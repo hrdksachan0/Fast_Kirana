@@ -30,7 +30,7 @@ export default function ActiveDeliveryCard({
 }: ActiveDeliveryCardProps) {
   const [showAllItems, setShowAllItems] = useState(false)
   const isCod = order.paymentMethod === 'COD'
-  const totalAmount = (order.total || 0) + (order.companionOrder ? (order.companionOrder.total || 0) : 0)
+  const totalAmount = order.combinedTotal || ((order.total || 0) + (order.companionOrder ? (order.companionOrder.total || 0) : 0))
   const allItems = [...(order.items || []), ...(order.companionOrder?.items || [])]
 
   const recipient = parseOrderRecipient(order)
@@ -272,61 +272,84 @@ export default function ActiveDeliveryCard({
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="bg-secondary/20 rounded-2xl p-3 border border-border/40 space-y-1.5 max-h-48 overflow-y-auto"
+              className="bg-secondary/20 rounded-2xl p-2.5 border border-border/40 space-y-2 max-h-56 overflow-y-auto"
             >
-              {order.items?.map((item: any) => (
-                <div key={item.id} className="flex justify-between items-center text-[11px] py-1 border-b border-border/20 last:border-0">
-                  <div className="truncate pr-2">
-                    <span className="text-text-primary font-bold">{item.name}</span>
-                    {item.price > 0 && (
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 ml-1 font-semibold">
-                        ({formatPrice(item.price)})
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-text-secondary font-bold bg-muted/40 px-1.5 py-0.5 rounded text-[10px]">
-                      ×{item.quantity}
-                    </span>
-                    <span className="font-black text-text-primary">
+              {allItems.map((item: any, idx: number) => {
+                const imgUrl = item.imageUrl || item.image || item.product?.imageUrl || item.product?.image
+                const unit = item.unit || item.variantTitle || item.variant?.name
+                return (
+                  <div
+                    key={item.id || idx}
+                    className={`flex items-center justify-between p-2 rounded-xl border gap-2.5 ${
+                      item.isCompanion
+                        ? 'bg-purple-500/5 border-purple-500/20'
+                        : 'bg-background/80 border-border/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative h-9 w-9 rounded-lg overflow-hidden bg-muted/60 border border-border/50 shrink-0 flex items-center justify-center">
+                        {imgUrl ? (
+                          <img src={imgUrl} alt={item.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-sm">{item.isCompanion ? '🍽️' : '📦'}</span>
+                        )}
+                        <span className="absolute bottom-0 right-0 bg-black/80 text-white font-mono text-[8px] font-black px-1 rounded-tl">
+                          {item.quantity}x
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-text-primary truncate">
+                          {item.isCompanion && <span className="text-purple-600 dark:text-purple-400 mr-1">🍽️</span>}
+                          {item.name}
+                        </div>
+                        {unit && (
+                          <div className="text-[10px] text-text-muted font-medium truncate">
+                            {unit}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs font-black text-text-primary shrink-0">
                       {formatPrice((item.price || 0) * (item.quantity || 1))}
-                    </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-
-              {order.companionOrder?.items?.map((item: any) => (
-                <div key={`comp-${item.id}`} className="flex justify-between items-center text-[11px] py-1 border-b border-border/20 last:border-0 text-purple-700 dark:text-purple-300">
-                  <div className="truncate pr-2">
-                    <span className="font-bold">🍽️ {item.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="bg-purple-500/15 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                      ×{item.quantity}
-                    </span>
-                    <span className="font-black">
-                      {formatPrice((item.price || 0) * (item.quantity || 1))}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </motion.div>
           ) : (
-            /* Compact preview chips */
-            <div className="flex flex-wrap gap-1.5">
-              {allItems.slice(0, 3).map((item: any, i: number) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1 text-[10px] font-bold bg-secondary/60 border border-border/40 px-2 py-0.5 rounded-lg text-text-secondary truncate max-w-[140px]"
-                >
-                  <span>{item.name}</span>
-                  <span className="text-text-muted">×{item.quantity || 1}</span>
-                </span>
-              ))}
+            /* Compact preview with images */
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {allItems.slice(0, 3).map((item: any, i: number) => {
+                const imgUrl = item.imageUrl || item.image || item.product?.imageUrl || item.product?.image
+                return (
+                  <div
+                    key={item.id || i}
+                    className="flex items-center gap-1.5 p-1.5 pr-2.5 rounded-xl bg-secondary/50 border border-border/40 shrink-0 max-w-[170px]"
+                  >
+                    <div className="relative h-7 w-7 rounded-md overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+                      {imgUrl ? (
+                        <img src={imgUrl} alt={item.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-xs">{item.isCompanion ? '🍲' : '📦'}</span>
+                      )}
+                      <span className="absolute bottom-0 right-0 bg-black/80 text-white font-mono text-[7px] font-black px-0.5 rounded-tl">
+                        {item.quantity}x
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold text-text-primary truncate">
+                      {item.name}
+                    </span>
+                  </div>
+                )
+              })}
               {allItems.length > 3 && (
-                <span className="text-[10px] font-bold bg-secondary text-text-muted px-2 py-0.5 rounded-lg border border-border/30">
+                <button
+                  type="button"
+                  onClick={() => setShowAllItems(true)}
+                  className="text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-xl shrink-0 border border-primary/20 cursor-pointer"
+                >
                   +{allItems.length - 3} more
-                </span>
+                </button>
               )}
             </div>
           )}

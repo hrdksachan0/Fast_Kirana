@@ -1528,10 +1528,12 @@ export async function POST(request: NextRequest) {
             : `FK-${baseReadableId}-G`
         }
         const orderItemsData = orderInfo.items.map((item: any) => {
-          const rawId = item.product.id || ''
-          const isVariant = rawId.includes('_')
-          const variantNameFromId = isVariant ? rawId.split('_')[1] : null
-          const variantName = item.selectedVariant || variantNameFromId || (item.dbProduct?.unit && item.dbProduct.unit.trim().length > 0 ? item.dbProduct.unit.trim() : null)
+          const rawVariant = (item.selectedVariant || variantNameFromId || '').trim()
+          const pName = (item.product?.name || item.dbProduct?.name || '').toLowerCase()
+          const isVernacular = rawVariant && !/\d/.test(rawVariant) && (pName.includes(rawVariant.toLowerCase()) || ['tamatar', 'pyaaz', 'aalo', 'alu', 'pyaz', 'kanda', 'karela', 'lauki', 'bhindi', 'baingan', 'gobhi', 'adrak', 'lahsun', 'mirch', 'dhaniya'].includes(rawVariant.toLowerCase()))
+          const variantName = (!isVernacular && rawVariant)
+            ? rawVariant
+            : (item.dbProduct?.unit && item.dbProduct.unit.trim().length > 0 ? item.dbProduct.unit.trim() : null)
           
           let itemPrice = item.dbProduct.price
           let itemCostPrice = item.dbProduct.costPrice || 0
@@ -2183,9 +2185,16 @@ export async function GET(request: NextRequest) {
 
     // Fetch items and addresses for all orders
     const orderIds = orders.map(o => o.id)
-    const allItems = orderIds.length > 0
-      ? await prisma.orderItem.findMany({ where: { orderId: { in: orderIds } } })
+    const allItemsRaw = orderIds.length > 0
+      ? await prisma.orderItem.findMany({
+          where: { orderId: { in: orderIds } },
+          include: { product: { select: { unit: true, variants: true } } },
+        })
       : []
+    const allItems = allItemsRaw.map(item => ({
+      ...item,
+      unit: (item as any).product?.unit || null,
+    }))
     const addressIds = [...new Set(orders.map(o => o.addressId))]
     const allAddresses = addressIds.length > 0
       ? await prisma.address.findMany({ where: { id: { in: addressIds } } })

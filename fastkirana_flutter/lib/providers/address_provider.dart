@@ -133,7 +133,7 @@ class SelectedAddressNotifier extends StateNotifier<Address?> {
       _persistAndSync(value);
     } else {
       _persistedAddressId = null;
-      SharedPreferences.getInstance().then((prefs) => prefs.remove('user_selected_address_id')).catchError((_) {});
+      SharedPreferences.getInstance().then((prefs) => prefs.remove('user_selected_address_id')).catchError((_) => false);
     }
   }
 

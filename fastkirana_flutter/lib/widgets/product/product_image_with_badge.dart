@@ -107,10 +107,17 @@ class OutletTag extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    // Strip redundant "Restaurant" / "Restro" suffix so it fits cleanly in the badge without getting cut off into "Restaur..."
+    final cleanOutlet = outletName
+        .replaceAll(RegExp(r'\s+Restaurant$', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+Restro$', caseSensitive: false), '')
+        .trim();
+    final displayOutlet = cleanOutlet.isNotEmpty ? cleanOutlet : outletName;
+
     return Align(
       alignment: Alignment.bottomLeft,
       child: Container(
-        constraints: BoxConstraints(maxWidth: isLowStock ? s * 80 : s * 130),
+        constraints: BoxConstraints(maxWidth: isLowStock ? s * 85 : s * 140),
         padding: EdgeInsets.symmetric(horizontal: s * 6, vertical: s * 2.5),
         decoration: BoxDecoration(
           color: const Color(0xDE0F172A),
@@ -131,7 +138,7 @@ class OutletTag extends StatelessWidget {
             SizedBox(width: s * 3.5),
             Flexible(
               child: Text(
-                outletName,
+                displayOutlet,
                 style: GoogleFonts.inter(
                   fontSize: s * 8,
                   fontWeight: FontWeight.w700,

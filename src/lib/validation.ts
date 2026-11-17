@@ -241,6 +241,8 @@ export const updateOrderStatusSchema = z.object({
   paymentCollectedBy: z.string().optional(),
   cashAmount: z.union([z.number(), z.string()]).nullable().optional(),
   deliveryUserId: z.string().nullable().optional(),
+  deliveryRoute: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   scope: z.string().optional(),
   updateCombined: z.boolean().optional(),
 })

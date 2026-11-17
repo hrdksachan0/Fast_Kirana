@@ -265,12 +265,15 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   }
 
   Future<void> _fetchLiveOrderStatus() async {
-    final displayId = widget.orderId ?? widget.order?.id ?? widget.order?.readableId;
-    if (displayId == null || displayId.isEmpty) return;
+    final rawId = widget.orderId ?? widget.order?.id ?? widget.order?.readableId;
+    if (rawId == null || rawId.isEmpty) return;
+
+    final cleanId = rawId.replaceAll('#', '').replaceAll('FK-', '').trim();
 
     try {
       final repo = OrderRepository(ref.read(dioProvider));
-      final order = await repo.getOrder(displayId);
+      var order = await repo.getOrder(cleanId);
+      order ??= await repo.getOrder(rawId);
       if (order != null && mounted) {
         setState(() {
           _liveOrder = order;
@@ -312,12 +315,51 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   @override
   Widget build(BuildContext context) {
     final effectiveOrder = _liveOrder ?? widget.order;
-    final rawDisplayId = widget.orderId ??
-        effectiveOrder?.readableId ??
-        effectiveOrder?.id ??
-        DateTime.now().millisecondsSinceEpoch.toString().substring(7);
-    final cleanId = rawDisplayId.replaceFirst('#', '').replaceFirst('FK-', '');
-    final displayId = '#FK-$cleanId';
+
+    // Resolve clean, human-friendly Order ID (e.g. #4095 or #4092-R)
+    String resolveCleanOrderId() {
+      // 1. Highest priority: readableId from live/fetched Order object (e.g. '4095' or '#4095')
+      final readable = effectiveOrder?.readableId?.trim();
+      if (readable != null && readable.isNotEmpty) {
+        final clean = readable.replaceAll('#', '').replaceAll('FK-', '').trim();
+        if (clean.isNotEmpty) return '#$clean';
+      }
+
+      // 2. If widget.orderId is already a short clean readable ID (not an internal Cashfree/UUID string)
+      if (widget.orderId != null && widget.orderId!.trim().isNotEmpty) {
+        final wId = widget.orderId!.trim();
+        if (!wId.toLowerCase().contains('ord_') && wId.length <= 10) {
+          final clean = wId.replaceAll('#', '').replaceAll('FK-', '').trim();
+          if (clean.isNotEmpty) return '#$clean';
+        }
+      }
+
+      // 3. If effectiveOrder.displayId is available and clean
+      if (effectiveOrder != null) {
+        final disp = effectiveOrder.displayId;
+        if (!disp.toLowerCase().contains('ord_') && disp.length <= 10) {
+          return '#$disp';
+        }
+      }
+
+      // 4. Fallback for internal gateway/cashfree order strings (e.g. 'ord_478fcfeaa5bf42e1a56d' or 'FK-ord_...')
+      final raw = widget.orderId ?? effectiveOrder?.id ?? '';
+      if (raw.isNotEmpty) {
+        final clean = raw.replaceAll('#', '').replaceAll('FK-', '').replaceAll('ord_', '').replaceAll('_', '').trim();
+        final digits = clean.replaceAll(RegExp(r'[^0-9]'), '');
+        if (digits.length >= 4) {
+          return '#${digits.substring(digits.length - 4)}';
+        }
+        if (clean.length > 6) {
+          return '#${clean.substring(clean.length - 6).toUpperCase()}';
+        }
+        return '#$clean';
+      }
+
+      return '#${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    }
+
+    final displayId = resolveCleanOrderId();
 
     final effectiveAmount = effectiveOrder?.total ?? widget.totalAmount;
     final amountFormatted = _formatAmount(effectiveAmount);
@@ -494,7 +536,10 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                         child: SlideTransition(
                           position: _contentSlideAnim,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8.5),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.sizeOf(context).width - 32,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(24),
@@ -513,38 +558,44 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                 GestureDetector(
-                                   onTap: () async {
-                                     HapticFeedback.mediumImpact();
-                                     await Clipboard.setData(ClipboardData(text: displayId));
-                                     if (mounted) {
-                                       setState(() => _isCopied = true);
-                                       Future.delayed(const Duration(seconds: 2), () {
-                                         if (mounted) setState(() => _isCopied = false);
-                                       });
-                                     }
-                                   },
-                                   child: Row(
-                                     mainAxisSize: MainAxisSize.min,
-                                     children: [
-                                       Text(
-                                         _isCopied ? 'Copied!' : displayId,
-                                         style: GoogleFonts.jetBrainsMono(
-                                           fontSize: Responsive.scaledFontSize(context, 12),
-                                           fontWeight: FontWeight.w800,
-                                           color: _isCopied ? const Color(0xFF16A34A) : slateDark,
-                                         ),
-                                       ),
-                                       const SizedBox(width: 4),
-                                       Icon(
-                                         _isCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
-                                         size: 13,
-                                         color: _isCopied ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
-                                       ),
-                                     ],
-                                   ),
-                                 ),
-                                 const SizedBox(width: 8),
+                                Flexible(
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      HapticFeedback.mediumImpact();
+                                      await Clipboard.setData(ClipboardData(text: displayId));
+                                      if (mounted) {
+                                        setState(() => _isCopied = true);
+                                        Future.delayed(const Duration(seconds: 2), () {
+                                          if (mounted) setState(() => _isCopied = false);
+                                        });
+                                      }
+                                    },
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            _isCopied ? 'Copied!' : displayId,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.jetBrainsMono(
+                                              fontSize: Responsive.scaledFontSize(context, 12),
+                                              fontWeight: FontWeight.w800,
+                                              color: _isCopied ? const Color(0xFF16A34A) : slateDark,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          _isCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
+                                          size: 13,
+                                          color: _isCopied ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 Container(
                                   width: 4,
                                   height: 4,

@@ -33,7 +33,7 @@ export default function CodPaymentModal({
   const [hasSplitOnline, setHasSplitOnline] = useState(false)
   const [cashPortionInput, setCashPortionInput] = useState('')
 
-  const orderTotal = (order?.total || 0) + (order?.companionOrder ? (order.companionOrder.total || 0) : 0)
+  const orderTotal = order?.combinedTotal || ((order?.total || 0) + (order?.companionOrder ? (order.companionOrder.total || 0) : 0))
   const displayId = order?.readableId || order?.id?.slice(0, 8) || ''
 
   // ── Cash Calculator Logic ──

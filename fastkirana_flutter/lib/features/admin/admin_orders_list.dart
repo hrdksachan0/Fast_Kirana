@@ -14,6 +14,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:collection/collection.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/restaurant_utils.dart';
+import '../../core/utils/route_detector.dart';
 import '../../data/models/order.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../core/services/supabase_service.dart';
@@ -764,7 +765,14 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     final List<Order> soloOrders = [];
 
     for (final o in orders) {
-      final cid = o.combinedId?.trim();
+      String? cid = o.combinedId?.trim();
+      if (cid == null || cid.isEmpty) {
+        final rid = (o.readableId ?? '').toUpperCase().trim();
+        final match = RegExp(r'^(\d+|[A-Z0-9]+)-[GR\d]+$').firstMatch(rid);
+        if (match != null) {
+          cid = 'readable_${match.group(1)}';
+        }
+      }
       if (cid != null && cid.isNotEmpty) {
         groups.putIfAbsent(cid, () => []).add(o);
       } else {
@@ -1189,6 +1197,39 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                 payload: broadcastPayload,
               );
             }
+
+            // Trigger instant buzzer for the respected restaurant when verified/confirmed!
+            String? targetRestId = order.restaurantId;
+            if (targetRestId == null || targetRestId.isEmpty) {
+              if (order.subOrders != null && order.subOrders!.isNotEmpty) {
+                for (final sub in order.subOrders!) {
+                  if (sub.restaurantId != null && sub.restaurantId!.isNotEmpty) {
+                    targetRestId = sub.restaurantId;
+                    break;
+                  }
+                }
+              }
+            }
+
+            if (targetRestId != null && targetRestId.isNotEmpty &&
+                (newStatus == OrderStatus.confirmed || newStatus == OrderStatus.pending)) {
+              final restPayload = {
+                'orderId': order.id,
+                'readableId': order.readableId ?? order.id,
+                'restaurantId': targetRestId,
+                'restaurantName': order.shopName ?? 'Restaurant',
+                'status': statusUpper,
+                'timestamp': DateTime.now().toIso8601String(),
+              };
+              sb.channel('restaurant-orders-live-$targetRestId').sendBroadcastMessage(
+                event: 'new_order',
+                payload: restPayload,
+              );
+              sb.channel('restaurant-orders-live').sendBroadcastMessage(
+                event: 'new_order',
+                payload: restPayload,
+              );
+            }
           } catch (_) {}
         }
 
@@ -1249,6 +1290,28 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
             'status': statusUpper,
             'updatedAt': DateTime.now().toIso8601String(),
           }).eq('id', subOrder.id).catchError((_) {}));
+
+          if (subOrder.restaurantId != null && subOrder.restaurantId!.isNotEmpty &&
+              (newStatus == OrderStatus.confirmed || newStatus == OrderStatus.pending)) {
+            final restPayload = {
+              'orderId': subOrder.id,
+              'readableId': subOrder.readableId ?? subOrder.id,
+              'restaurantId': subOrder.restaurantId,
+              'restaurantName': subOrder.shopName ?? 'Restaurant',
+              'status': statusUpper,
+              'timestamp': DateTime.now().toIso8601String(),
+            };
+            try {
+              sb.channel('restaurant-orders-live-${subOrder.restaurantId}').sendBroadcastMessage(
+                event: 'new_order',
+                payload: restPayload,
+              );
+              sb.channel('restaurant-orders-live').sendBroadcastMessage(
+                event: 'new_order',
+                payload: restPayload,
+              );
+            } catch (_) {}
+          }
         }
 
         futures.add(OrderRepository(ref.read(dioProvider)).updateOrderStatus(subOrder.id, newStatus).catchError((_) => false));
@@ -1263,12 +1326,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
     if (cleanPhone.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No valid phone number found for this customer'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.showWarning(context, 'No valid phone number found for this customer');
       }
       return;
     }
@@ -1278,12 +1336,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     } catch (e) {
       debugPrint('Could not launch phone dialer: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not open dialer for $cleanPhone'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppToast.showError(context, 'Could not open dialer for $cleanPhone');
       }
     }
   }
@@ -1334,23 +1387,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     if (mounted) {
       final statusLabel = isUnassigning
           ? 'Order moved to Open Pool (Unassigned)'
-          : 'Assigned to $riderName · Status: ${wasShipped ? "Out for Delivery" : "Ready for Pickup"}!';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(isUnassigning ? Icons.refresh_rounded : Icons.two_wheeler_rounded, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                statusLabel,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          backgroundColor: isUnassigning ? AppDesignSystem.slate700 : AppDesignSystem.cyan600,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+          : 'Assigned to $riderName · ${wasShipped ? "Out for Delivery" : "Ready for Pickup"}';
+      if (isUnassigning) {
+        AppToast.showInfo(context, statusLabel);
+      } else {
+        AppToast.showSuccess(context, 'Rider Assigned 🛵', subtitle: statusLabel);
+      }
     }
 
     // 2. Concurrent Network Sync
@@ -1393,17 +1435,93 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         }
       }
 
+      final authOptions = await AdminAuthorization.optionsAsync();
       for (final id in idsToAssign) {
         var cleanId = id.trim();
         if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
-        futures.add(ref.read(dioProvider).patch('/api/orders/$cleanId', data: {
-          'deliveryUserId': isUnassigning ? '' : riderId,
-          'status': targetStatusStr,
-        }).catchError((_) => Response(requestOptions: RequestOptions())));
+        futures.add(ref.read(dioProvider).patch(
+          '/api/orders/$cleanId',
+          data: {
+            'deliveryUserId': isUnassigning ? '' : riderId,
+            'status': targetStatusStr,
+          },
+          options: authOptions,
+        ).catchError((_) => Response(requestOptions: RequestOptions())));
       }
 
       await Future.wait(futures);
     }
+  }
+
+  Future<void> _updateOrderRoute(Order order, DeliveryRouteKey newRoute) async {
+    HapticFeedback.mediumImpact();
+    final rInfo = DeliveryRoutes.getByKey(newRoute);
+    final updatedNotes = DeliveryRoutes.setRouteInNotes(order.notes, newRoute);
+
+    // 1. Optimistic local UI update (including subOrders)
+    setState(() {
+      _allOrders = _allOrders.map((o) {
+        if (o.id == order.id || (order.combinedId != null && o.combinedId == order.combinedId)) {
+          final updatedSubs = o.subOrders?.map((s) => s.copyWith(notes: updatedNotes)).toList();
+          return o.copyWith(notes: updatedNotes, subOrders: updatedSubs);
+        }
+        return o;
+      }).toList();
+    });
+
+    if (mounted) {
+      AppToast.showSuccess(
+        context,
+        'Delivery Route Updated',
+        subtitle: '${rInfo.emoji} ${rInfo.label}',
+      );
+    }
+
+    // 2. Sync to Supabase & API
+    try {
+      final authOptions = await AdminAuthorization.optionsAsync();
+      final idsToUpdate = <String>{order.id};
+      if (order.subOrders != null) {
+        for (final s in order.subOrders!) {
+          idsToUpdate.add(s.id);
+        }
+      }
+
+      final futures = <Future>[];
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        for (final id in idsToUpdate) {
+          var cleanId = id.trim();
+          if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+          futures.add(sb.from('orders').update({
+            'notes': updatedNotes,
+            'updatedAt': DateTime.now().toIso8601String(),
+          }).eq('id', cleanId).catchError((_) {}));
+        }
+
+        if (order.combinedId != null && order.combinedId!.isNotEmpty) {
+          futures.add(sb.from('orders').update({
+            'notes': updatedNotes,
+            'updatedAt': DateTime.now().toIso8601String(),
+          }).eq('combinedId', order.combinedId!).catchError((_) {}));
+        }
+      }
+
+      for (final id in idsToUpdate) {
+        var cleanId = id.trim();
+        if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+        futures.add(ref.read(dioProvider).patch(
+          '/api/orders/$cleanId',
+          data: {
+            'deliveryRoute': newRoute.name.toUpperCase(),
+            'notes': updatedNotes,
+          },
+          options: authOptions,
+        ).catchError((_) => Response(requestOptions: RequestOptions())));
+      }
+
+      await Future.wait(futures);
+    } catch (_) {}
   }
 
   bool _isUnpaidOnline(Order order) {
@@ -2230,6 +2348,7 @@ $formattedItems
                         onUpdateStatus: _updateOrderStatus,
                         onUpdateSubOrderStatus: _updateSubOrderStatus,
                         onAssignRider: _assignRider,
+                        onUpdateRoute: _updateOrderRoute,
                         onWhatsappCustomer: _whatsappCustomer,
                         onCallCustomer: _callCustomer,
                         onShowSubstitution: _showSubstitutionModal,

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/services/admin_authorization.dart';
 import '../../../../core/theme/design_system.dart';
+import '../../../../core/utils/app_toast.dart';
 import '../../../../data/models/order.dart';
 
 /// Modal bottom sheet for recording order item & general refunds
@@ -197,15 +198,11 @@ class AdminRefundSheet {
                           : () async {
                               final amt = double.tryParse(amountController.text.trim()) ?? 0.0;
                               if (amt <= 0) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Please enter a valid refund amount > 0')),
-                                );
+                                AppToast.showWarning(context, 'Please enter a valid refund amount > 0');
                                 return;
                               }
                               if (amt > remainingRefundable) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Refund amount cannot exceed remaining balance (₹${remainingRefundable.toInt()})')),
-                                );
+                                AppToast.showWarning(context, 'Refund amount cannot exceed remaining balance (₹${remainingRefundable.toInt()})');
                                 return;
                               }
 
@@ -231,12 +228,7 @@ class AdminRefundSheet {
                                   Navigator.pop(modalContext);
                                 }
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Refund of ₹${amt.toInt()} recorded successfully!'),
-                                      backgroundColor: const Color(0xFF059669),
-                                    ),
-                                  );
+                                  AppToast.showSuccess(context, 'Refund Recorded', subtitle: '₹${amt.toInt()} recorded successfully');
                                 }
                                 onRefundSuccess();
                               } catch (err) {
@@ -244,12 +236,7 @@ class AdminRefundSheet {
                                   setModalState(() => isSubmitting = false);
                                 }
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Failed to record refund: $err'),
-                                      backgroundColor: const Color(0xFFDC2626),
-                                    ),
-                                  );
+                                  AppToast.showError(context, 'Failed to record refund', subtitle: '$err');
                                 }
                               }
                             },

@@ -60,6 +60,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         data['screen'] == 'admin-orders' ||
         data['screen'] == 'restaurant-console' ||
         data['screen'] == 'delivery' ||
+data['screen'] == 'delivery-dashboard' ||
+data['type'] == 'DELIVERY_ASSIGNED' ||
+title.toString().contains('🛵') ||
         data['screen'] == 'picker' ||
         data['role'] == 'ADMIN' ||
         data['type'] == 'STAFF_ALERT' ||
@@ -215,7 +218,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       (body ?? '').toString().toLowerCase().contains('on the way') ||
       (body ?? '').toString().toLowerCase().contains('arriving'));
 
-  final isDeliveryRiderAlert = (data['screen'] == 'delivery' || data['role'] == 'DELIVERY') &&
+  final isDeliveryRiderAlert = (data['screen'] == 'delivery' ||
+data['screen'] == 'delivery-dashboard' ||
+data['type'] == 'DELIVERY_ASSIGNED' ||
+title.toString().contains('🛵') || data['role'] == 'DELIVERY') &&
       (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED');
 
   final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && !isOrderStatusUpdate && (
@@ -742,6 +748,9 @@ class NotificationService {
           data['screen'] == 'admin-orders' ||
           data['screen'] == 'restaurant-console' ||
           data['screen'] == 'delivery' ||
+data['screen'] == 'delivery-dashboard' ||
+data['type'] == 'DELIVERY_ASSIGNED' ||
+title.toString().contains('🛵') ||
           data['screen'] == 'picker' ||
           data['role'] == 'ADMIN' ||
           data['type'] == 'STAFF_ALERT' ||
@@ -914,7 +923,10 @@ class NotificationService {
         body.toString().toLowerCase().contains('on the way') ||
         body.toString().toLowerCase().contains('arriving'));
 
-    final isDeliveryRiderAlert = (data['screen'] == 'delivery' || data['role'] == 'DELIVERY') &&
+    final isDeliveryRiderAlert = (data['screen'] == 'delivery' ||
+data['screen'] == 'delivery-dashboard' ||
+data['type'] == 'DELIVERY_ASSIGNED' ||
+title.toString().contains('🛵') || data['role'] == 'DELIVERY') &&
         (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED');
 
     final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && !isOrderStatusUpdate && (

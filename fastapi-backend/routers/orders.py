@@ -3560,8 +3560,80 @@ async def update_order(
     payment_collected_by = payload.get("paymentCollectedBy")
     delivery_user_id = payload.get("deliveryUserId")
 
+    is_admin = role == "ADMIN"
+    is_delivery = role == "DELIVERY"
+    is_picker = role == "PICKER"
+    is_restaurant_staff = role in ["CHEF", "RESTAURANT_OWNER"]
+    is_owner = order.userId == user_id
+    is_restaurant_order = bool(order.restaurantId or order.orderType == OrderType.RESTAURANT)
+
+    if not is_owner and not is_admin and not is_delivery and not is_picker and not is_restaurant_staff:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Handle Route, Notes, or Rider Assignment without changing Status
+    has_notes = "notes" in payload
+    has_route = "deliveryRoute" in payload
+    has_duid = "deliveryUserId" in payload
+
     if not target_status_str:
-        raise HTTPException(status_code=400, detail="status is required")
+        if has_notes or has_route or has_duid:
+            updated_notes = payload.get("notes")
+            delivery_route = payload.get("deliveryRoute")
+            if delivery_route and not updated_notes:
+                clean_route = str(delivery_route).upper().strip()
+                updated_notes = f"{order.notes or ''} | ROUTE:{clean_route}".strip(" |")
+
+            if updated_notes is not None:
+                order.notes = updated_notes
+
+            if has_duid:
+                raw_duid = payload.get("deliveryUserId")
+                if not raw_duid or str(raw_duid).strip().upper() in ["", "UNASSIGNED", "NONE", "NULL"]:
+                    order.deliveryUserId = None
+                    order.deliveryLat = None
+                    order.deliveryLng = None
+                else:
+                    order.deliveryUserId = str(raw_duid).strip()
+
+            order.updatedAt = datetime.utcnow()
+
+            companions = []
+            if order.combinedId:
+                sibling_stmt = select(Order).where(Order.combinedId == order.combinedId, Order.id != order.id)
+                sibling_res = await db.execute(sibling_stmt)
+                companions = list(sibling_res.scalars().all())
+
+            for companion in companions:
+                if updated_notes is not None:
+                    companion.notes = updated_notes
+                if has_duid:
+                    companion.deliveryUserId = order.deliveryUserId
+                companion.updatedAt = datetime.utcnow()
+
+            await db.commit()
+            await db.refresh(order)
+            clear_order_cache(order.id)
+            if order.combinedId:
+                clear_order_cache(order.combinedId)
+            for companion in companions:
+                clear_order_cache(companion.id)
+                if companion.combinedId:
+                    clear_order_cache(companion.combinedId)
+
+            return {
+                "success": True,
+                "message": "Order updated successfully",
+                "order": {
+                    "id": order.id,
+                    "readableId": order.readableId,
+                    "status": order.status.value,
+                    "notes": order.notes,
+                    "deliveryUserId": order.deliveryUserId,
+                    "updatedAt": order.updatedAt.isoformat()
+                }
+            }
+        else:
+            raise HTTPException(status_code=400, detail="status is required")
 
     status_alias_map = {
         "PREPARING": OrderStatus.CONFIRMED,
@@ -3579,17 +3651,6 @@ async def update_order(
             target_status = OrderStatus(raw_status_str)
         except ValueError:
             target_status = OrderStatus.CONFIRMED
-
-    # Authorization Check
-    is_admin = role == "ADMIN"
-    is_delivery = role == "DELIVERY"
-    is_picker = role == "PICKER"
-    is_restaurant_staff = role in ["CHEF", "RESTAURANT_OWNER"]
-    is_owner = order.userId == user_id
-    is_restaurant_order = bool(order.restaurantId or order.orderType == OrderType.RESTAURANT)
-
-    if not is_owner and not is_admin and not is_delivery and not is_picker and not is_restaurant_staff:
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
     # Enforce order state machine transitions
     from services.order_calculation_service import validate_status_transition
@@ -3780,6 +3841,11 @@ async def update_order(
 
     # Update database values
     order.status = target_status
+    if "notes" in payload:
+        order.notes = payload.get("notes")
+    elif "deliveryRoute" in payload:
+        clean_route = str(payload.get("deliveryRoute")).upper().strip()
+        order.notes = f"{order.notes or ''} | ROUTE:{clean_route}".strip(" |")
     order.updatedAt = datetime.utcnow()
 
     if target_status == OrderStatus.DELIVERED:
@@ -4011,6 +4077,8 @@ async def update_order(
             companion.deliveryLng = order.deliveryLng
         elif order.deliveryUserId:
             companion.deliveryUserId = order.deliveryUserId
+        if "notes" in payload or "deliveryRoute" in payload:
+            companion.notes = order.notes
         if target_status == OrderStatus.DELIVERED:
             companion.paymentStatus = PaymentStatus.PAID
             companion.deliveredAt = datetime.utcnow()

@@ -147,11 +147,17 @@ class OrderItemHelper {
     }
 
     if (explicit != null && explicit.isNotEmpty) {
-      return explicit;
+      if (isVernacularOrDuplicateName(explicit, name)) {
+        explicit = null;
+      } else {
+        return explicit;
+      }
     }
 
     if (name.isNotEmpty) {
-      // Fallback 1: Extract variant inside brackets/parentheses in title (e.g. "Chole Bhature (2Pc)", "Paneer Tikka (Half)", "Aloo Paratha (2 Pc)", "Chili Potato (Gravy)")
+      // Fallback 1: Extract variant inside brackets/parentheses in title ONLY IF it specifies a weight/unit or size
+      // (e.g. "Chole Bhature (2Pc)", "Paneer Tikka (Half)", "Aloo Paratha (2 Pc)", "Black Forest (Egg Mix)")
+      // NEVER match vernacular produce names like "Tomato ( Tamatar )", "Potato (Aalo)", "Onion ( Pyaaz )"
       final generalBracketMatch = RegExp(
         r'[\(\[]\s*([^()\[\]]{1,25})\s*[\)\]]',
         caseSensitive: false,
@@ -159,8 +165,11 @@ class OrderItemHelper {
       if (generalBracketMatch != null) {
         final rawContent = generalBracketMatch.group(1)!.trim();
         final lower = rawContent.toLowerCase();
-        // Ignore pure veg/non-veg tags
-        if (lower != 'veg' && lower != 'pure veg' && lower != 'non-veg' && lower != 'egg') {
+
+        final hasUnitOrNumber = RegExp(r'\d+\s*(pc|pcs|gm|g|kg|ml|l|ltr|pack|piece|slice|plate|serving)\b', caseSensitive: false).hasMatch(rawContent);
+        final isKnownPortion = RegExp(r'\b(half|full|quarter|small|medium|large|regular|single|double|gravy|dry|boneless|egg mix|eggless|spicy|sweet)\b', caseSensitive: false).hasMatch(lower);
+
+        if ((hasUnitOrNumber || isKnownPortion) && !isVernacularOrDuplicateName(rawContent, name)) {
           final cleaned = rawContent.replaceAllMapped(
             RegExp(r'(\d+)\s*(pc|pcs|gm|g|kg|ml|l)\b', caseSensitive: false),
             (m) {
@@ -234,9 +243,105 @@ class OrderItemHelper {
         }
         return '1 Portion';
       }
+
+      // Fallback 6: Context-aware defaults for loose grocery staples & produce (Tomato, Potato, Onion, etc.)
+      final lowerName = name.toLowerCase();
+      double priceNum = 0.0;
+      if (item is Map) {
+        priceNum = (item['price'] as num?)?.toDouble() ?? 0.0;
+      } else if (item != null) {
+        try {
+          priceNum = ((item as dynamic).price as num?)?.toDouble() ?? 0.0;
+        } catch (_) {}
+      }
+
+      if (lowerName.contains('tomato') || lowerName.contains('tamatar')) {
+        return priceNum >= 35 ? '1 kg' : '500 g';
+      }
+      if (lowerName.contains('potato') || lowerName.contains('aalo') || lowerName.contains('alu')) {
+        return '1 kg';
+      }
+      if (lowerName.contains('onion') || lowerName.contains('pyaaz') || lowerName.contains('pyaz')) {
+        return '1 kg';
+      }
+      if (lowerName.contains('ginger') || lowerName.contains('adrak')) {
+        return '100 g';
+      }
+      if (lowerName.contains('garlic') || lowerName.contains('lahsun')) {
+        return '250 g';
+      }
+      if (lowerName.contains('chili') || lowerName.contains('chilli') || lowerName.contains('mirch')) {
+        return '100 g';
+      }
+      if (lowerName.contains('coriander') || lowerName.contains('dhaniya')) {
+        return '100 g';
+      }
+      if (lowerName.contains('cucumber') || lowerName.contains('kheera')) {
+        return '500 g';
+      }
+      if (lowerName.contains('lemon') || lowerName.contains('nimbu')) {
+        return '4 Pcs';
+      }
+      if (lowerName.contains('bread')) {
+        return '1 Pkt';
+      }
+      if (lowerName.contains('milk') || lowerName.contains('doodh')) {
+        return '500 ml';
+      }
+      if (lowerName.contains('paneer')) {
+        return priceNum >= 140 ? '500 g' : '200 g';
+      }
     }
 
     return '';
+  }
+
+  /// Checks whether a candidate variant string is merely a vernacular/Hindi translation
+  /// or a duplicate of the product title itself (e.g., "Tamatar" for "Tomato ( Tamatar )",
+  /// "Aalo" for "Potato (Aalo)", "Pyaaz" for "Onion ( Pyaaz )").
+  static bool isVernacularOrDuplicateName(String variantCandidate, String productName) {
+    final v = variantCandidate.trim().toLowerCase();
+    final p = productName.trim().toLowerCase();
+    if (v.isEmpty) return true;
+    if (v == 'null' || v == 'standard' || v == 'default' || v == 'none') return true;
+
+    // If it contains quantity numbers (e.g. 500g, 1kg, 2pc), it is a real variant, not vernacular!
+    if (RegExp(r'\d+\s*(pc|pcs|gm|g|kg|ml|l|ltr|pack|portion|piece|slice|plate|serving)\b', caseSensitive: false).hasMatch(v)) {
+      return false;
+    }
+
+    // If it contains size/prep words (e.g. half, full, medium, eggless, gravy), it's a real variant!
+    if (RegExp(r'\b(half|full|quarter|small|medium|large|regular|single|double|gravy|dry|boneless|egg mix|eggless|spicy|sweet)\b', caseSensitive: false).hasMatch(v)) {
+      return false;
+    }
+
+    // Exact duplicate or substring of the product name (e.g. "Tamatar" inside "Tomato ( Tamatar )")
+    final cleanV = v.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    final cleanP = p.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    if (v == p || p.contains(v) || (cleanV.isNotEmpty && (cleanV == cleanP || cleanP.contains(cleanV)))) {
+      return true;
+    }
+
+    // Common Hindi/vernacular produce names that should never be treated as variant units
+    const vernacularProduce = {
+      'tamatar', 'tomato', 'aalo', 'alu', 'potato', 'pyaaz', 'pyaz', 'onion', 'kanda',
+      'karela', 'lauki', 'kaddu', 'bhindi', 'okra', 'baingan', 'brinjal', 'eggplant',
+      'gobhi', 'gobi', 'phool gobhi', 'patta gobhi', 'bandha gobhi', 'cabbage', 'cauliflower',
+      'shimla mirch', 'capsicum', 'hari mirch', 'mirch', 'chilli', 'chili',
+      'dhaniya', 'coriander', 'pudina', 'mint', 'palak', 'spinach', 'methi', 'fenugreek',
+      'gajar', 'carrot', 'mooli', 'radish', 'adrak', 'ginger', 'lahsun', 'garlic',
+      'nimbu', 'lemon', 'matar', 'peas', 'kadhi patta', 'curry leaves',
+      'kheera', 'khira', 'cucumber', 'kakdi', 'tarbooj', 'watermelon', 'kharbuja', 'muskmelon',
+      'seb', 'apple', 'kela', 'banana', 'aam', 'mango', 'santra', 'orange', 'anar', 'pomegranate',
+      'papeeta', 'papaya', 'angoor', 'grapes', 'amrood', 'guava', 'chikoo', 'chiku',
+      'veg', 'pure veg', 'non veg', 'non-veg', 'egg'
+    };
+
+    if (vernacularProduce.contains(v)) {
+      return true;
+    }
+
+    return false;
   }
 
   /// Robustly extracts and normalizes the product image URL from any item representation.

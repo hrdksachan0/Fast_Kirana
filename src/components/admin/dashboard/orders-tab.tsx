@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase-client'
 import { RecordRefundModal } from '@/components/admin/record-refund-modal'
 import { MobileOrderCard } from '@/components/admin/dashboard/mobile-order-card'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
+import { detectOrderRoute, DELIVERY_ROUTES, DeliveryRouteKey, setRouteInNotes } from '@/lib/route-detector'
 
 export interface OrdersTabProps {
   storeId?: string | null
@@ -66,6 +67,7 @@ export function OrdersTab({
 
   const [storeRiders, setStoreRiders] = React.useState<any[]>([])
   const [assigningRiderOrderId, setAssigningRiderOrderId] = React.useState<string | null>(null)
+  const [orderRouteFilter, setOrderRouteFilter] = React.useState<DeliveryRouteKey>('ALL')
 
   const fetchRiders = React.useCallback(async () => {
     try {
@@ -100,17 +102,27 @@ export function OrdersTab({
         ? (order.status === 'SHIPPED' ? 'SHIPPED' : (['ADMIN_PENDING', 'PENDING', 'CONFIRMED', 'PROCESSING'].includes(order.status) ? 'PACKED' : order.status))
         : order.status
 
-      const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
-        body: JSON.stringify({
-          deliveryUserId: riderId || null,
-          status: targetStatus,
-        }),
-      })
+      // If combined order, update all sub-orders simultaneously
+      const targetIds = order.isCombined && order.subOrders?.length > 0
+        ? order.subOrders.map((s: any) => s.id)
+        : [order.id]
+
+      const responses = await Promise.all(
+        targetIds.map((tid: string) =>
+          fetch(`${apiUrl()}/api/orders/${tid}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders,
+            },
+            body: JSON.stringify({
+              deliveryUserId: riderId || null,
+              status: targetStatus,
+            }),
+          })
+        )
+      )
+      const res = responses[0]
 
       if (res.ok) {
         order.deliveryUserId = riderId || null
@@ -149,6 +161,58 @@ export function OrdersTab({
   const [shareSelectOrder, setShareSelectOrder] = React.useState<any | null>(null)
   const [updatingPaymentId, setUpdatingPaymentId] = React.useState<string | null>(null)
   const [syncingOrderId, setSyncingOrderId] = React.useState<string | null>(null)
+  const [updatingRouteOrderId, setUpdatingRouteOrderId] = React.useState<string | null>(null)
+  const [, setForceRender] = React.useState(0)
+
+  const handleUpdateOrderRoute = async (order: any, routeKey: DeliveryRouteKey, e?: React.MouseEvent | React.ChangeEvent) => {
+    if (e && 'stopPropagation' in e) e.stopPropagation()
+    setUpdatingRouteOrderId(order.id)
+    try {
+      const targetIds = order.isCombined && order.subOrders?.length > 0
+        ? order.subOrders.map((s: any) => s.id)
+        : [order.id]
+
+      const newNotes = setRouteInNotes(order.notes, routeKey)
+
+      const responses = await Promise.all(
+        targetIds.map((tid: string) =>
+          fetch(`${apiUrl()}/api/orders/${tid}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders,
+            },
+            body: JSON.stringify({
+              deliveryRoute: routeKey,
+              notes: newNotes,
+            }),
+          })
+        )
+      )
+      const res = responses[0]
+
+      if (res && res.ok) {
+        order.notes = newNotes
+        order.deliveryRoute = routeKey
+        if (order.subOrders) {
+          order.subOrders.forEach((s: any) => {
+            s.notes = newNotes
+            s.deliveryRoute = routeKey
+          })
+        }
+        setForceRender((c) => c + 1)
+        const routeObj = routeKey !== 'ALL' ? (DELIVERY_ROUTES as any)[routeKey] : null
+        toast.success(`📍 Route changed to ${routeObj?.emoji || ''} ${routeObj?.name || routeKey}!`)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Failed to update delivery route')
+      }
+    } catch (_) {
+      toast.error('Network error updating route')
+    } finally {
+      setUpdatingRouteOrderId(null)
+    }
+  }
 
   const handleSyncCashfreePayment = async (order: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
@@ -766,6 +830,17 @@ export function OrdersTab({
     return 'GROCERY'
   }
 
+  const activeRouteCounts = React.useMemo(() => {
+    const counts: Record<string, number> = { HAMIRPUR: 0, MOOSANAGAR: 0, KANPUR: 0, JAHANABAD: 0, TOWN_CENTER: 0 }
+    if (Array.isArray(rawActiveList)) {
+      for (const o of rawActiveList) {
+        const rKey = detectOrderRoute(o).key
+        if (counts[rKey] !== undefined) counts[rKey]++
+      }
+    }
+    return counts
+  }, [rawActiveList])
+
   // Filter Active Table by status, store, method & search query
   const filteredActiveOrders = (Array.isArray(rawActiveList) ? rawActiveList : []).filter((o) => {
     const isUnpaidOnline = o.paymentStatus !== 'PAID' && o.paymentMethod !== 'COD'
@@ -778,6 +853,7 @@ export function OrdersTab({
       : (o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter)))
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
+    const matchesRoute = orderRouteFilter === 'ALL' || detectOrderRoute(o).key === orderRouteFilter
     const q = (orderSearchQuery || '').toLowerCase().trim().replace(/^#/, '')
     const matchesSearch = 
       q === '' || 
@@ -790,7 +866,7 @@ export function OrdersTab({
       (o?.userPhone ? String(o.userPhone).includes(q) : false) || 
       (o?.user?.phone ? String(o.user.phone).includes(q) : false) || 
       (o?.address?.phone ? String(o.address.phone).includes(q) : false)
-    return matchesFilter && matchesShop && matchesMethod && matchesSearch
+    return matchesFilter && matchesShop && matchesMethod && matchesRoute && matchesSearch
   })
 
   // Filter History Table by status, store, method & search query
@@ -798,6 +874,7 @@ export function OrdersTab({
     const matchesFilter = orderStatusFilter === 'ALL' || activeStatuses.includes(orderStatusFilter) || o.status === orderStatusFilter || (o.subOrders && o.subOrders.some((s: any) => s.status === orderStatusFilter))
     const matchesShop = orderShopFilter === 'ALL' || getOrderStoreType(o) === orderShopFilter
     const matchesMethod = orderMethodFilter === 'ALL' || getOrderMethod(o) === orderMethodFilter
+    const matchesRoute = orderRouteFilter === 'ALL' || detectOrderRoute(o).key === orderRouteFilter
     const q = (orderSearchQuery || '').toLowerCase().trim().replace(/^#/, '')
     const matchesSearch = 
       q === '' || 
@@ -810,7 +887,7 @@ export function OrdersTab({
       (o?.userPhone ? String(o.userPhone).includes(q) : false) || 
       (o?.user?.phone ? String(o.user.phone).includes(q) : false) || 
       (o?.address?.phone ? String(o.address.phone).includes(q) : false)
-    return matchesFilter && matchesShop && matchesMethod && matchesSearch
+    return matchesFilter && matchesShop && matchesMethod && matchesRoute && matchesSearch
   })
 
   const activeOrdersCount = rawActiveList.length
@@ -1039,6 +1116,48 @@ export function OrdersTab({
                 </button>
               ))}
             </div>
+
+            {/* Ghatampur 4 Arterial Delivery Routes */}
+            <div className="flex items-center gap-1 flex-wrap w-full pt-1.5 border-t border-border/40">
+              <span className="text-[10px] font-black uppercase text-text-muted px-1">📍 Delivery Route:</span>
+              <button
+                type="button"
+                onClick={() => setOrderRouteFilter('ALL')}
+                className={`px-2.5 py-1 text-[9.5px] font-black rounded-lg transition-all cursor-pointer border ${
+                  orderRouteFilter === 'ALL'
+                    ? 'bg-primary text-white border-primary shadow-2xs'
+                    : 'bg-card border-border hover:bg-muted text-text-secondary'
+                }`}
+              >
+                🚀 All Routes
+              </button>
+              {(['HAMIRPUR', 'MOOSANAGAR', 'KANPUR', 'JAHANABAD'] as const).map((rKey) => {
+                const rInfo = DELIVERY_ROUTES[rKey]
+                const isSelected = orderRouteFilter === rKey
+                const count = activeRouteCounts[rKey] || 0
+                return (
+                  <button
+                    key={rKey}
+                    type="button"
+                    onClick={() => setOrderRouteFilter(rKey)}
+                    className={`px-2.5 py-1 text-[9.5px] font-black rounded-lg transition-all cursor-pointer border flex items-center gap-1.5 ${
+                      isSelected
+                        ? rInfo.activeButtonClass
+                        : 'bg-card border-border hover:bg-muted text-text-secondary'
+                    }`}
+                  >
+                    <span>{rInfo.emoji} {rInfo.label}</span>
+                    {count > 0 && (
+                      <span className={`px-1.5 py-0.2 rounded-full text-[8px] font-black ${
+                        isSelected ? 'bg-white/25 text-white' : 'bg-primary/10 text-primary'
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Active Orders - Mobile Card View */}
@@ -1075,6 +1194,7 @@ export function OrdersTab({
                     fifoRank={fifoRank}
                     storeRiders={storeRiders}
                     onAssignRider={handleAssignRider}
+                    onUpdateRoute={handleUpdateOrderRoute}
                   />
                 )
               })
@@ -1120,6 +1240,30 @@ export function OrdersTab({
                             <span className="font-mono font-black text-[12px] text-text-primary group-hover/cell:text-amber-600 transition-colors underline decoration-dotted">
                               #{o.readableId || o.id.slice(0, 8)}
                             </span>
+                            {(() => {
+                              const rInfo = detectOrderRoute(o)
+                              return (
+                                <div 
+                                  className="relative inline-flex items-center"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <select
+                                    value={rInfo.key}
+                                    onChange={(e) => handleUpdateOrderRoute(o, e.target.value as DeliveryRouteKey, e)}
+                                    disabled={updatingRouteOrderId === o.id}
+                                    className={`appearance-none text-[8.5px] font-black pl-1.5 pr-3 py-0.5 rounded-md border cursor-pointer transition-all shadow-2xs hover:brightness-95 focus:outline-none focus:ring-1 focus:ring-amber-500/50 ${rInfo.colorBadgeClass}`}
+                                    title="Click to manually override delivery route (Hamirpur / Moosanagar / Kanpur / Jahanabad / Town Center)"
+                                  >
+                                    <option value="HAMIRPUR">🔴 Hamirpur Rd</option>
+                                    <option value="MOOSANAGAR">🟣 Moosanagar Rd</option>
+                                    <option value="KANPUR">🔵 Kanpur Rd</option>
+                                    <option value="JAHANABAD">🟢 Jahanabad Rd</option>
+                                    <option value="TOWN_CENTER">🟡 Town Center</option>
+                                  </select>
+                                  <span className="absolute right-1 text-[6.5px] pointer-events-none opacity-60">▼</span>
+                                </div>
+                              )
+                            })()}
                             {o.status === 'ADMIN_PENDING' && (
                               <span className="text-[8.5px] font-black px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1 shadow-2xs animate-pulse">
                                 🛡️ APPROVAL REQUIRED
@@ -1693,6 +1837,48 @@ export function OrdersTab({
                 </button>
               ))}
             </div>
+
+            {/* Ghatampur 4 Arterial Delivery Routes */}
+            <div className="flex items-center gap-1 flex-wrap w-full pt-1.5 border-t border-border/40">
+              <span className="text-[10px] font-black uppercase text-text-muted px-1">📍 Delivery Route:</span>
+              <button
+                type="button"
+                onClick={() => setOrderRouteFilter('ALL')}
+                className={`px-2.5 py-1 text-[9.5px] font-black rounded-lg transition-all cursor-pointer border ${
+                  orderRouteFilter === 'ALL'
+                    ? 'bg-primary text-white border-primary shadow-2xs'
+                    : 'bg-card border-border hover:bg-muted text-text-secondary'
+                }`}
+              >
+                🚀 All Routes
+              </button>
+              {(['HAMIRPUR', 'MOOSANAGAR', 'KANPUR', 'JAHANABAD'] as const).map((rKey) => {
+                const rInfo = DELIVERY_ROUTES[rKey]
+                const isSelected = orderRouteFilter === rKey
+                const count = activeRouteCounts[rKey] || 0
+                return (
+                  <button
+                    key={rKey}
+                    type="button"
+                    onClick={() => setOrderRouteFilter(rKey)}
+                    className={`px-2.5 py-1 text-[9.5px] font-black rounded-lg transition-all cursor-pointer border flex items-center gap-1.5 ${
+                      isSelected
+                        ? rInfo.activeButtonClass
+                        : 'bg-card border-border hover:bg-muted text-text-secondary'
+                    }`}
+                  >
+                    <span>{rInfo.emoji} {rInfo.label}</span>
+                    {count > 0 && (
+                      <span className={`px-1.5 py-0.2 rounded-full text-[8px] font-black ${
+                        isSelected ? 'bg-white/25 text-white' : 'bg-primary/10 text-primary'
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* History Orders - Mobile Card View */}
@@ -1723,6 +1909,7 @@ export function OrdersTab({
                   onPrintInvoice={printCustomerInvoice}
                   sendingKotIds={sendingKotIds}
                   printedKotIds={printedKotIds}
+                  onUpdateRoute={handleUpdateOrderRoute}
                 />
               ))
             )}

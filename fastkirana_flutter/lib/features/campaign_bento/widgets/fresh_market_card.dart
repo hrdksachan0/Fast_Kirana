@@ -260,55 +260,23 @@ class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
 // Panoramic Branded Header (Fruit Skyline + Cloud Typography)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _BloomPanoramicHeader extends StatelessWidget {
-  final String title;
-  const _BloomPanoramicHeader({this.title = 'Fresh Market'});
-
-  @override
-  Widget build(BuildContext context) {
-    final displayTitle = title.trim().isNotEmpty ? title : 'Fresh Market';
-    return SizedBox(
-      height: 76,
-      width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 1. Vector SVG Header Art (Pineapple, Orange, Dragonfruit, Lime & Sky)
-          const CampaignArtwork(
-            image: 'bloom-panoramic-header.svg',
-            width: double.infinity,
-            height: 76,
-            fit: BoxFit.cover,
-          ),
-
-          // 2. Fallback / Enhancing Cloud Typography
-          Positioned(
-            top: 8,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Text(
-                displayTitle,
-                style: GoogleFonts.quicksand(
-                  fontSize: displayTitle.length > 8 ? 20 : 24,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: -1.2,
-                  shadows: [
-                    Shadow(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.35),
-                      offset: const Offset(0, 3),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _BloomPanoramicHeader extends StatelessWidget {
+  final String title;
+  const _BloomPanoramicHeader({this.title = 'Fresh Market'});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 76,
+      width: double.infinity,
+      child: CampaignArtwork(
+        image: 'bloom-panoramic-header.svg',
+        width: double.infinity,
+        height: 76,
+        fit: BoxFit.cover,
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

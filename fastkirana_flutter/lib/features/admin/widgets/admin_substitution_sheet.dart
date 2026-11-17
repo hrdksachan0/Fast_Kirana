@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/design_system.dart';
+import '../../../../core/utils/app_toast.dart';
 import '../../../../data/models/order.dart';
 import '../../../../core/services/admin_notification_service.dart';
 import '../../../../core/utils/order_item_helper.dart';
@@ -110,9 +111,7 @@ class AdminSubstitutionSheet {
               onPressed: () {
                 final replacement = repController.text.trim();
                 if (replacement.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please enter replacement item name', style: GoogleFonts.inter(fontWeight: FontWeight.w700))),
-                  );
+                  AppToast.showWarning(context, 'Please enter replacement item name');
                   return;
                 }
                 Navigator.pop(ctx);

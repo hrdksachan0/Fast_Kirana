@@ -430,16 +430,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   }
 
   void _triggerContinuousRiderAlarm(Map<String, dynamic> newOrder) {
-    OrderAlarmService.instance.startRiderAlarm(
-      orderMap: newOrder,
-      context: mounted ? context : null,
-      onAccept: () async {
-        final orderId = (newOrder['id'] ?? newOrder['readableId'] ?? '').toString();
-        if (orderId.isNotEmpty) {
-          await _updateOrderStatus(orderId, 'SHIPPED');
-        }
-      },
-    );
+    // Subtle audio chime alert only - NO disruptive blocking dialogs!
+    OrderAlarmService.instance.playChime();
   }
 
   void _toggleDarkMode() async {
@@ -1453,8 +1445,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         .where((o) {
           if (o['status'] != 'SHIPPED' || _isSelfPickupOrder(o)) return false;
           final dId = o['deliveryUserId']?.toString();
-          if (dId != null && dId.isNotEmpty) {
-            return _isAssignedToMe(o);
+          if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) {
+            return false;
           }
           return true;
         })
@@ -1471,6 +1463,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             return false;
           }
           final dId = o['deliveryUserId']?.toString();
+          // Show if assigned to me, OR if unassigned in open pool so rider can pick it up!
           if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) {
             return false;
           }

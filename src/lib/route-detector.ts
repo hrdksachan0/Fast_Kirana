@@ -91,10 +91,41 @@ const JAHANABAD_KEYWORDS = [
 ]
 
 /**
+ * Formats order notes with a standardized route override marker.
+ */
+export function setRouteInNotes(existingNotes: string | null | undefined, routeKey: DeliveryRouteKey): string {
+  const cleaned = (existingNotes || '')
+    .replace(/\s*\|\s*ROUTE:[A-Z_]+(?=\s*\||$)/gi, '')
+    .replace(/ROUTE:[A-Z_]+/gi, '')
+    .trim()
+  if (routeKey === 'ALL') return cleaned
+  const marker = `ROUTE:${routeKey}`
+  return cleaned ? `${cleaned} | ${marker}` : marker
+}
+
+/**
  * Detects the route from order address strings and coordinates.
+ * Priority: Manual Admin Override in notes > Address text keywords > Coordinates > Fallback
  */
 export function detectOrderRoute(order: any): RouteInfo {
   if (!order) return DELIVERY_ROUTES.TOWN_CENTER
+
+  // 1. Explicit Admin manual override in notes or deliveryRoute property
+  let notesUpper = ((order.notes || '') + ' ' + (order.deliveryInstructions || '') + ' ' + (order.deliveryRoute || '')).toUpperCase()
+  if (Array.isArray(order.subOrders)) {
+    for (const sub of order.subOrders) {
+      notesUpper += ' ' + ((sub.notes || '') + ' ' + (sub.deliveryInstructions || '') + ' ' + (sub.deliveryRoute || '')).toUpperCase()
+    }
+  }
+  if (notesUpper.includes('ROUTE:HAMIRPUR')) return DELIVERY_ROUTES.HAMIRPUR
+  if (notesUpper.includes('ROUTE:MOOSANAGAR')) return DELIVERY_ROUTES.MOOSANAGAR
+  if (notesUpper.includes('ROUTE:KANPUR')) return DELIVERY_ROUTES.KANPUR
+  if (notesUpper.includes('ROUTE:JAHANABAD')) return DELIVERY_ROUTES.JAHANABAD
+  if (notesUpper.includes('ROUTE:TOWN_CENTER')) return DELIVERY_ROUTES.TOWN_CENTER
+
+  if (order.deliveryRoute && DELIVERY_ROUTES[order.deliveryRoute as keyof typeof DELIVERY_ROUTES]) {
+    return DELIVERY_ROUTES[order.deliveryRoute as keyof typeof DELIVERY_ROUTES]
+  }
 
   const addr = order.address || {}
   const rawText = [

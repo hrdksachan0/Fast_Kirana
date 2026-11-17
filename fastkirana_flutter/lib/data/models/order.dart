@@ -674,13 +674,26 @@ class OrderItem {
   String? get variant => selectedVariant ?? size ?? weight ?? unit;
 
   String? get displayVariantOrWeight {
-    if (selectedVariant != null && selectedVariant!.trim().isNotEmpty && selectedVariant != 'null') {
+    if (selectedVariant != null &&
+        selectedVariant!.trim().isNotEmpty &&
+        selectedVariant != 'null' &&
+        !OrderItemHelper.isVernacularOrDuplicateName(selectedVariant!, name)) {
       return selectedVariant!.trim();
     }
-    if (size != null && size!.trim().isNotEmpty && size != 'null') return size!.trim();
+    if (unit != null &&
+        unit!.trim().isNotEmpty &&
+        unit != 'null' &&
+        !OrderItemHelper.isVernacularOrDuplicateName(unit!, name)) {
+      return unit!.trim();
+    }
     if (weight != null && weight!.trim().isNotEmpty && weight != 'null') return weight!.trim();
-    if (unit != null && unit!.trim().isNotEmpty && unit != 'null') return unit!.trim();
-    final fallback = OrderItemHelper.resolveWeightOrVariant({'name': name}, name);
+    if (size != null &&
+        size!.trim().isNotEmpty &&
+        size != 'null' &&
+        !OrderItemHelper.isVernacularOrDuplicateName(size!, name)) {
+      return size!.trim();
+    }
+    final fallback = OrderItemHelper.resolveWeightOrVariant({'name': name, 'price': price}, name);
     return fallback.isNotEmpty ? fallback : null;
   }
 

@@ -10,6 +10,7 @@ import '../../../core/services/logger_service.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'order_recipient_helper.dart';
 import 'rider_cart_modal.dart';
+import '../../../core/utils/route_detector.dart';
 
 class RiderActiveDeliveryCard extends StatelessWidget {
   final Map<String, dynamic> order;
@@ -56,7 +57,16 @@ class RiderActiveDeliveryCard extends StatelessWidget {
     final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
     final isPaid = rawPayStatus == 'PAID';
     final isCod = rawPayMethod == 'COD' || rawPayMethod.isEmpty;
-    final items = (order['items'] as List<dynamic>?) ?? [];
+    final rawItems = (order['items'] as List<dynamic>?) ?? [];
+    final companionItems = (order['companionOrder'] is Map ? (order['companionOrder']['items'] as List<dynamic>?) : null) ?? [];
+    final subOrdersItems = (order['subOrders'] is List)
+        ? (order['subOrders'] as List).expand((sub) => (sub is Map && sub['items'] is List) ? (sub['items'] as List) : []).toList()
+        : [];
+    final items = [
+      ...rawItems,
+      ...companionItems,
+      if (rawItems.isEmpty) ...subOrdersItems,
+    ];
     final lat = (address?['lat'] as num?)?.toDouble() ?? AppConfig.darkstoreLat;
     final lng = (address?['lng'] as num?)?.toDouble() ?? AppConfig.darkstoreLng;
     final batch = order['batch'] is Map ? (order['batch'] as Map<String, dynamic>) : null;
@@ -88,6 +98,9 @@ class RiderActiveDeliveryCard extends StatelessWidget {
       } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
     }
     final orderTimeStr = DateFormat('hh:mm a').format(orderDate);
+    final elapsedMinutes = DateTime.now().difference(orderDate).inMinutes.clamp(0, 9999);
+    final isSlaUrgent = elapsedMinutes >= 20;
+    final isSlaWarning = elapsedMinutes >= 15 && elapsedMinutes < 20;
 
     String deliverAddress = '';
     if (address != null) {
@@ -126,12 +139,65 @@ class RiderActiveDeliveryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Ambient Green Top Strip
+          // Top SLA Strip
           Container(
-            height: 4,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [AppDesignSystem.success, AppDesignSystem.emerald600]),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: isSlaUrgent
+                  ? const Color(0xFFFEE2E2)
+                  : (isSlaWarning ? const Color(0xFFFEF3C7) : const Color(0xFFF0FDF4)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              border: Border(
+                bottom: BorderSide(
+                  color: isSlaUrgent
+                      ? const Color(0xFFFCA5A5)
+                      : (isSlaWarning ? const Color(0xFFFDE68A) : const Color(0xFFBBF7D0)),
+                  width: 0.8,
+                ),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: isSlaUrgent
+                            ? const Color(0xFFDC2626)
+                            : (isSlaWarning ? const Color(0xFFD97706) : AppDesignSystem.emerald600),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isSlaUrgent
+                          ? '⚠️ ${elapsedMinutes}m SLA OVERDUE • Deliver ASAP'
+                          : (isSlaWarning ? '⏱️ ${elapsedMinutes}m SLA Warning' : '⏱️ ${elapsedMinutes}m on trip • On Track'),
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontWeight: FontWeight.w900,
+                        color: isSlaUrgent
+                            ? const Color(0xFFB91C1C)
+                            : (isSlaWarning ? const Color(0xFFB45309) : const Color(0xFF047857)),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  orderTimeStr,
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 10),
+                    fontWeight: FontWeight.w700,
+                    color: isSlaUrgent
+                        ? const Color(0xFFB91C1C)
+                        : (isSlaWarning ? const Color(0xFFB45309) : AppDesignSystem.slate500),
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -190,30 +256,7 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                                 ],
                               ),
                             ),
-                          if (isBatch || effectiveTotal > 1)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('⚡', style: TextStyle(fontSize: 9.5)),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    '+₹${bonusEarning.toInt()} Batch Bonus',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 9),
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF047857),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+
                         ],
                       ),
                     ),
@@ -242,6 +285,26 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    Builder(builder: (context) {
+                      final rInfo = DeliveryRoutes.detect(order);
+                      return Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: rInfo.backgroundColor,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: rInfo.primaryColor.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          '${rInfo.emoji} ${rInfo.shortLabel}',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: rInfo.textColor,
+                          ),
+                        ),
+                      );
+                    }),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -431,51 +494,6 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                   ),
                 ),
 
-                // Batched Partner Order preview
-                if (partnerReadableId != null && partnerReadableId.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFBFDBFE), width: 1),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.alt_route_rounded, size: 14, color: Color(0xFF2563EB)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Batched with #$partnerReadableId${distanceMeters != null ? ' (~${distanceMeters}m away)' : ''}',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10),
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1D4ED8),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFF93C5FD)),
-                          ),
-                          child: Text(
-                            effectiveStop == 1 ? 'Stop 2 is Next' : 'Drop after Stop 1',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 9),
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF1E40AF),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
                 // Delivery Note callout if instructions are present
                 if (recipient.deliveryInstructions != null && recipient.deliveryInstructions!.isNotEmpty) ...[
                   const SizedBox(height: 6),
@@ -573,8 +591,6 @@ class RiderActiveDeliveryCard extends StatelessWidget {
                               color: AppDesignSystem.statusCancelledText,
                               height: 1.3,
                             ),
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

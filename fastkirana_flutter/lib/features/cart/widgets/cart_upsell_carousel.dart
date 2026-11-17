@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart';
 
@@ -220,7 +220,7 @@ class _CartUpsellCarouselState extends ConsumerState<CartUpsellCarousel> {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: Responsive.productShelfHeight(context),
+          height: hasFoodItem ? 228.0 : Responsive.productShelfHeight(context),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),

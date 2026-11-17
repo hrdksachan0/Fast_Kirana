@@ -1,12 +1,13 @@
 'use client'
-import { apiUrl, catalogApiUrl } from '@/lib/api-url';
+import { catalogApiUrl } from '@/lib/api-url';
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Search, X, TrendingUp, History, Loader2, Plus, Minus, Mic, MicOff, ArrowRight } from 'lucide-react'
+import { Search, X, TrendingUp, History, Loader2, Plus, Minus, Mic, MicOff, ArrowRight, ChevronRight } from 'lucide-react'
 import { useUIStore } from '@/stores/ui-store'
 import { useCart } from '@/hooks/use-cart'
+import { ProductCard } from '@/components/product/product-card'
 import { ProductImage } from '@/components/product/product-image'
 import { isCafeProduct, cn, getProductLimit, isProductStoreClosed } from '@/lib/utils'
 import { Product } from '@/types'
@@ -19,7 +20,76 @@ interface SearchOverlayProps {
   onClose: () => void
 }
 
-// Map category slugs to visual colors
+// ─── Typeahead Index Types ───
+interface TypeaheadTerm {
+  term: string
+  category: string
+  categorySlug: string
+}
+
+interface TypeaheadBrand {
+  name: string
+  imageUrl: string | null
+  count: number
+}
+
+interface TypeaheadProduct {
+  id: string
+  name: string
+  slug: string
+  imageUrl: string
+  price: number
+  mrp: number
+  discount: number
+  unit: string
+  stock: number
+  isAvailable: boolean
+  tags: string[]
+  restaurantId: string | null
+  variants: any
+  categoryName: string
+  categorySlug: string
+}
+
+interface TypeaheadIndex {
+  terms: TypeaheadTerm[]
+  brands: TypeaheadBrand[]
+  categories: { name: string; slug: string; imageUrl: string | null }[]
+  products: TypeaheadProduct[]
+}
+
+// ─── Singleton Typeahead Cache ───
+let _typeaheadCache: TypeaheadIndex | null = null
+let _typeaheadFetchPromise: Promise<TypeaheadIndex> | null = null
+let _typeaheadFetchedAt = 0
+const TYPEAHEAD_TTL = 5 * 60 * 1000 // 5 minutes
+
+async function getTypeaheadIndex(storeId?: string): Promise<TypeaheadIndex> {
+  const now = Date.now()
+  if (_typeaheadCache && now - _typeaheadFetchedAt < TYPEAHEAD_TTL) {
+    return _typeaheadCache
+  }
+  if (_typeaheadFetchPromise) return _typeaheadFetchPromise
+
+  const storeParam = storeId ? `?storeId=${encodeURIComponent(storeId)}` : ''
+  _typeaheadFetchPromise = fetch(`${catalogApiUrl()}/api/typeahead${storeParam}`)
+    .then(res => res.json())
+    .then(data => {
+      _typeaheadCache = data as TypeaheadIndex
+      _typeaheadFetchedAt = Date.now()
+      _typeaheadFetchPromise = null
+      return _typeaheadCache
+    })
+    .catch(err => {
+      console.error('[Typeahead] Failed to load index:', err)
+      _typeaheadFetchPromise = null
+      return { terms: [], brands: [], categories: [], products: [] } as TypeaheadIndex
+    })
+
+  return _typeaheadFetchPromise
+}
+
+// ─── Map category slugs to visual colors ───
 const CATEGORY_COLORS: Record<string, { bg: string; gradient: string }> = {
   'fruits-vegetables': { bg: 'bg-emerald-50', gradient: 'from-emerald-100 to-emerald-50' },
   'dairy-breakfast': { bg: 'bg-blue-50', gradient: 'from-blue-100 to-blue-50' },
@@ -35,14 +105,14 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<Product[]>([])
   const [selectedIndex, setSelectedIndex] = useState<number>(-1)
   const [loading, setLoading] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = useRef<any>(null)
-  const searchCacheRef = useRef<Map<string, Product[]>>(new Map())
-  const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Typeahead state
+  const [typeaheadIndex, setTypeaheadIndex] = useState<TypeaheadIndex | null>(null)
 
   // Lock body scroll when search overlay is open
   useEffect(() => {
@@ -57,20 +127,16 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   }, [open])
 
   const activeStoreId = useUIStore((s) => s.activeStoreId)
-  const [categories, setCategories] = useState<any[]>([])
   const [trendingSearches, setTrendingSearches] = useState<string[]>([])
 
+  // Load typeahead index on overlay open
   useEffect(() => {
-    // Fetch categories
-    fetch(`${catalogApiUrl()}/api/categories`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setCategories(data)
-        }
-      })
-      .catch((err) => console.error('Failed to fetch categories:', err))
+    if (open) {
+      getTypeaheadIndex(activeStoreId || undefined).then(setTypeaheadIndex)
+    }
+  }, [open, activeStoreId])
 
+  useEffect(() => {
     // Fetch trending searches (products scoped to active store)
     const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
     fetch(`${catalogApiUrl()}/api/products?trending=true${storeParam}`)
@@ -197,93 +263,89 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   useEffect(() => {
     if (!open) {
       setQuery('')
-      setSuggestions([])
     }
   }, [open])
 
-  // Fetch suggestions with fast 180ms debounce + client-side memory cache + AbortController
-  useEffect(() => {
+  // ─── BLINKIT-STYLE: Client-side instant typeahead matching ───
+  const typeaheadResults = useMemo(() => {
     const cleanQuery = query.trim().toLowerCase()
-    if (cleanQuery.length < 2) {
-      setSuggestions([])
-      setLoading(false)
-      return
-    }
+    if (cleanQuery.length < 1 || !typeaheadIndex) return null
 
-    // Instant Cache Hit (0ms)
-    const cacheKey = `${cleanQuery}:${activeStoreId || 'all'}`
-    if (searchCacheRef.current.has(cacheKey)) {
-      setSuggestions(searchCacheRef.current.get(cacheKey)!)
-      setLoading(false)
-      return
-    }
+    const { terms, brands, products } = typeaheadIndex
 
-    // Cancel any previous in-flight fetch
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-    const controller = new AbortController()
-    abortControllerRef.current = controller
+    // 1. Text suggestions — prefix match on product names
+    const textSuggestions: { term: string; category: string; type: 'product' | 'brand' | 'category' }[] = []
+    const seenTerms = new Set<string>()
 
-    const debounceMs = cleanQuery.length <= 2 ? 180 : 100
-    const handler = setTimeout(async () => {
-      setLoading(true)
-      try {
-        const storeParam = activeStoreId ? `&storeId=${encodeURIComponent(activeStoreId)}` : ''
-        const res = await fetch(`${catalogApiUrl()}/api/products?search=${encodeURIComponent(query)}&limit=50${storeParam}`, {
-          signal: controller.signal
-        })
-        if (res.ok) {
-          const data = await res.json()
-          const items = data.products || []
-          searchCacheRef.current.set(cacheKey, items)
-          setSuggestions(items)
-          setSelectedIndex(-1)
-        }
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') {
-          console.error('Failed to fetch search suggestions:', err)
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false)
-        }
+    // Brand matches first
+    for (const brand of brands) {
+      if (brand.name.toLowerCase().startsWith(cleanQuery) && !seenTerms.has(brand.name.toLowerCase())) {
+        textSuggestions.push({ term: brand.name, category: `${brand.count} products`, type: 'brand' })
+        seenTerms.add(brand.name.toLowerCase())
+        if (textSuggestions.length >= 2) break
       }
-    }, debounceMs)
-
-    return () => {
-      clearTimeout(handler)
-      controller.abort()
     }
-  }, [query, activeStoreId])
 
-  // Keyboard navigation (Escape, ArrowUp, ArrowDown, Enter)
+    // Product name matches
+    for (const t of terms) {
+      if (textSuggestions.length >= 6) break
+      const tLower = t.term.toLowerCase()
+      if (tLower.includes(cleanQuery) && !seenTerms.has(tLower)) {
+        textSuggestions.push({ term: t.term, category: t.category, type: 'product' })
+        seenTerms.add(tLower)
+      }
+    }
+
+    // Category matches
+    for (const cat of typeaheadIndex.categories) {
+      if (textSuggestions.length >= 7) break
+      if (cat.name.toLowerCase().includes(cleanQuery) && !seenTerms.has(cat.name.toLowerCase())) {
+        textSuggestions.push({ term: cat.name, category: 'Category', type: 'category' })
+        seenTerms.add(cat.name.toLowerCase())
+      }
+    }
+
+    // 2. Product matches — for inline 3-per-row grid
+    const matchedProducts = products.filter(p => {
+      const pName = p.name.toLowerCase()
+      const pTags = (p.tags || []).map(t => t.toLowerCase())
+      return pName.includes(cleanQuery) || pTags.some(t => t.includes(cleanQuery))
+    })
+
+    // Sort: in-stock first, then by relevance (starts-with > contains)
+    matchedProducts.sort((a, b) => {
+      const aInStock = a.isAvailable && a.stock > 0 ? 1 : 0
+      const bInStock = b.isAvailable && b.stock > 0 ? 1 : 0
+      if (aInStock !== bInStock) return bInStock - aInStock
+
+      const aStartsWith = a.name.toLowerCase().startsWith(cleanQuery) ? 1 : 0
+      const bStartsWith = b.name.toLowerCase().startsWith(cleanQuery) ? 1 : 0
+      if (aStartsWith !== bStartsWith) return bStartsWith - aStartsWith
+
+      return 0
+    })
+
+    return {
+      textSuggestions: textSuggestions.slice(0, 6),
+      products: matchedProducts.slice(0, 12), // Max 12 products (4 rows of 3)
+      totalMatches: matchedProducts.length,
+    }
+  }, [query, typeaheadIndex])
+
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!open) return
       if (e.key === 'Escape') {
         onClose()
-      } else if (e.key === 'ArrowDown') {
-        if (suggestions.length > 0) {
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0))
-        }
-      } else if (e.key === 'ArrowUp') {
-        if (suggestions.length > 0) {
-          e.preventDefault()
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1))
-        }
-      } else if (e.key === 'Enter' && selectedIndex >= 0 && suggestions[selectedIndex]) {
+      } else if (e.key === 'Enter' && query.trim()) {
         e.preventDefault()
-        const selected = suggestions[selectedIndex]
-        saveSearchTerm(selected.name)
-        router.push(`/product/${selected.slug}`)
-        onClose()
+        handleSearch(query)
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose, suggestions, selectedIndex, router, saveSearchTerm])
+  }, [open, onClose, query])
 
   const handleSearch = useCallback(
     (searchQuery: string) => {
@@ -311,7 +373,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     onClose()
   }
 
-  const handleAddProduct = (e: React.MouseEvent, product: Product) => {
+  const handleAddProduct = (e: React.MouseEvent, product: TypeaheadProduct | Product) => {
     e.preventDefault()
     e.stopPropagation()
     
@@ -331,16 +393,29 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
       unit: product.unit,
       stock: product.stock,
       isAvailable: product.isAvailable,
-      category: product.category,
-      tags: product.tags,
+      category: { slug: (product as any).categorySlug || (product as any).category?.slug || '' },
+      tags: product.tags || [],
       restaurantId: (product as any).restaurantId || (product as any).restaurant?.id,
       restaurantName: (product as any).restaurantName || (product as any).restaurant?.name,
       restaurant: (product as any).restaurant,
       menuSection: (product as any).menuSection || null,
     }
     
-    addItem(cartProduct)
+    addItem(cartProduct as any)
     saveSearchTerm(product.name)
+  }
+
+  // ─── Highlight matching text in suggestions ───
+  const highlightMatch = (text: string, query: string) => {
+    const idx = text.toLowerCase().indexOf(query.toLowerCase())
+    if (idx === -1) return <span>{text}</span>
+    return (
+      <>
+        <span>{text.slice(0, idx)}</span>
+        <span className="font-black text-text-primary">{text.slice(idx, idx + query.length)}</span>
+        <span>{text.slice(idx + query.length)}</span>
+      </>
+    )
   }
 
   return (
@@ -378,8 +453,14 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                   className="w-full pl-10 pr-12 py-3 bg-zinc-50/60 dark:bg-white/[0.03] border border-zinc-200/80 dark:border-white/[0.08] rounded-xl text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:bg-white/80 focus:dark:bg-black/45 focus:border-primary/45 focus:ring-4 focus:ring-primary/5 transition-all font-bold shadow-inner"
                 />
                 <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  {query.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setQuery('')}
+                      className="h-7 w-7 rounded-lg flex items-center justify-center text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900/60 hover:text-text-primary transition-all cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   ) : (
                     <button
                       type="button"
@@ -407,203 +488,123 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             </div>
 
             {/* Content area */}
-            <div className="flex-1 overflow-y-auto p-4 pb-36 space-y-6">
-              {query.trim().length >= 2 ? (
-                /* Dynamic Matches */
-                suggestions.length > 0 ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-black uppercase tracking-wider text-text-muted">
-                        Quick Matches
-                      </h3>
-                      {loading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                    </div>
-                    <div className="divide-y divide-border/40 overflow-hidden rounded-2xl border border-border/60 bg-card/60 shadow-sm glass">
-                      {suggestions.map((product, idx) => {
-                        const quantity = getItemQuantity(product.id)
-                        const isStoreClosed = isProductStoreClosed(
-                          product,
-                          { groceryMartOpen, cafeOpen, restaurantOpen },
-                          categoryStatus
-                        )
-
-                        const normalizedVariants = (() => {
-                          if (!product.variants) return []
-                          if (Array.isArray(product.variants)) return product.variants
-                          if (typeof product.variants === 'string') {
-                            try {
-                              const parsed = JSON.parse(product.variants)
-                              if (Array.isArray(parsed)) return parsed
-                            } catch {}
-                          }
-                          return []
-                        })()
-                        const hasVariants = normalizedVariants.length > 0
-                        const totalVariantStock = hasVariants ? normalizedVariants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0) : product.stock
-                        const isProductSoldOut = product.isAvailable === false || (hasVariants ? totalVariantStock <= 0 : product.stock <= 0)
-
-                        return (
-                          <div
-                            key={product.id}
-                            className={cn(
-                              "flex items-center justify-between p-3 transition-colors hover:bg-muted/40",
-                              selectedIndex === idx && "bg-primary/10 border-l-4 border-l-primary dark:bg-primary/20",
-                              isProductSoldOut && "opacity-80"
-                            )}
+            <div className="flex-1 overflow-y-auto pb-36">
+              {query.trim().length >= 1 && typeaheadResults ? (
+                /* ─── BLINKIT-STYLE: Text Suggestions + Product Grid ─── */
+                typeaheadResults.textSuggestions.length > 0 || typeaheadResults.products.length > 0 ? (
+                  <div>
+                    {/* Zone 1: Text Autocomplete Suggestions (Instant, Blinkit-style) */}
+                    {typeaheadResults.textSuggestions.length > 0 && (
+                      <div className="border-b border-zinc-100 dark:border-zinc-800">
+                        {typeaheadResults.textSuggestions.map((suggestion, idx) => (
+                          <button
+                            key={`${suggestion.term}-${idx}`}
+                            onClick={() => {
+                              if (suggestion.type === 'category') {
+                                const cat = typeaheadIndex?.categories.find(c => c.name === suggestion.term)
+                                if (cat) {
+                                  handleCategoryClick(cat.slug)
+                                  return
+                                }
+                              }
+                              setQuery(suggestion.term)
+                              handleSearch(suggestion.term)
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 active:bg-zinc-100 transition-colors cursor-pointer border-b border-zinc-50 dark:border-zinc-900 last:border-b-0"
                           >
-                            {/* Left: Thumbnail Image & Info Clickable */}
-                            <button
-                              onClick={() => {
-                                saveSearchTerm(product.name)
-                                router.push(`/product/${product.slug}`)
-                                onClose()
-                              }}
-                              className="flex flex-1 items-center gap-3 text-left min-w-0 mr-4 cursor-pointer"
-                            >
-                              <div className="relative h-12 w-12 rounded-xl border border-border/40 bg-muted/30 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                <ProductImage
-                                  src={product.imageUrl}
-                                  alt={product.name}
-                                  categorySlug={product.category?.slug}
-                                  width={150}
-                                  className={cn("h-full w-full object-contain", isProductSoldOut && "grayscale opacity-60")}
-                                />
-                                {isProductSoldOut && (
-                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                    <span className="text-[7px] font-black text-white bg-rose-600/90 px-1 py-0.5 rounded uppercase tracking-tighter">
-                                      Out
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <h4 className="text-xs sm:text-sm font-extrabold text-text-primary line-clamp-2 leading-snug">
-                                  {product.name}
-                                </h4>
-                                <span className="text-[10px] text-text-muted font-bold block">
-                                  {product.unit}
-                                </span>
-                                {(product.restaurantId || (product as any).restaurant?.id || (product as any).restaurantName) ? (
-                                  <span className={cn(
-                                    "inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-md mt-1 border",
-                                    getOutletName(product).includes('Wedson')
-                                      ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30"
-                                      : getOutletName(product).includes('Bal Udyan')
-                                      ? "text-purple-700 dark:text-purple-300 bg-purple-500/10 border-purple-500/30"
-                                      : getOutletName(product).includes('Pizza')
-                                      ? "text-rose-700 dark:text-rose-300 bg-rose-500/10 border-rose-500/30"
-                                      : "text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30"
-                                  )}>
-                                    {getOutletName(product).includes('Pizza') ? '🍕' : '🍳'} {getOutletName(product)}
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-[8.5px] font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded mt-1 border border-zinc-200 dark:border-zinc-700">
-                                    🛒 FastMinute Grocery
-                                  </span>
-                                )}
-                                
-                                {/* Pricing */}
-                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                  <span className="text-xs sm:text-sm font-black text-text-primary">
-                                    ₹{product.price}
-                                  </span>
-                                  {product.mrp > product.price && (
-                                    <>
-                                      <span className="text-[10px] text-text-muted line-through font-bold">
-                                        ₹{product.mrp}
-                                      </span>
-                                      <span className="bg-[#fff1ed] text-[#ff6f3b] text-[8px] font-black px-1.5 py-0.5 rounded">
-                                        {product.discount}% OFF
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
-
-                            {/* Right: Inline Quick ADD button */}
-                            <div className="relative h-8 w-20 sm:w-24 flex-shrink-0">
-                              {isProductSoldOut ? (
-                                <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 dark:text-zinc-500 text-[10px] sm:text-[11px] font-bold rounded-xl border border-zinc-200/80 dark:border-zinc-700/60 flex items-center justify-center select-none cursor-not-allowed">
-                                  Sold Out
-                                </div>
-                              ) : isStoreClosed ? (
-                                <div className="w-full h-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] sm:text-[11px] font-bold rounded-xl border border-amber-500/20 flex items-center justify-center select-none cursor-not-allowed">
-                                  Closed
-                                </div>
-                              ) : hasVariants ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    setActiveVariantProduct({ ...product, variants: normalizedVariants })
-                                  }}
-                                  className="w-full h-full border border-primary/60 bg-white dark:bg-zinc-900 text-primary hover:bg-primary hover:text-white text-[10px] sm:text-xs font-black rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xs animate-pulse-gentle"
-                                >
-                                  Options
-                                </button>
-                              ) : quantity === 0 ? (
-                                <button
-                                  onClick={(e) => handleAddProduct(e, product)}
-                                  className="w-full h-full border border-primary bg-white dark:bg-zinc-900 text-primary hover:bg-primary hover:text-white text-[11px] sm:text-xs font-black rounded-xl transition-all duration-200 flex items-center justify-center gap-0.5 cursor-pointer shadow-xs"
-                                >
-                                  + ADD
-                                </button>
+                            {/* Icon */}
+                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                              {suggestion.type === 'brand' ? (
+                                <span className="text-sm">🏷️</span>
+                              ) : suggestion.type === 'category' ? (
+                                <span className="text-sm">📂</span>
                               ) : (
-                                <div className="flex h-full w-full items-center justify-between rounded-xl bg-gradient-to-r from-[#2e7d32] to-[#1b5e20] text-white font-extrabold overflow-hidden shadow-xs">
-                                  <button
-                                    onClick={() => updateQuantity(product.id, product.name, quantity - 1)}
-                                    className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all cursor-pointer"
-                                    aria-label="Decrease quantity"
-                                  >
-                                    <Minus className="h-3 w-3 stroke-[3]" />
-                                  </button>
-                                  <span className="w-5 sm:w-6 shrink-0 flex items-center justify-center text-[10px] sm:text-xs font-black select-none h-full bg-[#2e7d32] border-x border-white/20">
-                                    {quantity}
-                                  </span>
-                                  <button
-                                    onClick={() => updateQuantity(product.id, product.name, quantity + 1)}
-                                    disabled={product.stock > 0 && quantity >= product.stock}
-                                    className="flex-1 flex h-full items-center justify-center hover:bg-black/10 active:scale-90 transition-all disabled:opacity-50 cursor-pointer"
-                                    aria-label="Increase quantity"
-                                  >
-                                    <Plus className="h-3 w-3 stroke-[3]" />
-                                  </button>
-                                </div>
+                                <Search className="h-3.5 w-3.5 text-zinc-400" />
                               )}
                             </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {/* View full search results button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        saveSearchTerm(query)
-                        router.push(`/search?q=${encodeURIComponent(query.trim())}`)
-                        onClose()
-                      }}
-                      className="w-full py-2.5 px-4 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs flex items-center justify-between transition-all duration-200 cursor-pointer shadow-xs active:scale-[0.99]"
-                    >
-                      <span>View all results for &ldquo;{query}&rdquo;</span>
-                      <span className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider">
-                        Full Search <ArrowRight className="h-3.5 w-3.5" />
-                      </span>
-                    </button>
+
+                            {/* Text */}
+                            <div className="flex-1 min-w-0 text-left">
+                              <p className="text-[13px] font-bold text-text-primary truncate leading-snug">
+                                {highlightMatch(suggestion.term, query.trim())}
+                              </p>
+                              {suggestion.category && (
+                                <p className="text-[10px] text-text-muted font-semibold truncate">
+                                  {suggestion.type === 'brand' ? `${suggestion.category}` : suggestion.category}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Arrow */}
+                            <ChevronRight className="h-3.5 w-3.5 text-zinc-300 dark:text-zinc-600 flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Zone 2: Product Grid — 3 per row (Blinkit-style) */}
+                    {typeaheadResults.products.length > 0 && (
+                      <div className="p-3">
+                        {/* Results header */}
+                        <div className="flex items-center justify-between mb-2.5 px-1">
+                          <p className="text-[11px] text-text-muted font-bold">
+                            Showing {Math.min(typeaheadResults.products.length, 12)} of {typeaheadResults.totalMatches} items for &ldquo;{query.trim()}&rdquo;
+                          </p>
+                          {typeaheadResults.totalMatches > 12 && (
+                            <button
+                              onClick={() => handleSearch(query)}
+                              className="text-[11px] font-black text-primary flex items-center gap-0.5 cursor-pointer"
+                            >
+                              View all <ArrowRight className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* 3-per-row product grid */}
+                        <div 
+                          onClickCapture={(e) => {
+                            const target = e.target as HTMLElement
+                            const anchor = target.closest('a')
+                            if (anchor && anchor.getAttribute('href')?.startsWith('/product/')) {
+                              onClose()
+                            }
+                          }}
+                          className="grid grid-cols-3 gap-2"
+                        >
+                          {typeaheadResults.products.map((product) => (
+                            <ProductCard key={product.id} product={product as any} isCompact />
+                          ))}
+                        </div>
+
+                        {/* View all results button */}
+                        {typeaheadResults.totalMatches > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => handleSearch(query)}
+                            className="w-full mt-3 py-2.5 px-4 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs flex items-center justify-between transition-all duration-200 cursor-pointer shadow-xs active:scale-[0.99]"
+                          >
+                            <span>View all results for &ldquo;{query.trim()}&rdquo;</span>
+                            <span className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider">
+                              Full Search <ArrowRight className="h-3.5 w-3.5" />
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  !loading && (
+                  /* No results */
+                  <div className="p-4">
                     <div className="text-center py-8 px-4 rounded-2xl border border-border/60 bg-muted/20">
                       <span className="text-3xl">🔍</span>
                       <h4 className="text-sm font-bold text-text-primary mt-2">No matching products found</h4>
                       <p className="text-xs text-text-muted mt-1">Try searching for other terms or browse categories below</p>
                     </div>
-                  )
+                  </div>
                 )
               ) : (
-                /* History and Suggestions */
-                <>
+                /* ─── Empty State: History + Trending + Categories ─── */
+                <div className="p-4 space-y-6">
                   {/* Recent Searches */}
                   {recentSearches.length > 0 && (
                     <div>
@@ -662,64 +663,66 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                   </div>
 
                   {/* Popular categories */}
-                  <div>
-                    <h3 className="text-sm font-bold text-text-primary mb-3">
-                      Popular Categories
-                    </h3>
-                    <div
-                      className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
-                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                    >
-                      {categories.map((category) => {
-                        const colors = CATEGORY_COLORS[category.slug] || {
-                          bg: 'bg-zinc-50',
-                          gradient: 'from-zinc-100 to-zinc-50',
-                        }
-                        const hasImage = category.imageUrl && (
-                          category.imageUrl.startsWith('data:image/') ||
-                          category.imageUrl.startsWith('/') ||
-                          category.imageUrl.startsWith('http')
-                        )
-                        return (
-                          <button
-                            key={category.slug}
-                            onClick={() => handleCategoryClick(category.slug)}
-                            className="flex flex-col items-center gap-1.5 flex-shrink-0 group cursor-pointer"
-                          >
-                            <div
-                              className={`flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br ${colors.gradient} shadow-sm group-hover:scale-110 transition-transform duration-300 overflow-hidden relative`}
+                  {typeaheadIndex && typeaheadIndex.categories.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-bold text-text-primary mb-3">
+                        Popular Categories
+                      </h3>
+                      <div
+                        className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                      >
+                        {typeaheadIndex.categories.map((category) => {
+                          const colors = CATEGORY_COLORS[category.slug] || {
+                            bg: 'bg-zinc-50',
+                            gradient: 'from-zinc-100 to-zinc-50',
+                          }
+                          const hasImage = category.imageUrl && (
+                            category.imageUrl.startsWith('data:image/') ||
+                            category.imageUrl.startsWith('/') ||
+                            category.imageUrl.startsWith('http')
+                          )
+                          return (
+                            <button
+                              key={category.slug}
+                              onClick={() => handleCategoryClick(category.slug)}
+                              className="flex flex-col items-center gap-1.5 flex-shrink-0 group cursor-pointer"
                             >
-                              {hasImage ? (
-                                <img
-                                  src={category.imageUrl}
-                                  alt={category.name}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <span className="text-2xl" role="img" aria-label={category.name}>
-                                  {category.imageUrl && category.imageUrl.length < 5 ? category.imageUrl : '🛒'}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] font-bold text-text-primary group-hover:text-primary transition-colors text-center leading-tight w-16 line-clamp-2">
-                              {category.name}
-                            </span>
-                          </button>
-                        )
-                      })}
+                              <div
+                                className={`flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br ${colors.gradient} shadow-sm group-hover:scale-110 transition-transform duration-300 overflow-hidden relative`}
+                              >
+                                {hasImage ? (
+                                  <img
+                                    src={category.imageUrl!}
+                                    alt={category.name}
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <span className="text-2xl" role="img" aria-label={category.name}>
+                                    {category.imageUrl && category.imageUrl.length < 5 ? category.imageUrl : '🛒'}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-text-primary group-hover:text-primary transition-colors text-center leading-tight w-16 line-clamp-2">
+                                {category.name}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
+                  )}
 
-              {/* Quick tips */}
-              <div className="rounded-xl bg-accent/5 border border-accent/10 p-3">
-                <p className="text-xs text-text-secondary">
-                  💡 <span className="font-medium text-text-primary">Pro tip:</span>{' '}
-                  Type a brand name or product to quickly find what you need. We deliver fast to your doorstep!
-                </p>
-              </div>
+                  {/* Quick tips */}
+                  <div className="rounded-xl bg-accent/5 border border-accent/10 p-3">
+                    <p className="text-xs text-text-secondary">
+                      💡 <span className="font-medium text-text-primary">Pro tip:</span>{' '}
+                      Type a brand name or product to quickly find what you need. We deliver fast to your doorstep!
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </>

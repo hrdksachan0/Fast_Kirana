@@ -3,6 +3,7 @@
 import React from 'react'
 import { Loader2, MessageSquare, Share2, Printer, FileText } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
+import { detectOrderRoute } from '@/lib/route-detector'
 
 interface MobileOrderCardProps {
   order: any
@@ -26,6 +27,7 @@ interface MobileOrderCardProps {
   fifoRank?: number | null
   storeRiders?: any[]
   onAssignRider?: (order: any, riderId: string) => void
+  onUpdateRoute?: (order: any, routeKey: any) => void
 }
 
 export function MobileOrderCard({
@@ -50,6 +52,7 @@ export function MobileOrderCard({
   fifoRank,
   storeRiders,
   onAssignRider,
+  onUpdateRoute,
 }: MobileOrderCardProps) {
   const isRest = o.restaurantId || o.orderType === 'RESTAURANT' || o.isCombined
   const isKotPrinted = printedKotIds.has(o.id) || o.subOrders?.some((s: any) => printedKotIds.has(s.id))
@@ -94,6 +97,27 @@ export function MobileOrderCard({
             <span className="font-mono font-black text-sm text-text-primary tracking-tight">
               #{o.readableId || o.id.slice(0, 8)}
             </span>
+            {(() => {
+              const rInfo = detectOrderRoute(o)
+              return (
+                <select
+                  value={rInfo.key}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    e.stopPropagation()
+                    onUpdateRoute?.(o, e.target.value)
+                  }}
+                  className={`text-[8.5px] font-black px-1.5 py-0.5 rounded-md border cursor-pointer outline-none ${rInfo.colorBadgeClass}`}
+                  title="Click to manually change Delivery Route"
+                >
+                  <option value="HAMIRPUR">🔴 Hamirpur Rd</option>
+                  <option value="MOOSANAGAR">🟣 Moosanagar Rd</option>
+                  <option value="KANPUR">🔵 Kanpur Rd</option>
+                  <option value="JAHANABAD">🟢 Jahanabad Rd</option>
+                  <option value="TOWN_CENTER">🟡 Town Center</option>
+                </select>
+              )
+            })()}
             {fifoRank && fifoRank <= 3 && (
               <span className={`text-[8.5px] font-black px-1.5 py-0.5 rounded-full ${
                 fifoRank === 1 
@@ -267,6 +291,44 @@ export function MobileOrderCard({
         </select>
       </div>
 
+      {/* ── Verification Call Quick-Road Selector (Only when ADMIN_PENDING) ── */}
+      {o.status === 'ADMIN_PENDING' && (
+        <div className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/25 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between text-[9.5px] font-black text-violet-700 dark:text-violet-300 uppercase tracking-wider">
+            <span>📞 Customer Verification Route</span>
+            <span className="text-[8px] bg-violet-500/20 px-1.5 py-0.5 rounded">1-Tap Verify</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { key: 'HAMIRPUR', label: '🔴 Hamirpur Rd', bg: 'bg-rose-500 hover:bg-rose-600' },
+              { key: 'MOOSANAGAR', label: '🟣 Moosanagar Rd', bg: 'bg-purple-600 hover:bg-purple-700' },
+              { key: 'KANPUR', label: '🔵 Kanpur Rd', bg: 'bg-blue-600 hover:bg-blue-700' },
+              { key: 'JAHANABAD', label: '🟢 Jahanabad Rd', bg: 'bg-emerald-600 hover:bg-emerald-700' },
+            ].map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => {
+                  o.selectedDeliveryRoute = r.key
+                  if (o.isCombined && o.subOrders?.length > 0) {
+                    o.subOrders.forEach((s: any) => {
+                      s.selectedDeliveryRoute = r.key
+                      onUpdateOrderStatus(s.id, 'PENDING')
+                    })
+                  } else {
+                    onUpdateOrderStatus(o.id, 'PENDING')
+                  }
+                }}
+                disabled={isUpdating}
+                className={`py-1 px-2 text-[10px] font-black text-white rounded-lg transition-all active:scale-95 shadow-2xs cursor-pointer text-center ${r.bg}`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Bottom Row: Primary Action & Quick Function Buttons ── */}
       <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-border/40" onClick={(e) => e.stopPropagation()}>
         {/* Step Forward Action Button */}
@@ -275,7 +337,11 @@ export function MobileOrderCard({
             type="button"
             onClick={() => {
               if (action.nextStatus) {
-                onUpdateOrderStatus(o.id, action.nextStatus)
+                if (o.isCombined && o.subOrders?.length > 0) {
+                  o.subOrders.forEach((s: any) => onUpdateOrderStatus(s.id, action.nextStatus))
+                } else {
+                  onUpdateOrderStatus(o.id, action.nextStatus)
+                }
               }
             }}
             disabled={isUpdating || !action.nextStatus}

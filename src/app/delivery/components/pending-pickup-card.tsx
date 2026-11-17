@@ -1,7 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Phone, ShoppingBag, Navigation, Clock, Loader2 } from 'lucide-react'
+import { MapPin, Phone, ShoppingBag, Navigation, Clock, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatPrice, formatPhone, formatAddress } from '@/lib/utils'
 import { parseOrderRecipient } from '../recipient-helper'
 import { detectOrderRoute } from '@/lib/route-detector'
@@ -23,6 +24,7 @@ export default function PendingPickupCard({
   updatingId,
   onUpdateStatus,
 }: PendingPickupCardProps) {
+  const [showAllItems, setShowAllItems] = useState(false)
   const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
   const routeInfo = detectOrderRoute(order)
   
@@ -215,79 +217,134 @@ export default function PendingPickupCard({
           </div>
         </div>
 
-        {/* 6. Items preview */}
+        {/* 6. Product Items List with Images & Quantity Badges */}
         {allItems.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-            <ShoppingBag className="h-3.5 w-3.5 text-text-muted mr-0.5" />
-            {previewItems.map((item: any, idx: number) => (
-              <span 
-                key={item.id || idx} 
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
-                  item.isCompanion 
-                    ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20' 
-                    : 'bg-secondary/60 text-text-secondary border-border/40'
-                }`}
-              >
-                {item.quantity}× {item.name}
+          <div className="space-y-2 border-t border-border/40 pt-3">
+            <div className="flex items-center justify-between text-xs font-black text-text-primary">
+              <span className="flex items-center gap-1.5">
+                <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                Items to Collect ({allItems.length})
               </span>
-            ))}
-            {remainingItemsCount > 0 && (
-              <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-secondary text-text-muted border border-border/30">
-                +{remainingItemsCount} more
-              </span>
-            )}
+              {allItems.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllItems((prev) => !prev)}
+                  className="text-[11px] font-bold text-primary hover:underline cursor-pointer flex items-center gap-0.5"
+                >
+                  {showAllItems ? (
+                    <>
+                      <span>Show Less</span>
+                      <ChevronUp className="h-3 w-3" />
+                    </>
+                  ) : (
+                    <>
+                      <span>View All ({allItems.length})</span>
+                      <ChevronDown className="h-3 w-3" />
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              {(showAllItems ? allItems : allItems.slice(0, 2)).map((item: any, idx: number) => {
+                const imgUrl = item.imageUrl || item.image || item.product?.imageUrl || item.product?.image
+                const unit = item.unit || item.variantTitle || item.variant?.name
+                return (
+                  <div
+                    key={item.id || idx}
+                    className={`flex items-center justify-between p-2 rounded-xl border gap-2.5 transition-all ${
+                      item.isCompanion
+                        ? 'bg-purple-500/5 border-purple-500/20'
+                        : 'bg-secondary/40 border-border/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {/* Product Thumbnail with Overlay Quantity */}
+                      <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-muted/60 border border-border/50 shrink-0 flex items-center justify-center shadow-2xs">
+                        {imgUrl ? (
+                          <img src={imgUrl} alt={item.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-base">{item.isCompanion || isRestaurant ? '🍲' : '📦'}</span>
+                        )}
+                        <span className="absolute bottom-0 right-0 bg-black/80 text-white font-mono text-[9px] font-black px-1 rounded-tl">
+                          {item.quantity}x
+                        </span>
+                      </div>
+
+                      {/* Title & Unit */}
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-text-primary truncate">
+                          {item.isCompanion && <span className="text-purple-600 dark:text-purple-400 mr-1">🍽️</span>}
+                          {item.name}
+                        </div>
+                        {unit && (
+                          <div className="text-[10px] text-text-muted font-medium truncate">
+                            {unit}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Price */}
+                    <div className="text-xs font-black text-text-primary shrink-0">
+                      {formatPrice((item.price || 0) * (item.quantity || 1))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
-        {/* 7. Footer */}
-        <div className="pt-3 border-t border-border/40 flex items-center justify-between gap-3">
-          <div>
+        {/* 7. Footer: Option 2 (Kitchen State Switcher) */}
+        <div className="pt-3 border-t border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center justify-between sm:block">
             <span className="text-[9px] font-black uppercase tracking-wider text-text-muted block">
               Total Order Value
             </span>
-            <span className="text-lg font-black text-text-primary">
-              {formatPrice((order.total || 0) + (order.companionOrder?.total || 0))}
-            </span>
-            <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 block mt-0.5">
-              {order.paymentMethod === 'COD' ? '💰 Collect Cash' : '✅ Paid Online'}
-            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-black text-text-primary">
+                {formatPrice(order.combinedTotal || ((order.total || 0) + (order.companionOrder?.total || 0)))}
+              </span>
+              <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                {order.paymentMethod === 'COD' ? '💰 Collect Cash' : '✅ Paid Online'}
+              </span>
+            </div>
           </div>
 
-          <div className="flex-1 max-w-[200px]">
+          <div className="w-full sm:w-auto sm:min-w-[220px]">
             {order.status === 'PACKED' ? (
               <button
                 onClick={() => onUpdateStatus(order.id, 'SHIPPED')}
                 disabled={updatingId === order.id}
-                className={`w-full flex items-center justify-center gap-2 h-11 text-white text-xs font-black rounded-2xl transition-all shadow-md active:scale-95 disabled:opacity-60 cursor-pointer ${
+                className={`w-full flex items-center justify-center gap-2 py-3 px-4 text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-60 cursor-pointer ${
                   isRestaurant
                     ? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 shadow-rose-500/20'
-                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/20'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/20'
                 }`}
               >
                 {updatingId === order.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    <Navigation className="h-4 w-4" />
-                    <span>Pick Up Order ➔</span>
+                    <Navigation className="h-3.5 w-3.5" />
+                    <span>Pick Up Order & Start Trip ➔</span>
                   </>
                 )}
               </button>
             ) : (
-              <div className="flex flex-col items-end gap-1 w-full">
-                <button
-                  disabled
-                  className="w-full flex items-center justify-center gap-1.5 h-10 bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-xl cursor-not-allowed"
-                >
+              <div className="flex flex-col items-stretch gap-1.5 w-full">
+                <div className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold rounded-xl select-none">
                   <Clock className="h-3.5 w-3.5 animate-spin" />
                   <span>Preparing in Kitchen...</span>
-                </button>
+                </div>
                 <button
                   onClick={() => onUpdateStatus(order.id, 'SHIPPED')}
                   disabled={updatingId === order.id}
-                  className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer active:scale-95 text-right pt-0.5"
+                  className="w-full text-center text-[10px] font-black text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer active:scale-95 py-1"
                 >
-                  Food Ready? Pick Up Anyway
+                  Food Ready? Pick Up Anyway ➔
                 </button>
               </div>
             )}

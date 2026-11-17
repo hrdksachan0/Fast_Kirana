@@ -8,7 +8,7 @@ import { isToday } from 'date-fns'
 import { toast } from 'sonner'
 import { playNotificationChime, playSuccessChime } from '@/lib/audio'
 import { triggerHaptic } from '@/lib/haptic'
-import { Loader2, Truck, ShoppingBag } from 'lucide-react'
+import { Loader2, Truck, ShoppingBag, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase-client'
 
@@ -18,6 +18,7 @@ import { optimizeRoute } from '@/lib/delivery-routing'
 import { useDeliveryOfflineSync } from '@/hooks/delivery/use-delivery-offline-sync'
 import { useRiderLocationTracking } from '@/hooks/delivery/use-rider-location-tracking'
 import { detectOrderRoute, DELIVERY_ROUTES, DeliveryRouteKey } from '@/lib/route-detector'
+import { groupCombinedDeliveryOrders } from '@/lib/order-combiner'
 
 // Sub-components
 import DeliveryHeader from './components/delivery-header'
@@ -38,7 +39,9 @@ export default function DeliveryDashboard() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   const [activeTab, setActiveTab] = useState<'deliveries' | 'wallet' | 'history'>('deliveries')
+  const [deliverySubTab, setDeliverySubTab] = useState<'active' | 'assigned'>('active')
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<DeliveryRouteKey>('ALL')
+  const [selectedVendorFilter, setSelectedVendorFilter] = useState<string>('ALL')
   const [paymentChoiceOrderId, setPaymentChoiceOrderId] = useState<string | null>(null)
   const [qrModalOrder, setQrModalOrder] = useState<any | null>(null)
   const [confirmDeliveryOrder, setConfirmDeliveryOrder] = useState<any | null>(null)
@@ -110,10 +113,11 @@ export default function DeliveryDashboard() {
       const res = await fetch(`${apiUrl()}/api/delivery/orders`)
       if (res.ok) {
         const data = await res.json()
-        setOrders(data)
+        const unified = groupCombinedDeliveryOrders(data)
+        setOrders(unified)
 
         if (typeof window !== 'undefined') {
-          const sanitizedCache = data.map((o: any) => ({
+          const sanitizedCache = unified.map((o: any) => ({
             id: o.id,
             orderNumber: o.orderNumber,
             status: o.status,
@@ -129,7 +133,7 @@ export default function DeliveryDashboard() {
       if (typeof window !== 'undefined') {
         const cached = localStorage.getItem('delivery_orders_cache')
         if (cached) {
-          setOrders(JSON.parse(cached))
+          setOrders(groupCombinedDeliveryOrders(JSON.parse(cached)))
           toast.warning('Network error. Loaded cached offline data.')
         }
       }
@@ -269,13 +273,21 @@ export default function DeliveryDashboard() {
 
     if (typeof window !== 'undefined' && !navigator.onLine) {
       try {
+        const targetOrder = orders.find((o) => o.id === orderId)
+        const companionId = targetOrder?.companionOrder?.id
+        const subOrderIds = targetOrder?.subOrders?.map((s: any) => s.id) || []
+        const allRelatedIds = Array.from(new Set([orderId, companionId, ...subOrderIds].filter(Boolean)))
+
         const savedQueue = JSON.parse(localStorage.getItem('offline_delivery_updates') || '[]')
-        savedQueue.push({ orderId, newStatus, extraData, timestamp: new Date().getTime() })
+        allRelatedIds.forEach((id) => {
+          savedQueue.push({ orderId: id, newStatus, extraData, timestamp: new Date().getTime() })
+        })
         localStorage.setItem('offline_delivery_updates', JSON.stringify(savedQueue))
         setOfflineQueue(savedQueue)
 
+        const relatedSet = new Set(allRelatedIds)
         const updatedOrders = orders.map((o) => {
-          if (o.id === orderId) {
+          if (relatedSet.has(o.id)) {
             const up: any = { ...o, status: newStatus }
             if (newStatus === 'SHIPPED') {
               up.deliveryUserId = session?.user?.id
@@ -319,20 +331,19 @@ export default function DeliveryDashboard() {
     try {
       const targetOrder = orders.find((o) => o.id === orderId)
       const companionId = targetOrder?.companionOrder?.id
+      const subOrderIds = targetOrder?.subOrders?.map((s: any) => s.id) || []
+      const allRelatedIds = Array.from(new Set([orderId, companionId, ...subOrderIds].filter(Boolean)))
 
-      const res = await fetch(`${apiUrl()}/api/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, ...extraData }),
-      })
-
-      if (companionId) {
-        await fetch(`${apiUrl()}/api/orders/${companionId}`, {
+      // Update all related sub-orders simultaneously
+      const patchPromises = allRelatedIds.map((id) =>
+        fetch(`${apiUrl()}/api/orders/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus, ...extraData }),
-        }).catch(() => null)
-      }
+        })
+      )
+      const responses = await Promise.all(patchPromises)
+      const res = responses[0]
 
       if (res.ok) {
         if (newStatus === 'DELIVERED') {
@@ -359,9 +370,37 @@ export default function DeliveryDashboard() {
     }
   }
 
+  // Multi-Hub & Strict Rider Assignment Guard:
+  // 1. If assigned by Admin, strictly match session rider ID.
+  // 2. Multi-hub: match rider's assignedStoreId if configured.
+  const currentRiderId = session?.user?.id
+  const currentRiderStoreId = (session?.user as any)?.assignedStoreId
+
+  const isOrderAssignedToMe = useCallback(
+    (o: any) => {
+      // If order has an assigned rider, must match currently logged-in rider
+      if (o.deliveryUserId) {
+        return o.deliveryUserId === currentRiderId
+      }
+      if (o.companionOrder?.deliveryUserId) {
+        return o.companionOrder.deliveryUserId === currentRiderId
+      }
+      if (o.subOrders?.some((s: any) => s.deliveryUserId === currentRiderId)) {
+        return true
+      }
+      // If unassigned, only show if rider belongs to the same operational hub and order has no rider
+      if (currentRiderStoreId && o.storeId && o.storeId !== currentRiderStoreId) {
+        return false
+      }
+      // If unassigned orders are gated: only show if explicitly assigned to this rider
+      return false
+    },
+    [currentRiderId, currentRiderStoreId]
+  )
+
   const rawOutForDelivery = useMemo(
-    () => orders.filter((o) => o.status === 'SHIPPED'),
-    [orders]
+    () => orders.filter((o) => o.status === 'SHIPPED' && (o.deliveryUserId === currentRiderId || isOrderAssignedToMe(o))),
+    [orders, currentRiderId, isOrderAssignedToMe]
   )
   const outForDeliveryOrders = useMemo(() => {
     const optimized = optimizeRoute(rawOutForDelivery)
@@ -371,16 +410,37 @@ export default function DeliveryDashboard() {
       if (seen.has(o.id)) continue
       dedupped.push(o)
       seen.add(o.id)
-      if (o.companionOrder) seen.add(o.companionOrder.id)
+      if (o.companionOrder?.id) seen.add(o.companionOrder.id)
+      if (o.subOrders) o.subOrders.forEach((s: any) => seen.add(s.id))
+      if (o.combinedId) seen.add(o.combinedId)
     }
 
-    if (selectedRouteFilter === 'ALL') return dedupped
-    return dedupped.filter((o) => detectOrderRoute(o).key === selectedRouteFilter)
-  }, [rawOutForDelivery, selectedRouteFilter])
+    let filtered = dedupped
+    if (selectedRouteFilter !== 'ALL') {
+      filtered = filtered.filter((o) => detectOrderRoute(o).key === selectedRouteFilter)
+    }
+    if (selectedVendorFilter !== 'ALL') {
+      filtered = filtered.filter((o) => {
+        if (o.isCombined || o.companionOrder) return true
+        const sName = (o.shopName || o.restaurantName || '').toLowerCase()
+        if (selectedVendorFilter === 'GROCERY') {
+          return !o.restaurantId && !sName.includes('restaurant') && !sName.includes('cafe')
+        }
+        if (selectedVendorFilter === 'RESTAURANT') {
+          return !!o.restaurantId || sName.includes('restaurant') || sName.includes('cafe')
+        }
+        return sName.includes(selectedVendorFilter.toLowerCase())
+      })
+    }
+    return filtered
+  }, [rawOutForDelivery, selectedRouteFilter, selectedVendorFilter])
 
   const pendingOrders = useMemo(() => {
+    // Only show orders that are assigned to this rider by admin!
     const raw = orders.filter(
-      (o) => o.status === 'PACKED' || o.status === 'PREPARING' || o.status === 'CONFIRMED'
+      (o) =>
+        ['PACKED', 'PREPARING', 'CONFIRMED'].includes(o.status) &&
+        (o.deliveryUserId === currentRiderId || isOrderAssignedToMe(o) || (!o.deliveryUserId && !currentRiderStoreId))
     )
     const dedupped: any[] = []
     const seen = new Set<string>()
@@ -388,12 +448,46 @@ export default function DeliveryDashboard() {
       if (seen.has(o.id)) continue
       dedupped.push(o)
       seen.add(o.id)
-      if (o.companionOrder) seen.add(o.companionOrder.id)
+      if (o.companionOrder?.id) seen.add(o.companionOrder.id)
+      if (o.subOrders) o.subOrders.forEach((s: any) => seen.add(s.id))
+      if (o.combinedId) seen.add(o.combinedId)
     }
 
-    if (selectedRouteFilter === 'ALL') return dedupped
-    return dedupped.filter((o) => detectOrderRoute(o).key === selectedRouteFilter)
-  }, [orders, selectedRouteFilter])
+    let filtered = dedupped
+    if (selectedRouteFilter !== 'ALL') {
+      filtered = filtered.filter((o) => detectOrderRoute(o).key === selectedRouteFilter)
+    }
+    if (selectedVendorFilter !== 'ALL') {
+      filtered = filtered.filter((o) => {
+        // Combined multi-outlet orders stay visible in both GROCERY & RESTAURANT views
+        if (o.isCombined || o.companionOrder) return true
+
+        const sName = (o.shopName || o.restaurantName || '').toLowerCase()
+        if (selectedVendorFilter === 'GROCERY') {
+          return !o.restaurantId && !sName.includes('restaurant') && !sName.includes('cafe')
+        }
+        if (selectedVendorFilter === 'RESTAURANT') {
+          return !!o.restaurantId || sName.includes('restaurant') || sName.includes('cafe')
+        }
+        return sName.includes(selectedVendorFilter.toLowerCase())
+      })
+    }
+    return filtered
+  }, [orders, currentRiderId, currentRiderStoreId, isOrderAssignedToMe, selectedRouteFilter, selectedVendorFilter])
+
+  // Extract unique available vendors/restaurants for the filter
+  const availableVendors = useMemo(() => {
+    const active = orders.filter((o) =>
+      ['SHIPPED', 'PACKED', 'PREPARING', 'CONFIRMED'].includes(o.status) &&
+      (o.deliveryUserId === currentRiderId || !o.deliveryUserId)
+    )
+    const vendors = new Set<string>()
+    for (const o of active) {
+      const name = (o.shopName || o.restaurantName || '').trim()
+      if (name) vendors.add(name)
+    }
+    return Array.from(vendors)
+  }, [orders, currentRiderId])
 
   // Count active orders across routes for pill badges
   const routeCounts = useMemo(() => {
@@ -415,11 +509,24 @@ export default function DeliveryDashboard() {
     return counts
   }, [orders])
 
-  const deliveredOrders = orders.filter(
-    (o) =>
-      o.status === 'DELIVERED' &&
-      isToday(new Date(o.deliveredAt || o.updatedAt || o.createdAt))
-  )
+  const deliveredOrders = useMemo(() => {
+    const raw = orders.filter(
+      (o) =>
+        o.status === 'DELIVERED' &&
+        isToday(new Date(o.deliveredAt || o.updatedAt || o.createdAt))
+    )
+    const dedupped: any[] = []
+    const seen = new Set<string>()
+    for (const o of raw) {
+      if (seen.has(o.id)) continue
+      dedupped.push(o)
+      seen.add(o.id)
+      if (o.companionOrder?.id) seen.add(o.companionOrder.id)
+      if (o.subOrders) o.subOrders.forEach((s: any) => seen.add(s.id))
+      if (o.combinedId) seen.add(o.combinedId)
+    }
+    return dedupped
+  }, [orders])
 
   const lastLocationPostRef = useRef<number>(0)
 
@@ -462,7 +569,7 @@ export default function DeliveryDashboard() {
   const todayDeliveries = deliveredOrders.length
   const todayCodCollected = deliveredOrders
     .filter((o) => o.paymentMethod === 'COD')
-    .reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+    .reduce((sum: number, o: any) => sum + (o.combinedTotal || ((o.total || 0) + (o.companionOrder ? (o.companionOrder.total || 0) : 0))), 0)
 
   const executeDeliveryCompletion = async (
     orderId: string,
@@ -502,14 +609,8 @@ export default function DeliveryDashboard() {
 
   const handleMarkDelivered = (orderId: string) => {
     const order = orders.find((o) => o.id === orderId)
-    if (!order) return
-
-    // Streamlined: Skip redundant confirm handover popup!
-    // Directly go to COD payment collection if COD, else deliver directly with 1 tap.
-    if (order.paymentMethod === 'COD') {
-      setPaymentChoiceOrderId(order.id)
-    } else {
-      executeDeliveryCompletion(order.id, false, 'ONLINE')
+    if (order) {
+      setConfirmDeliveryOrder(order)
     }
   }
 
@@ -599,108 +700,156 @@ export default function DeliveryDashboard() {
         ) : (
           <>
             {activeTab === 'deliveries' && (
-              <div className="space-y-6">
-                {/* 4 Arterial Routes Filter Bar */}
-                <div className="bg-card/70 border border-border/80 backdrop-blur-sm p-3 rounded-2xl space-y-2 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-text-muted flex items-center gap-1">
-                      <span>📍 Select Route</span>
-                    </span>
-                    {selectedRouteFilter !== 'ALL' && (
-                      <button
-                        onClick={() => setSelectedRouteFilter('ALL')}
-                        className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
-                      >
-                        Reset All ({routeCounts.ALL})
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRouteFilter('ALL')}
-                      className={`px-3 py-1.5 text-[11px] font-black rounded-xl transition-all shrink-0 cursor-pointer border ${
-                        selectedRouteFilter === 'ALL'
-                          ? 'bg-primary text-white border-primary shadow-xs'
-                          : 'bg-background hover:bg-secondary border-border text-text-secondary'
-                      }`}
+              <div className="space-y-4">
+                {/* 1. Single-Row Dropdown Filters: Outlet & Route */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Outlet Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedVendorFilter}
+                      onChange={(e) => setSelectedVendorFilter(e.target.value)}
+                      className="w-full h-10 pl-3 pr-8 bg-card/90 border border-border/80 rounded-xl text-xs font-bold text-text-primary appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs truncate"
                     >
-                      🚀 All Routes ({routeCounts.ALL})
-                    </button>
-                    {(['HAMIRPUR', 'MOOSANAGAR', 'KANPUR', 'JAHANABAD'] as const).map((rKey) => {
-                      const rInfo = DELIVERY_ROUTES[rKey]
-                      const count = routeCounts[rKey] || 0
-                      const isSelected = selectedRouteFilter === rKey
-                      return (
-                        <button
-                          key={rKey}
-                          type="button"
-                          onClick={() => setSelectedRouteFilter(rKey)}
-                          className={`px-3 py-1.5 text-[11px] font-black rounded-xl transition-all shrink-0 cursor-pointer border ${
-                            isSelected
-                              ? rInfo.activeButtonClass
-                              : 'bg-background hover:bg-secondary border-border text-text-secondary'
-                          }`}
-                        >
-                          {rInfo.emoji} {rInfo.shortLabel} {count > 0 ? `(${count})` : ''}
-                        </button>
-                      )
-                    })}
+                      <option value="ALL">🍽️ All Outlets ({orders.filter(o => ['SHIPPED', 'PACKED', 'PREPARING', 'CONFIRMED'].includes(o.status)).length})</option>
+                      <option value="GROCERY">🛒 Darkstore Only</option>
+                      <option value="RESTAURANT">🍽️ Kitchens & Cafes</option>
+                      {availableVendors.map((v) => (
+                        <option key={v} value={v}>📍 {v}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted pointer-events-none" />
+                  </div>
+
+                  {/* Route Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedRouteFilter}
+                      onChange={(e) => setSelectedRouteFilter(e.target.value as DeliveryRouteKey)}
+                      className="w-full h-10 pl-3 pr-8 bg-card/90 border border-border/80 rounded-xl text-xs font-bold text-text-primary appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-2xs truncate"
+                    >
+                      <option value="ALL">📍 All Routes ({routeCounts.ALL})</option>
+                      {(['HAMIRPUR', 'MOOSANAGAR', 'KANPUR', 'JAHANABAD'] as const).map((rKey) => {
+                        const rInfo = DELIVERY_ROUTES[rKey]
+                        const count = routeCounts[rKey] || 0
+                        return (
+                          <option key={rKey} value={rKey}>
+                            {rInfo.emoji} {rInfo.shortLabel} {count > 0 ? `(${count})` : ''}
+                          </option>
+                        )
+                      })}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted pointer-events-none" />
                   </div>
                 </div>
 
-                {/* Out for Delivery Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xs font-black uppercase tracking-wider text-text-muted flex items-center gap-1.5">
-                      <Truck className="h-3.5 w-3.5 text-primary" />
-                      <span>Out For Delivery ({outForDeliveryOrders.length})</span>
-                    </h2>
-                    {outForDeliveryOrders.length > 1 && (
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                        ⚡ Route Optimized
-                      </span>
+                {/* 2. Sub-Tab Switcher: On The Way vs Assigned Pickups */}
+                <div className="grid grid-cols-2 p-1 bg-secondary/50 border border-border/60 rounded-2xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDeliverySubTab('active')}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      deliverySubTab === 'active'
+                        ? 'bg-card text-emerald-600 dark:text-emerald-400 shadow-sm border border-border/40'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    <Truck className="h-3.5 w-3.5" />
+                    <span>On The Way</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                      deliverySubTab === 'active'
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-muted text-text-muted'
+                    }`}>
+                      {outForDeliveryOrders.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeliverySubTab('assigned')}
+                    className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      deliverySubTab === 'assigned'
+                        ? 'bg-card text-purple-600 dark:text-purple-400 shadow-sm border border-border/40'
+                        : 'text-text-muted hover:text-text-primary'
+                    }`}
+                  >
+                    <ShoppingBag className="h-3.5 w-3.5" />
+                    <span>Assigned Pickups</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                      deliverySubTab === 'assigned'
+                        ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400'
+                        : 'bg-muted text-text-muted'
+                    }`}>
+                      {pendingOrders.length}
+                    </span>
+                  </button>
+                </div>
+
+                {/* 3A. Active Deliveries View (On The Way) */}
+                {deliverySubTab === 'active' && (
+                  <div className="space-y-4">
+                    {outForDeliveryOrders.length === 0 ? (
+                      <div className="text-center py-12 px-6 border-2 border-dashed border-border/70 rounded-3xl bg-card/40 space-y-3">
+                        <div className="text-4xl">🛵</div>
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-black text-text-primary">No orders out for delivery</h3>
+                          <p className="text-xs text-text-muted max-w-xs mx-auto">
+                            Accept new pickup orders from the Assigned tab to start your trip.
+                          </p>
+                        </div>
+                        {pendingOrders.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setDeliverySubTab('assigned')}
+                            className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 rounded-xl text-xs font-black cursor-pointer transition-all active:scale-95"
+                          >
+                            <span>Go to Assigned Pickups ({pendingOrders.length})</span>
+                            <span>➔</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      outForDeliveryOrders.map((order, idx) => (
+                        <ActiveDeliveryCard
+                          key={order.id}
+                          order={order}
+                          idx={idx}
+                          updatingId={updatingId}
+                          onMarkDelivered={() => handleMarkDelivered(order.id)}
+                          onOpenQr={() => setQrModalOrder(order)}
+                        />
+                      ))
                     )}
                   </div>
+                )}
 
-                  {outForDeliveryOrders.length === 0 ? (
-                    <div className="text-center py-8 border-2 border-dashed border-border rounded-2xl p-6 bg-card/30">
-                      <p className="text-xs text-text-muted font-medium">
-                        No active deliveries assigned to you right now.
-                      </p>
-                    </div>
-                  ) : (
-                    outForDeliveryOrders.map((order, idx) => (
-                      <ActiveDeliveryCard
-                        key={order.id}
-                        order={order}
-                        idx={idx}
-                        updatingId={updatingId}
-                        onMarkDelivered={() => handleMarkDelivered(order.id)}
-                        onOpenQr={() => setQrModalOrder(order)}
-                      />
-                    ))
-                  )}
-                </div>
-
-                {/* Pending Pickups Section */}
-                <div className="space-y-3 pt-2">
-                  <h2 className="text-xs font-black uppercase tracking-wider text-text-muted flex items-center gap-1.5">
-                    <ShoppingBag className="h-3.5 w-3.5 text-amber-500" />
-                    <span>Ready for Pickup ({pendingOrders.length})</span>
-                  </h2>
-
-                  {pendingOrders.length === 0 ? (
-                    <div className="text-center py-6 border border-border/60 rounded-2xl p-4 bg-card/20">
-                      <p className="text-xs text-text-muted">No packed orders waiting for pickup.</p>
-                    </div>
-                  ) : (
-                    pendingOrders.map((order) => (
-                      <PendingPickupCard
-                        key={order.id}
-                        order={order}
-                        updatingId={updatingId}
-                        onUpdateStatus={handleUpdateStatus}
+                {/* 3B. Assigned Pickups View (Option 2 Kitchen Switcher) */}
+                {deliverySubTab === 'assigned' && (
+                  <div className="space-y-4">
+                    {pendingOrders.length === 0 ? (
+                      <div className="text-center py-12 px-6 border-2 border-dashed border-border/70 rounded-3xl bg-card/40 space-y-3">
+                        <div className="text-4xl">📦</div>
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-black text-text-primary">No pickup orders waiting</h3>
+                          <p className="text-xs text-text-muted max-w-xs mx-auto">
+                            You have no pending assigned pickups right now.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      pendingOrders.map((order) => (
+                        <PendingPickupCard
+                          key={order.id}
+                          order={order}
+                          updatingId={updatingId}
+                          onUpdateStatus={handleUpdateStatus}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
                       />
                     ))
                   )}

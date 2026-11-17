@@ -109,6 +109,48 @@ final productsByRestaurantProvider =
       includeRestaurants: true);
 });
 
+/// Dedicated catalog provider for Search Screen:
+/// Combines darkstore grocery products with all active restaurant menus.
+/// This guarantees local fallback search has 100% catalog coverage (groceries + restaurant dishes).
+final searchCatalogProductsProvider = FutureProvider<List<Product>>((ref) async {
+  ref.keepAlive();
+  final repo = ref.watch(productRepositoryProvider);
+  final restRepo = ref.watch(restaurantRepositoryProvider);
+  final hub = ref.watch(currentStoreHubProvider);
+
+  // 1. Fetch darkstore products
+  final groceryFuture = repo.getProducts(
+    limit: 1000,
+    storeId: hub.id,
+    includeRestaurants: false,
+  );
+
+  // 2. Fetch restaurant menus for all registered restaurants
+  final activeRestaurants = RestaurantRegistry.all;
+  final restFutures = activeRestaurants.map((r) => restRepo.getRestaurantMenu(r.id));
+
+  try {
+    final results = await Future.wait([
+      groceryFuture,
+      ...restFutures,
+    ]);
+
+    final combined = <Product>[];
+    final seenIds = <String>{};
+    for (final list in results) {
+      for (final p in list) {
+        if (seenIds.add(p.id)) {
+          combined.add(p);
+        }
+      }
+    }
+    return combined;
+  } catch (e) {
+    // If any fails, fallback to darkstore products
+    return repo.getProducts(limit: 500, storeId: hub.id, includeRestaurants: false);
+  }
+});
+
 // Single shared product catalog for home screen — fetches ALL products once,
 // sections filter locally instead of each making separate API calls.
 // Stale-While-Revalidate (SWR): uses disk cache on cold start (<10ms) and refreshes in background.

@@ -466,21 +466,35 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
         // Instant Realtime Supabase Broadcast for Kitchen Console Chime & Refresh
         if (supabase) {
           try {
-            const ch = supabase.channel('restaurant-orders-live')
-            ch.subscribe((status) => {
+            const restBroadcastPayload = {
+              orderId: order.id,
+              readableId: displayId,
+              restaurantId: order.restaurantId,
+              restaurantName: order.restaurant?.name || order.shopName,
+              shopName: order.shopName,
+              status: order.status || 'PENDING',
+            }
+
+            // Broadcast to both outlet-specific and global restaurant channels
+            const chSpecific = supabase.channel(`restaurant-orders-live-${order.restaurantId}`)
+            chSpecific.subscribe((status) => {
               if (status === 'SUBSCRIBED') {
-                ch.send({
+                chSpecific.send({
                   type: 'broadcast',
                   event: 'new_order',
-                  payload: {
-                    orderId: order.id,
-                    readableId: displayId,
-                    restaurantId: order.restaurantId,
-                    restaurantName: order.restaurant?.name || order.shopName,
-                    shopName: order.shopName,
-                    status: order.status || 'PENDING',
-                  },
-                }).then(() => supabase.removeChannel(ch)).catch(() => {})
+                  payload: restBroadcastPayload,
+                }).then(() => supabase.removeChannel(chSpecific)).catch(() => {})
+              }
+            })
+
+            const chGlobal = supabase.channel('restaurant-orders-live')
+            chGlobal.subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                chGlobal.send({
+                  type: 'broadcast',
+                  event: 'new_order',
+                  payload: restBroadcastPayload,
+                }).then(() => supabase.removeChannel(chGlobal)).catch(() => {})
               }
             })
           } catch (_) {}
@@ -494,25 +508,53 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
           data: { orderId: order.id, restaurantId: order.restaurantId },
         }).catch((err: any) => console.error('Error sending restaurant approval web push:', err))
 
-        // FCM to Restaurant & Kitchen
+        // FCM to Restaurant & Kitchen Staff
         if (fcmMessaging) {
           const restPayload = buildOrderFcmPayload(
             `👨‍🍳 New Food Order #${displayId}!`,
-            `Order #${displayId} for ${outletName} is APPROVED by Admin. Start cooking!`,
+            `Order #${displayId} (${outletName}) is APPROVED by Admin. Start cooking!`,
             {
               title: `👨‍🍳 New Food Order #${displayId}!`,
-              body: `Order #${displayId} for ${outletName} is APPROVED by Admin. Start cooking!`,
+              body: `Order #${displayId} (${outletName}) is APPROVED by Admin. Start cooking!`,
               orderId: order.id,
               readableId: displayId,
               restaurantId: order.restaurantId,
               status: order.status || 'PENDING',
               screen: 'restaurant-console',
+              type: 'NEW_ORDER',
               timestamp: Date.now().toString(),
             }
           )
 
-          // Topic broadcast to single canonical restaurant topic
+          // 1. Topic broadcast to canonical restaurant topic
           sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restPayload }).catch(() => {})
+
+          // 2. Direct FCM tokens for users assigned to this restaurant
+          prisma.fcmToken.findMany({
+            where: {
+              user: {
+                OR: [
+                  { assignedRestaurantId: order.restaurantId },
+                  { role: { in: [Role.CHEF, Role.RESTAURANT_OWNER] } },
+                ],
+              },
+            },
+            select: { token: true },
+          }).then((restTokens) => {
+            for (const rToken of restTokens) {
+              fcmMessaging.send({
+                token: rToken.token,
+                ...restPayload,
+                android: {
+                  priority: 'high',
+                  notification: {
+                    sound: 'order_chime',
+                    channelId: 'fastkirana_order_buzzer_v2',
+                  },
+                },
+              }).catch(() => {})
+            }
+          }).catch((err: any) => console.error('Error fetching restaurant FCM tokens:', err))
         }
       } else {
         // Pure Grocery Order -> Pickers & Riders
