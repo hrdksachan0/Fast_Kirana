@@ -60,7 +60,10 @@ final productsProvider =
   final hub = ref.watch(currentStoreHubProvider);
   final forceRefresh = ref.read(catalogRecoveryEpochProvider) > 0;
   if (!ref.read(connectivityProvider).isOnline) {
-    return repo.getCachedProducts(categoryKey: categoryKey, storeId: hub.id);
+    final cached = await repo.getCachedProducts(categoryKey: categoryKey, storeId: hub.id);
+    if (cached.isNotEmpty) {
+      return cached;
+    }
   }
   if (categoryKey == null || categoryKey.isEmpty) {
     return repo.getProducts(

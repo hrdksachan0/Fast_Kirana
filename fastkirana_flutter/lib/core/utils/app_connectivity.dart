@@ -99,23 +99,69 @@ class AppConnectivityObserver extends ChangeNotifier {
   }
 
   Future<bool> _probeApi() async {
-    final response = await _probeClient.get('/api/healthz', queryParameters: {
-      't': DateTime.now().millisecondsSinceEpoch,
-    });
-    dynamic data = response.data;
-    if (data is String) {
+    // 1. Primary endpoint probe
+    try {
+      final response = await _probeClient.get('/api/healthz', queryParameters: {
+        't': DateTime.now().millisecondsSinceEpoch,
+      });
+      dynamic data = response.data;
+      if (data is String) {
+        try {
+          data = jsonDecode(data);
+        } catch (_) {}
+      }
+      if (response.statusCode == 200 &&
+          data is Map &&
+          data['status'] == 'healthy' &&
+          data['probe'] == 'liveness' &&
+          data['service'] is String &&
+          ((data['service'] as String).contains('FastKirana') ||
+           (data['service'] as String).contains('FastMinute'))) {
+        return true;
+      }
+    } catch (_) {}
+
+    // 2. Secondary domain probe if primary failed or during DNS cutover
+    if (AppConfig.secondaryApiUrl != AppConfig.apiBaseUrl) {
       try {
-        data = jsonDecode(data);
+        final secondaryClient = Dio(BaseOptions(
+          baseUrl: AppConfig.secondaryApiUrl,
+          connectTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
+          followRedirects: false,
+          headers: {'Cache-Control': 'no-cache, no-store'},
+        ));
+        final response = await secondaryClient.get('/api/healthz', queryParameters: {
+          't': DateTime.now().millisecondsSinceEpoch,
+        });
+        dynamic data = response.data;
+        if (data is String) {
+          try {
+            data = jsonDecode(data);
+          } catch (_) {}
+        }
+        if (response.statusCode == 200 &&
+            data is Map &&
+            data['status'] == 'healthy') {
+          return true;
+        }
       } catch (_) {}
     }
-    // Captive-portal HTML, redirects and proxy error pages cannot report online.
-    return response.statusCode == 200 &&
-        data is Map &&
-        data['status'] == 'healthy' &&
-        data['probe'] == 'liveness' &&
-        data['service'] is String &&
-        ((data['service'] as String).contains('FastKirana') ||
-         (data['service'] as String).contains('FastMinute'));
+
+    // 3. Fallback: If backend is temporarily restarting/redeploying (502 or transient delay),
+    // probe internet reachability via Google 204 canary so user is not falsely trapped in offline state.
+    try {
+      final canaryClient = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 3),
+        receiveTimeout: const Duration(seconds: 3),
+      ));
+      final canaryRes = await canaryClient.get('https://connectivitycheck.gstatic.com/generate_204');
+      if (canaryRes.statusCode == 204 || canaryRes.statusCode == 200) {
+        return true;
+      }
+    } catch (_) {}
+
+    return false;
   }
 
   void _publish(bool online, int epoch, {required bool debounce}) {
