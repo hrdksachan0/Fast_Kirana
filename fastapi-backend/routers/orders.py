@@ -362,17 +362,16 @@ async def send_pwa_notification_to_user(user_id: str, title: str, body: str, dat
                 res = await session.execute(stmt)
                 tokens = list(set(t for t in res.scalars().all() if t and len(t) > 10))
 
+        # Strict Single Dispatch to Customer:
+        # If user has registered FCM tokens, send multicast ONLY.
+        # Fallback to phone / user topics ONLY if no active tokens are found.
         if tokens:
             await send_fcm_notification(tokens=tokens, title=title, body=body, data=data)
-
-        # Broadcast to phone topic (covers mobile apps subscribed to phone_$phone)
-        if phone:
+        elif phone:
             clean_phone = str(phone).replace("+91", "").replace(" ", "").replace("-", "").strip()
             if clean_phone and len(clean_phone) == 10:
                 await send_fcm_topic_notification(f"phone_{clean_phone}", title, body, data)
-
-        # Broadcast to user topic (covers mobile apps subscribed to user_$userId)
-        if user_id:
+        elif user_id:
             await send_fcm_topic_notification(f"user_{user_id}", title, body, data)
     except Exception as e:
         logger.error(f"Failed to dispatch FCM push notification to user: {str(e)}")
@@ -425,7 +424,8 @@ async def dispatch_isolated_order_fcm_notifications(
             }
             if store_id:
                 await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_title, admin_body, admin_data)
-            await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
+            else:
+                await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
             return  # Stop here! Do not notify restaurant/picker/rider until approved
 
         # ── CASE 2: AUTO-APPROVED / CONFIRMED ──
@@ -490,16 +490,12 @@ async def dispatch_isolated_status_update_notifications(
         base_order_no = re.sub(r'-[GR\d]+$', '', readable_id or "")
         safe_shop_name = (shop_name or "").replace("FastKirana", "FastMinute")
 
-        # ── RIDER NOTIFICATION: Triggered when order is CONFIRMED (Admin verified) or PACKED ──
-        if status_val in ["CONFIRMED", "PACKED"] or (restaurant_id and status_val in ["COOKED", "PREPARED", "PACKED"]):
-            if status_val == "CONFIRMED":
-                rider_title = f"🛵 New Order #{base_order_no} Verified!"
-                rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) verified by Admin! Tap to view details."
-                msg_type = "NEW_ORDER"
-            else:
-                rider_title = f"🛵 Order #{base_order_no} is Packed & Ready!"
-                rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) is packed. Tap to pick up & deliver."
-                msg_type = "ORDER_PACKED"
+        # ── RIDER NOTIFICATION: Triggered ONLY when order is PACKED & ready for pickup ──
+        # (Designated rider is specifically buzzed via dispatch_rider_assignment_notification when assigned)
+        if status_val == "PACKED" or (restaurant_id and status_val in ["COOKED", "PREPARED"]):
+            rider_title = f"🛵 Order #{base_order_no} is Packed & Ready!"
+            rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) is packed. Tap to pick up & deliver."
+            msg_type = "ORDER_PACKED"
 
             rider_data = {
                 "orderId": order_id,
@@ -613,7 +609,9 @@ async def dispatch_rider_assignment_notification(
             alarm_title = "🚨 New Delivery Assigned! 🛵"
             alarm_body = f"Order #{clean_readable} has been assigned to you. Tap to view and deliver."
 
-            # 1. Direct Multicast to Rider Tokens with High-Priority Buzzer
+            # Strict Single Dispatch: If direct tokens exist, send multicast ONLY.
+            # Only fallback to topic broadcast if no registered tokens are found.
+            # This completely eliminates 2x-4x duplicate notifications on mobile devices!
             if rider_tokens:
                 await send_fcm_notification(
                     tokens=rider_tokens,
@@ -621,24 +619,21 @@ async def dispatch_rider_assignment_notification(
                     body=alarm_body,
                     data=fcm_data
                 )
-
-            # 2. Topic Broadcast to phone_<10digit>
-            if rider_phone and len(rider_phone) == 10:
+            elif rider_phone and len(rider_phone) == 10:
                 await send_fcm_topic_notification(
                     topic=f"phone_{rider_phone}",
                     title=alarm_title,
                     body=alarm_body,
                     data=fcm_data
                 )
-
-            # 3. Topic Broadcast to user_<riderId>
-            for r_uid in rider_user_ids:
-                await send_fcm_topic_notification(
-                    topic=f"user_{r_uid}",
-                    title=alarm_title,
-                    body=alarm_body,
-                    data=fcm_data
-                )
+            elif rider_user_ids:
+                for r_uid in rider_user_ids:
+                    await send_fcm_topic_notification(
+                        topic=f"user_{r_uid}",
+                        title=alarm_title,
+                        body=alarm_body,
+                        data=fcm_data
+                    )
 
             # 4. Instant Supabase Realtime broadcast to rider & admin channels
             try:
@@ -706,10 +701,8 @@ async def dispatch_restaurant_order_verified_notification(
             "total": str(total or 0.0),
         }
 
-        # 1. Send to restaurant topic
-        await send_fcm_topic_notification(f"restaurant_{clean_rest_id}", rest_title, rest_body, rest_data)
-
-        # 2. Direct multicast to restaurant owners / chefs assigned to this outlet
+        # Strict Single Dispatch: If direct tokens exist, send multicast ONLY.
+        # Fallback to restaurant topic or phone topics ONLY if no active tokens are registered.
         async with AsyncSessionLocal() as session:
             u_stmt = select(User.id, User.phone).where(
                 or_(User.assignedRestaurantId == clean_rest_id, User.assignedRestaurantId.ilike(f"%{clean_rest_id}%")),
@@ -720,16 +713,18 @@ async def dispatch_restaurant_order_verified_notification(
             matched_uids = [u[0] for u in matched_users if u[0]]
             matched_phones = [re.sub(r"\D", "", u[1])[-10:] for u in matched_users if u[1]]
 
+            owner_tokens = []
             if matched_uids:
                 t_stmt = select(FcmToken.token).where(FcmToken.userId.in_(matched_uids))
                 t_res = await session.execute(t_stmt)
                 owner_tokens = list(set([t for t in t_res.scalars().all() if t and len(t) > 10]))
-                if owner_tokens:
-                    await send_fcm_notification(owner_tokens, rest_title, rest_body, rest_data)
 
-            for p in matched_phones:
-                if p and len(p) == 10:
-                    await send_fcm_topic_notification(f"phone_{p}", rest_title, rest_body, rest_data)
+            if owner_tokens:
+                # 1. Direct Multicast ONLY to outlet staff
+                await send_fcm_notification(owner_tokens, rest_title, rest_body, rest_data)
+            else:
+                # Fallback to topic broadcast if no device tokens found
+                await send_fcm_topic_notification(f"restaurant_{clean_rest_id}", rest_title, rest_body, rest_data)
 
         # 3. Supabase Realtime broadcast to this restaurant's live orders channel
         try:
