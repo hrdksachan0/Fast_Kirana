@@ -23,18 +23,21 @@ export async function GET(request: NextRequest) {
     let start: Date
     let end: Date
 
-    if (startDateParam) {
-      start = new Date(`${startDateParam}T00:00:00.000`)
+    // Enforce Indian Standard Time (+05:30) date boundaries so reports match across all consoles
+    const cleanStartDate = (startDateParam || '').trim().slice(0, 10)
+    const cleanEndDate = (endDateParam || '').trim().slice(0, 10)
+
+    if (cleanStartDate) {
+      start = new Date(`${cleanStartDate}T00:00:00.000+05:30`)
     } else {
-      start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      start.setHours(0, 0, 0, 0)
+      const startD = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      start = new Date(`${startD.toISOString().slice(0, 10)}T00:00:00.000+05:30`)
     }
 
-    if (endDateParam) {
-      end = new Date(`${endDateParam}T23:59:59.999`)
+    if (cleanEndDate) {
+      end = new Date(`${cleanEndDate}T23:59:59.999+05:30`)
     } else {
-      end = new Date(now.getTime())
-      end.setHours(23, 59, 59, 999)
+      end = new Date(`${now.toISOString().slice(0, 10)}T23:59:59.999+05:30`)
     }
 
     // 2. Fetch active restaurants from DB filtered by storeId
@@ -240,8 +243,8 @@ export async function GET(request: NextRequest) {
           : 0
         const adjustedRestSales = Math.max(0, orderRestSalesRaw - unallocatedRefund)
 
-        const discountShare = o.subtotal > 0 ? (o.discount * (adjustedRestSales / o.subtotal)) : 0
-        const productSales = Math.max(0, adjustedRestSales - discountShare)
+        // Pure product sales only (food dishes sum) — strictly zero packaging, zero delivery, zero other charges
+        const productSales = adjustedRestSales
 
         const commRate = rStats.commissionRate
         const adminComm = productSales * commRate

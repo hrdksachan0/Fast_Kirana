@@ -1411,9 +1411,9 @@ async def restaurant_owner_reports(
             top_products_map[prod_key]["profit"] += item_rest_profit
             top_products_map[prod_key]["adminProfit"] += item_admin_profit
 
-        # If order had no specific items matching restaurant, use order food subtotal if restaurant order
+        # If order had no specific items matching restaurant, use order food subtotal (pure product only)
         if order_rest_sales <= 0.0 and (o.restaurantId == restaurant.id):
-            order_rest_sales = float(o.subtotal or o.total or 0.0)
+            order_rest_sales = float(o.subtotal or 0.0)
             order_admin_profit = order_rest_sales * commission_ratio
             order_rest_profit = order_rest_sales - order_admin_profit
             order_cost = order_rest_sales * (1.0 - restaurant_default_margin / 100.0)
