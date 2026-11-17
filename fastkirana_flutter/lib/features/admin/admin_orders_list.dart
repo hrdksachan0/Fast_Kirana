@@ -689,15 +689,20 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         if (existing == null) {
           orderMap[o.id] = o;
         } else {
-          // Never downgrade a DELIVERED or CANCELLED order, or an actively locked order!
+          // If admin explicitly locked/reversed status, allow it!
+          final existingLocked = _getLockedStatus(existing.id) ?? (existing.combinedId != null ? _getLockedStatus(existing.combinedId!) : null);
+          if (existingLocked != null) {
+            if (o.status == existingLocked) {
+              orderMap[o.id] = o;
+            }
+            return;
+          }
+
+          // Never downgrade a DELIVERED or CANCELLED order without an explicit admin lock!
           if (existing.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
             return;
           }
           if (existing.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
-            return;
-          }
-          final existingLocked = _getLockedStatus(existing.id) ?? (existing.combinedId != null ? _getLockedStatus(existing.combinedId!) : null);
-          if (existingLocked != null && o.status != existingLocked) {
             return;
           }
 
@@ -1002,15 +1007,20 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         if (existing == null) {
           orderMap[o.id] = o;
         } else {
-          // Never downgrade a DELIVERED or CANCELLED order, or an actively locked order!
+          // If admin explicitly locked/reversed status, allow it!
+          final existingLocked = _getLockedStatus(existing.id) ?? (existing.combinedId != null ? _getLockedStatus(existing.combinedId!) : null);
+          if (existingLocked != null) {
+            if (o.status == existingLocked) {
+              orderMap[o.id] = o;
+            }
+            return;
+          }
+
+          // Never downgrade a DELIVERED or CANCELLED order without an explicit admin lock!
           if (existing.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
             return;
           }
           if (existing.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
-            return;
-          }
-          final existingLocked = _getLockedStatus(existing.id) ?? (existing.combinedId != null ? _getLockedStatus(existing.combinedId!) : null);
-          if (existingLocked != null && o.status != existingLocked) {
             return;
           }
 

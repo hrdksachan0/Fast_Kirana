@@ -337,11 +337,13 @@ class DeliveryRoutes {
     }
 
     // 3. Coordinate-based directional quadrant (Ghatampur Darkstore center: 26.155, 80.165)
-    if (lat != null && lng != null && lat > 20 && lng > 70) {
+    final safeLat = lat;
+    final safeLng = lng;
+    if (safeLat != null && safeLng != null && safeLat > 20 && safeLng > 70) {
       const centerLat = 26.155;
       const centerLng = 80.165;
-      final dLat = lat - centerLat;
-      final dLng = lng - centerLng;
+      final dLat = safeLat - centerLat;
+      final dLng = safeLng - centerLng;
 
       if (dLat.abs() > 0.004 || dLng.abs() > 0.004) {
         if (dLat < -0.004 && dLat.abs() >= dLng.abs()) return hamirpur; // South
