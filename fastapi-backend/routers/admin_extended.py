@@ -1,11 +1,3 @@
-def _get_admin_store(current_admin: Any, store_id: Optional[str]) -> Optional[str]:
-    assigned = getattr(current_admin, "assignedStoreId", None) if hasattr(current_admin, "assignedStoreId") else (current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else None)
-    if assigned:
-        return str(assigned).strip()
-    if store_id and str(store_id).lower() != "all":
-        return str(store_id).strip()
-    return None
-
 """
 Admin Extended Routes
 Migrated from Next.js API routes to FastAPI.
@@ -49,6 +41,14 @@ router = APIRouter(prefix="/admin", tags=["Admin Extended"])
 # ============================================================
 # HELPERS
 # ============================================================
+
+def _get_admin_store(current_admin: Any, store_id: Optional[str]) -> Optional[str]:
+    assigned = getattr(current_admin, "assignedStoreId", None) if hasattr(current_admin, "assignedStoreId") else (current_admin.get("assignedStoreId") if isinstance(current_admin, dict) else None)
+    if assigned:
+        return str(assigned).strip()
+    if store_id and str(store_id).lower() != "all":
+        return str(store_id).strip()
+    return None
 
 def generate_readable_id(prefix: str, db: AsyncSession, model_class) -> str:
     """Generate unique readable ID like ORD-001, INV-001 etc."""
