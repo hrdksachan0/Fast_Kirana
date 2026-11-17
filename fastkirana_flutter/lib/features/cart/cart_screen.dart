@@ -13,6 +13,7 @@ import '../../data/models/cart.dart';
 import '../../data/repositories/cart_repository.dart';
 import '../../data/repositories/coupon_repository.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/store_settings_provider.dart';
 import '../../core/services/location_service.dart';
 import '../../widgets/offline_banner.dart';
 import '../../widgets/grid_skeletons.dart';
@@ -194,6 +195,170 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     });
   }
 
+  void _showClearCartConfirmation(BuildContext context, WidgetRef ref) {
+    HapticFeedback.mediumImpact();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Clear Cart?',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 17, color: const Color(0xFF0F172A)),
+        ),
+        content: Text(
+          'Are you sure you want to remove all items from your cart?',
+          style: GoogleFonts.inter(fontSize: 13.5, color: const Color(0xFF64748B), height: 1.4),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE11D48),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(cartProvider.notifier).clearCart();
+            },
+            child: Text(
+              'Clear',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildPremiumAppBar(
+    BuildContext context, {
+    int? itemCount,
+    VoidCallback? onClear,
+  }) {
+    return AppBar(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      scrolledUnderElevation: 0,
+      elevation: 0,
+      centerTitle: false,
+      titleSpacing: 0,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: Center(
+          child: Bounceable(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.pop(context);
+            },
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x06000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF0F172A),
+                size: 15,
+              ),
+            ),
+          ),
+        ),
+      ),
+      title: Padding(
+        padding: const EdgeInsets.only(left: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Your Cart',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: Responsive.scaledFontSize(context, 18),
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF0F172A),
+                letterSpacing: -0.4,
+              ),
+            ),
+            if (itemCount != null && itemCount > 0) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                ),
+                child: Text(
+                  '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF475569),
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: onClear != null
+          ? [
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Center(
+                  child: Bounceable(
+                    onTap: onClear,
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Color(0xFF64748B),
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ]
+          : null,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          color: const Color(0xFFF1F5F9),
+          height: 1,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartAsync = ref.watch(cartProvider);
@@ -203,21 +368,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         if (cart.items.isEmpty) {
           return Scaffold(
             backgroundColor: Colors.white,
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              leading: IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
-                    color: AppDesignSystem.slate200,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
-                ),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
+            appBar: _buildPremiumAppBar(context),
             body: _buildEmptyState(context),
           );
         }
@@ -226,49 +377,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       },
       loading: () => Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                color: AppDesignSystem.slate200,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Your Cart',
-            style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 17),
-              fontWeight: FontWeight.w900,
-              color: slateDark,
-              letterSpacing: -0.3,
-            ),
-          ),
-        ),
+        appBar: _buildPremiumAppBar(context),
         body: const CartShimmerSkeleton(),
       ),
       error: (e, st) => Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                color: AppDesignSystem.slate200,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
+        appBar: _buildPremiumAppBar(context),
         body: _buildCartErrorState(context, ref),
       ),
     );
@@ -396,17 +510,37 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildCartScreenContent(BuildContext context, WidgetRef ref, Cart cart) {
+    final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
     final tier = ref.watch(deliveryTierProvider);
     final subtotal = cart.subtotal;
     final deliveryFee = tier.deliveryFee;
+
+    final hasGrocery = cart.items.any((i) => !isRestaurantProduct(i.product));
+    final hasRestaurant = cart.items.any((i) => isRestaurantProduct(i.product));
+    final isCombined = hasGrocery && hasRestaurant;
+
+    // Dynamically fetch packaging / handling fee from storeSettings (same as checkout)
     double packagingFee = 0.0;
-    String packagingLabel = 'Food Packaging';
-    for (final item in cart.items) {
-      final r = item.product.restaurant;
-      if (r != null && r.packagingFee != null && r.packagingFee! > packagingFee) {
-        packagingFee = r.packagingFee!;
+    String packagingLabel = 'Handling Charge';
+
+    if (cart.items.isNotEmpty) {
+      packagingFee = isCombined
+          ? (storeSettings?.combinedMiscFee ?? 5.0)
+          : (storeSettings?.miscFee ?? 5.0);
+      packagingLabel = isCombined
+          ? (storeSettings?.combinedMiscFeeLabel ?? 'Handling Charge')
+          : (storeSettings?.miscFeeLabel ?? 'Handling Charge');
+
+      // Check if any restaurant has a specific packaging fee configured that is higher
+      for (final item in cart.items) {
+        final r = item.product.restaurant;
+        if (r != null && r.packagingFee != null && r.packagingFee! > packagingFee) {
+          packagingFee = r.packagingFee!;
+          packagingLabel = 'Food Packaging';
+        }
       }
     }
+
     final itemSavings = cart.savings;
     final freeGiftSavings = (_freeGiftDetails != null && _freeGiftDetails!['originalPrice'] != null)
         ? ((_freeGiftDetails!['originalPrice'] as num).toDouble())
@@ -445,50 +579,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: AppDesignSystem.slate50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
-              color: AppDesignSystem.slate200,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.arrow_back_rounded, color: slateDark, size: 18),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Your Cart',
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 17),
-                fontWeight: FontWeight.w900,
-                color: slateDark,
-                letterSpacing: -0.3,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.red200,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '$totalItems ${totalItems == 1 ? 'item' : 'items'}',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
-                  fontWeight: FontWeight.w800,
-                  color: primaryRed,
-                ),
-              ),
-            ),
-          ],
-        ),
+      appBar: _buildPremiumAppBar(
+        context,
+        itemCount: totalItems,
+        onClear: () => _showClearCartConfirmation(context, ref),
       ),
       body: SafeArea(
         bottom: false,
