@@ -166,9 +166,10 @@ class _MainShellState extends ConsumerState<MainShell>
 
     final showCart = selectedIndex != 3 && cartCount > 0;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final cartBottomOffset = 56.0 + bottomInset + 10.0;
+    final cartBottomOffset = 56.0 + bottomInset + 8.0;
+    // Stack tracker snugly above floating cart with a clean 8px gap
     final trackingBottomOffset =
-        showCart ? (cartBottomOffset + 76.0) : cartBottomOffset;
+        showCart ? (cartBottomOffset + 58.0) : cartBottomOffset;
 
     return PopScope(
       canPop: false,

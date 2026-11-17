@@ -46,6 +46,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
   late final AnimationController _progressController;
   final TextEditingController _controller = TextEditingController();
   String _query = '';
+  String _serverQuery = '';
   String _activeFilter = 'all'; // 'all', 'grocery', 'restaurant'
   Timer? _debounce;
   bool _isDebouncing = false;
@@ -66,6 +67,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
       final sanitized = _sanitizeSearchQuery(widget.initialQuery!);
       _controller.text = sanitized;
       _query = sanitized;
+      _serverQuery = sanitized;
     }
     _placeholderTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted && _query.isEmpty && _controller.text.isEmpty) {
@@ -265,10 +267,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
 
   void _selectCategory(String categoryId, String categoryName) {
     HapticFeedback.selectionClick();
+    _debounce?.cancel();
     _controller.text = categoryName;
     setState(() {
       _query = categoryName;
+      _serverQuery = categoryName;
       _activeFilter = 'all';
+      _isDebouncing = false;
     });
     _saveRecentSearch(categoryName);
   }
@@ -284,10 +289,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
 
   void _onSearchTermSelected(String term) {
     HapticFeedback.selectionClick();
+    _debounce?.cancel();
     _controller.text = term;
     setState(() {
       _query = term;
+      _serverQuery = term;
       _activeFilter = 'all';
+      _isDebouncing = false;
     });
     _saveRecentSearch(term);
   }
@@ -447,22 +455,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                                         });
                                         return;
                                       }
-                                      if (!_isDebouncing && trimmed != _query) {
-                                        setState(() => _isDebouncing = true);
+                                      // ⚡ Instant in-memory catalog and suggestion render (0ms)
+                                      if (_query != trimmed) {
+                                        setState(() {
+                                          _query = trimmed;
+                                          _activeFilter = 'all';
+                                        });
                                       }
-                                      _debounce = Timer(const Duration(milliseconds: 180), () {
-                                        if (mounted) {
+                                      // Debounce background server search
+                                      _debounce = Timer(const Duration(milliseconds: 250), () {
+                                        if (mounted && _serverQuery != trimmed) {
                                           setState(() {
-                                            _query = trimmed;
-                                            _activeFilter = 'all';
+                                            _serverQuery = trimmed;
                                             _isDebouncing = false;
                                           });
                                         }
                                       });
                                     },
                                     onSubmitted: (val) {
-                                      if (val.trim().isNotEmpty) {
-                                        _saveRecentSearch(val.trim());
+                                      _debounce?.cancel();
+                                      final trimmed = val.trim();
+                                      if (trimmed.isNotEmpty) {
+                                        _saveRecentSearch(trimmed);
+                                        setState(() {
+                                          _query = trimmed;
+                                          _serverQuery = trimmed;
+                                          _isDebouncing = false;
+                                        });
                                       }
                                     },
                                     style: GoogleFonts.inter(
@@ -487,10 +506,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                           if (_query.isNotEmpty)
                             GestureDetector(
                               onTap: () {
+                                _debounce?.cancel();
                                 _controller.clear();
                                 setState(() {
                                   _query = '';
+                                  _serverQuery = '';
                                   _activeFilter = 'all';
+                                  _isDebouncing = false;
                                 });
                               },
                               child: Container(
@@ -560,7 +582,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
             // ⚡ Glowing Micro-Progress Line
             Consumer(
               builder: (context, ref, _) {
-                final serverSearchAsync = ref.watch(searchProductsProvider(_query));
+                final effectiveServerQuery = _serverQuery.isNotEmpty ? _serverQuery : _query;
+                final serverSearchAsync = ref.watch(searchProductsProvider(effectiveServerQuery));
                 final isSearching = _query.isNotEmpty && ((_debounce?.isActive ?? false) || serverSearchAsync.isLoading);
                 return AnimatedBuilder(
                   animation: _progressController,
@@ -1022,10 +1045,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
   }
 
   Widget _buildSearchResults() {
-    if (_isDebouncing) {
-      return _buildContentShimmerList();
-    }
-    final serverSearchAsync = ref.watch(searchProductsProvider(_query));
+    final effectiveServerQuery = _serverQuery.isNotEmpty ? _serverQuery : _query;
+    final serverSearchAsync = ref.watch(searchProductsProvider(effectiveServerQuery));
     final productsAsync = ref.watch(searchCatalogProductsProvider);
     final restaurantsAsync = ref.watch(homeRestaurantsProvider);
 
@@ -1412,7 +1433,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
 
         // Authoritative live server search results from Backend (AI PgVector architecture)
         final serverProducts = serverSearchAsync.valueOrNull;
-        if (serverSearchAsync.isLoading && (serverProducts == null || serverProducts.isEmpty)) {
+        // Only show shimmer if in-memory local catalog has ZERO products AND server is still loading
+        if (serverSearchAsync.isLoading && (serverProducts == null || serverProducts.isEmpty) && localFiltered.isEmpty) {
           return _buildContentShimmerList();
         }
 
@@ -1575,8 +1597,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                     const SizedBox(height: 12),
                     GestureDetector(
                       onTap: () {
+                        _debounce?.cancel();
                         _controller.clear();
-                        setState(() => _query = '');
+                        setState(() {
+                          _query = '';
+                          _serverQuery = '';
+                          _isDebouncing = false;
+                        });
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -2014,10 +2041,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                     return InkWell(
                       onTap: () {
                         HapticFeedback.selectionClick();
+                        _debounce?.cancel();
                         _controller.text = s.title;
                         setState(() {
                           _query = s.title;
+                          _serverQuery = s.title;
                           _activeFilter = 'all';
+                          _isDebouncing = false;
                         });
                         _saveRecentSearch(s.title);
                       },

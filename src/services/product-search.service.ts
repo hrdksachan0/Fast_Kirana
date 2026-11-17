@@ -142,36 +142,7 @@ export class ProductSearchService {
         }
       }
 
-      if (normalizedQuery.length >= 2) {
-        try {
-          const queryEmbedding = await getGeminiQueryEmbedding(normalizedQuery)
-          if (queryEmbedding && queryEmbedding.length === 768) {
-            const embStr = `[${queryEmbedding.map(v => v.toFixed(6)).join(',')}]`
-            const vectorRows: any[] = await prisma.$queryRawUnsafe(`
-              SELECT p.id, (1 - (p.embedding <=> $1::vector)) as sim
-              FROM products p
-              WHERE ${includeUnavailable ? 'TRUE' : 'p."isAvailable" = TRUE'}
-                AND p.embedding IS NOT NULL
-                AND (1 - (p.embedding <=> $1::vector)) > 0.38
-              ORDER BY sim DESC
-              LIMIT 60;
-            `, embStr)
-
-            if (vectorRows && vectorRows.length > 0) {
-              vectorRows.forEach(r => {
-                const sim = Number(r.sim) || 0
-                candidateIds.push(r.id)
-                vectorMap.set(r.id, sim)
-              })
-            }
-          }
-        } catch (vecErr) {
-          console.warn('[ProductSearchService] PgVector search fallback:', vecErr)
-        }
-      }
-
-      // 3. Find candidate product IDs using PostgreSQL Full Text Search (Fallback & Multi-word Token Search)
-
+      // 2. Find candidate product IDs using PostgreSQL Full Text Search (Fast-Path, 10-20ms)
       if (tsquery) {
         try {
           const ftsRows: any[] = await prisma.$queryRaw`
@@ -210,7 +181,7 @@ export class ProductSearchService {
         }
       }
 
-      // 4. Typo tolerance: If few results found, use pg_trgm word_similarity
+      // 3. Typo tolerance: If few results found, use pg_trgm word_similarity
       if (candidateIds.length < 5) {
         try {
           const firstWord = searchTokens[0].replace(/[^a-z0-9]/g, '')
@@ -232,6 +203,38 @@ export class ProductSearchService {
           }
         } catch (err) {
           console.warn('[ProductSearchService] Trigram execution fallback:', err)
+        }
+      }
+
+      // 4. Gemini AI Vector Semantic Search: Only invoked when keyword search yields < 5 results OR query is conversational
+      const needsSemanticSearch = (candidateIds.length < 5 || shouldParseIntent(normalizedQuery)) && normalizedQuery.length >= 3
+      if (needsSemanticSearch) {
+        try {
+          const queryEmbedding = await getGeminiQueryEmbedding(normalizedQuery)
+          if (queryEmbedding && queryEmbedding.length === 768) {
+            const embStr = `[${queryEmbedding.map(v => v.toFixed(6)).join(',')}]`
+            const vectorRows: any[] = await prisma.$queryRawUnsafe(`
+              SELECT p.id, (1 - (p.embedding <=> $1::vector)) as sim
+              FROM products p
+              WHERE ${includeUnavailable ? 'TRUE' : 'p."isAvailable" = TRUE'}
+                AND p.embedding IS NOT NULL
+                AND (1 - (p.embedding <=> $1::vector)) > 0.38
+              ORDER BY sim DESC
+              LIMIT 60;
+            `, embStr)
+
+            if (vectorRows && vectorRows.length > 0) {
+              vectorRows.forEach(r => {
+                const sim = Number(r.sim) || 0
+                if (!candidateIds.includes(r.id)) {
+                  candidateIds.push(r.id)
+                }
+                vectorMap.set(r.id, sim)
+              })
+            }
+          }
+        } catch (vecErr) {
+          console.warn('[ProductSearchService] PgVector search fallback:', vecErr)
         }
       }
 

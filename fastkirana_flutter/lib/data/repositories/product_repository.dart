@@ -22,6 +22,9 @@ class ProductRepository {
   static List<Category>? _cachedCategories;
   // Keyed in-flight fetch map to prevent cross-contamination between different query types
   static final Map<String, Future<List<Product>>> _inFlightFetches = {};
+  // Fast in-memory cache for search queries (LRU)
+  static final Map<String, List<Product>> _searchQueryCache = {};
+  static final Map<String, DateTime> _searchQueryCacheTime = {};
   // ETag cache for HTTP 304 Not Modified optimization
   static final Map<String, String> _eTags = {};
 
@@ -427,6 +430,17 @@ class ProductRepository {
       }
 
       // Case B: Full Catalog / Search / Restaurant Query
+      // 0. Search Query in-memory fast-cache hit (0ms return for repeated / backspaced queries)
+      if (!forceRefresh && !admin && search != null && search.trim().isNotEmpty) {
+        final searchKey = '$effectiveStoreId|${search.trim().toLowerCase()}';
+        final cachedSearch = _searchQueryCache[searchKey];
+        final cacheTime = _searchQueryCacheTime[searchKey];
+        if (cachedSearch != null && cacheTime != null && now.difference(cacheTime).inMinutes < 3) {
+          debugPrint('[ProductRepo] search in-memory cache HIT for "$search" in hub $effectiveStoreId: ${cachedSearch.length} items');
+          return cachedSearch;
+        }
+      }
+
       final cached = _hubCachedProducts[effectiveStoreId];
       final lastTime = _hubLastFetchTime[effectiveStoreId];
 
@@ -496,6 +510,14 @@ class ProductRepository {
       if (!admin) _inFlightFetches.remove(key);
 
       if (search != null && search.isNotEmpty) {
+        final searchKey = '$effectiveStoreId|${search.trim().toLowerCase()}';
+        _searchQueryCache[searchKey] = liveProducts;
+        _searchQueryCacheTime[searchKey] = DateTime.now();
+        if (_searchQueryCache.length > 50) {
+          final oldestKey = _searchQueryCache.keys.first;
+          _searchQueryCache.remove(oldestKey);
+          _searchQueryCacheTime.remove(oldestKey);
+        }
         return liveProducts;
       }
       return _filterProducts(liveProducts, category: category ?? resolvedId, search: search, restaurantId: restaurantId);
