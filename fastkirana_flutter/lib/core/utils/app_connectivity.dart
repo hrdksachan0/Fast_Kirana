@@ -121,34 +121,7 @@ class AppConnectivityObserver extends ChangeNotifier {
       }
     } catch (_) {}
 
-    // 2. Secondary domain probe if primary failed or during DNS cutover
-    if (AppConfig.secondaryApiUrl != AppConfig.apiBaseUrl) {
-      try {
-        final secondaryClient = Dio(BaseOptions(
-          baseUrl: AppConfig.secondaryApiUrl,
-          connectTimeout: const Duration(seconds: 4),
-          receiveTimeout: const Duration(seconds: 4),
-          followRedirects: false,
-          headers: {'Cache-Control': 'no-cache, no-store'},
-        ));
-        final response = await secondaryClient.get('/api/healthz', queryParameters: {
-          't': DateTime.now().millisecondsSinceEpoch,
-        });
-        dynamic data = response.data;
-        if (data is String) {
-          try {
-            data = jsonDecode(data);
-          } catch (_) {}
-        }
-        if (response.statusCode == 200 &&
-            data is Map &&
-            data['status'] == 'healthy') {
-          return true;
-        }
-      } catch (_) {}
-    }
-
-    // 3. Fallback: If backend is temporarily restarting/redeploying (502 or transient delay),
+    // 2. Fallback: If backend is temporarily restarting/redeploying (502 or boot delay),
     // probe internet reachability via Google 204 canary so user is not falsely trapped in offline state.
     try {
       final canaryClient = Dio(BaseOptions(
