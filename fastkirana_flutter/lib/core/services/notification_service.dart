@@ -84,17 +84,18 @@ title.toString().contains('🛵') ||
     final notifScreen = (data['screen'] ?? '').toString().trim();
     final isRestStaff = userRole == 'RESTAURANT' || userRole == 'RESTAURANT_OWNER' || userRole == 'CHEF' || assignedRestId.isNotEmpty;
 
-    // 1. If assigned to an outlet and notification is for another restaurant, SUPPRESS!
-    if (isRestStaff && assignedRestId.isNotEmpty && notifRestId.isNotEmpty) {
-      if (assignedRestId.toLowerCase() != notifRestId.toLowerCase()) {
+    // 1. STRICT RESTAURANT ISOLATION (Background):
+    // Restaurant staff ONLY receive alerts for THEIR assigned restaurant!
+    // Suppress ALL grocery orders (empty restaurantId) and all other restaurants' orders!
+    if (isRestStaff) {
+      if (notifRestId.isEmpty) {
+        debugPrint('NotificationService: Suppressing non-restaurant / grocery alert for restaurant staff in background.');
+        return;
+      }
+      if (assignedRestId.isNotEmpty && assignedRestId.toLowerCase() != notifRestId.toLowerCase()) {
         debugPrint('NotificationService: Suppressing alert in background for different restaurant ($notifRestId != $assignedRestId)');
         return;
       }
-    }
-    // 2. If restaurant staff and notification is grocery picker alert, SUPPRESS!
-    if (isRestStaff && (notifScreen == 'picker' || data['role'] == 'PICKER')) {
-      debugPrint('NotificationService: Suppressing grocery picker alert for restaurant staff in background.');
-      return;
     }
     // 3. If grocery picker and notification is restaurant console alert, SUPPRESS!
     if (userRole == 'PICKER' && (notifScreen == 'restaurant-console' || notifRestId.isNotEmpty)) {
@@ -771,17 +772,18 @@ title.toString().contains('🛵') ||
       final notifScreen = (data['screen'] ?? '').toString().trim();
       final isRestStaff = userRole == 'RESTAURANT' || userRole == 'RESTAURANT_OWNER' || userRole == 'CHEF' || assignedRestId.isNotEmpty;
 
-      // 1. If assigned to an outlet and notification is for another restaurant, SUPPRESS!
-      if (isRestStaff && assignedRestId.isNotEmpty && notifRestId.isNotEmpty) {
-        if (assignedRestId.toLowerCase() != notifRestId.toLowerCase()) {
+      // 1. STRICT RESTAURANT ISOLATION (Foreground):
+      // Restaurant staff ONLY receive alerts for THEIR assigned restaurant!
+      // Suppress ALL grocery orders (empty restaurantId) and all other restaurants' orders!
+      if (isRestStaff) {
+        if (notifRestId.isEmpty) {
+          debugPrint('NotificationService: Suppressing non-restaurant / grocery alert for restaurant staff in foreground.');
+          return;
+        }
+        if (assignedRestId.isNotEmpty && assignedRestId.toLowerCase() != notifRestId.toLowerCase()) {
           debugPrint('NotificationService: Suppressing foreground alert for different restaurant ($notifRestId != $assignedRestId)');
           return;
         }
-      }
-      // 2. If restaurant staff and notification is grocery picker alert, SUPPRESS!
-      if (isRestStaff && (notifScreen == 'picker' || data['role'] == 'PICKER')) {
-        debugPrint('NotificationService: Suppressing grocery picker alert for restaurant staff in foreground.');
-        return;
       }
       // 3. If grocery picker and notification is restaurant console alert, SUPPRESS!
       if (userRole == 'PICKER' && (notifScreen == 'restaurant-console' || notifRestId.isNotEmpty)) {
