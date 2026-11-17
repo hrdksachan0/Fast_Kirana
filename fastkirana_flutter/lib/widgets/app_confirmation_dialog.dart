@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -42,7 +43,7 @@ class AppConfirmationDialog extends StatelessWidget {
   // Presets & Static Helpers
   // -------------------------------------------------------------
 
-  /// Generic confirmation modal
+  /// Generic confirmation modal with frosted backdrop blur
   static Future<bool?> show({
     required BuildContext context,
     required IconData icon,
@@ -59,24 +60,27 @@ class AppConfirmationDialog extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: barrierDismissible,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => AppConfirmationDialog(
-        icon: icon,
-        title: title,
-        message: message,
-        contentWidget: contentWidget,
-        confirmLabel: confirmLabel,
-        cancelLabel: cancelLabel,
-        type: type,
-        confirmIcon: confirmIcon,
-        onConfirm: () {
-          HapticFeedback.mediumImpact();
-          Navigator.of(ctx).pop(true);
-        },
-        onCancel: () {
-          HapticFeedback.lightImpact();
-          Navigator.of(ctx).pop(false);
-        },
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+        child: AppConfirmationDialog(
+          icon: icon,
+          title: title,
+          message: message,
+          contentWidget: contentWidget,
+          confirmLabel: confirmLabel,
+          cancelLabel: cancelLabel,
+          type: type,
+          confirmIcon: confirmIcon,
+          onConfirm: () {
+            HapticFeedback.mediumImpact();
+            Navigator.of(ctx).pop(true);
+          },
+          onCancel: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(ctx).pop(false);
+          },
+        ),
       ),
     );
   }
@@ -95,8 +99,10 @@ class AppConfirmationDialog extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => AppConfirmationDialog(
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+        child: AppConfirmationDialog(
         icon: Icons.payments_rounded,
         title: 'Convert to Cash on Delivery?',
         message: 'Switch this order from pending online payment to Cash on Delivery immediately.',
@@ -284,14 +290,15 @@ class AppConfirmationDialog extends StatelessWidget {
           Navigator.of(ctx).pop(false);
         },
       ),
-    );
+    ),
+  );
   }
 
-  /// Modern Universal Logout Dialog
+  /// Modern Universal Logout Dialog with frosted backdrop & security badge
   static Future<bool?> showLogout({
     required BuildContext context,
-    String title = 'Log Out?',
-    String subtitle = 'Are you sure you want to sign out?',
+    String title = 'Log Out of FastMinute?',
+    String subtitle = 'You will need to verify your phone number or email to log back in.',
     String confirmLabel = 'Log Out',
     String? accountNote,
   }) {
@@ -299,51 +306,151 @@ class AppConfirmationDialog extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => AppConfirmationDialog(
-        icon: Icons.logout_rounded,
-        title: title,
-        message: subtitle,
-        type: ConfirmationDialogType.danger,
-        confirmLabel: confirmLabel,
-        confirmIcon: Icons.power_settings_new_rounded,
-        contentWidget: accountNote != null
-            ? Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFEE2E2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.shield_outlined, size: 16, color: Color(0xFFDC2626)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        accountNote,
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFB91C1C),
-                          height: 1.3,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+        child: AppConfirmationDialog(
+          icon: Icons.logout_rounded,
+          title: title,
+          message: subtitle,
+          type: ConfirmationDialogType.danger,
+          confirmLabel: confirmLabel,
+          cancelLabel: 'Cancel',
+          confirmIcon: Icons.power_settings_new_rounded,
+          contentWidget: accountNote != null
+              ? Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF1F2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFECDD3), width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFE4E6),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFFECDD3), width: 1),
+                        ),
+                        child: const Icon(
+                          Icons.verified_user_rounded,
+                          size: 17,
+                          color: Color(0xFFE11D48),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          accountNote,
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11.5),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF9F1239),
+                            height: 1.38,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : null,
+          onConfirm: () {
+            HapticFeedback.heavyImpact();
+            Navigator.of(ctx).pop(true);
+          },
+          onCancel: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(ctx).pop(false);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Ultra-Premium Clear Cart Dialog with frosted backdrop & context pill
+  static Future<bool?> showClearCart({
+    required BuildContext context,
+    int? itemCount,
+    String? storeName,
+    String title = 'Clear Entire Cart?',
+    String confirmLabel = 'Clear Cart',
+    String cancelLabel = 'Cancel',
+  }) {
+    HapticFeedback.lightImpact();
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+        child: AppConfirmationDialog(
+          icon: Icons.remove_shopping_cart_rounded,
+          title: title,
+          message: itemCount != null && itemCount > 0
+              ? 'Are you sure you want to remove all $itemCount items from your cart?'
+              : 'Are you sure you want to remove all items from your cart?',
+          type: ConfirmationDialogType.danger,
+          confirmLabel: confirmLabel,
+          cancelLabel: cancelLabel,
+          confirmIcon: Icons.delete_sweep_rounded,
+          contentWidget: Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1F2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFECDD3), width: 1),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE4E6),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFECDD3), width: 1),
+                  ),
+                  child: const Icon(
+                    Icons.shopping_bag_outlined,
+                    size: 17,
+                    color: Color(0xFFE11D48),
+                  ),
                 ),
-              )
-            : null,
-        onConfirm: () {
-          HapticFeedback.heavyImpact();
-          Navigator.of(ctx).pop(true);
-        },
-        onCancel: () {
-          HapticFeedback.lightImpact();
-          Navigator.of(ctx).pop(false);
-        },
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    storeName != null && storeName.isNotEmpty
+                        ? 'All selected items and cooking instructions for $storeName will be removed.'
+                        : 'All selected items and customized cooking instructions will be removed.',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF9F1239),
+                      height: 1.38,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          onConfirm: () {
+            HapticFeedback.heavyImpact();
+            Navigator.of(ctx).pop(true);
+          },
+          onCancel: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(ctx).pop(false);
+          },
+        ),
       ),
     );
   }
@@ -354,6 +461,7 @@ class AppConfirmationDialog extends StatelessWidget {
     required String title,
     required String message,
     required String confirmLabel,
+    String cancelLabel = 'Cancel',
     IconData icon = Icons.delete_outline_rounded,
     Widget? contentWidget,
   }) {
@@ -361,23 +469,27 @@ class AppConfirmationDialog extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
-      builder: (ctx) => AppConfirmationDialog(
-        icon: icon,
-        title: title,
-        message: message,
-        type: ConfirmationDialogType.danger,
-        confirmLabel: confirmLabel,
-        confirmIcon: icon,
-        contentWidget: contentWidget,
-        onConfirm: () {
-          HapticFeedback.heavyImpact();
-          Navigator.of(ctx).pop(true);
-        },
-        onCancel: () {
-          HapticFeedback.lightImpact();
-          Navigator.of(ctx).pop(false);
-        },
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+        child: AppConfirmationDialog(
+          icon: icon,
+          title: title,
+          message: message,
+          type: ConfirmationDialogType.danger,
+          confirmLabel: confirmLabel,
+          cancelLabel: cancelLabel,
+          confirmIcon: icon,
+          contentWidget: contentWidget,
+          onConfirm: () {
+            HapticFeedback.heavyImpact();
+            Navigator.of(ctx).pop(true);
+          },
+          onCancel: () {
+            HapticFeedback.lightImpact();
+            Navigator.of(ctx).pop(false);
+          },
+        ),
       ),
     );
   }
@@ -391,11 +503,11 @@ class AppConfirmationDialog extends StatelessWidget {
       case ConfirmationDialogType.success:
         return const Color(0xFF10B981); // Emerald 500
       case ConfirmationDialogType.danger:
-        return const Color(0xFFE20A22); // FastKirana Brand Red
+        return const Color(0xFFE11D48); // Rose 600 / FastMinute Red
       case ConfirmationDialogType.warning:
         return const Color(0xFFF59E0B); // Amber 500
       case ConfirmationDialogType.info:
-        return const Color(0xFF3B82F6); // Blue 500
+        return const Color(0xFF2563EB); // Blue 600
     }
   }
 
@@ -432,53 +544,73 @@ class AppConfirmationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       backgroundColor: Colors.white,
-      elevation: 20,
-      shadowColor: const Color(0xFF0F172A).withValues(alpha: 0.25),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(28),
           border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.16),
+              blurRadius: 28,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 1. Concentric Glow Icon Badge
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: _badgeBgColor,
-                shape: BoxShape.circle,
-                border: Border.all(color: _badgeBorderColor, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: _primaryColor.withValues(alpha: 0.18),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
+            // 1. Concentric 3-Layer Depth Icon Badge
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 74,
+                  height: 74,
+                  decoration: BoxDecoration(
+                    color: _primaryColor.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
                   ),
-                ],
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  size: 28,
-                  color: _primaryColor,
                 ),
-              ),
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: _badgeBgColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: _badgeBorderColor, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _primaryColor.withValues(alpha: 0.16),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      size: 26,
+                      color: _primaryColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 18),
 
-            // 2. Headline
+            // 2. Headline with Plus Jakarta Sans
             Text(
               title,
-              style: GoogleFonts.inter(
-                fontSize: Responsive.scaledFontSize(context, 17.5),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: Responsive.scaledFontSize(context, 18),
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF0F172A),
                 letterSpacing: -0.4,
@@ -489,21 +621,24 @@ class AppConfirmationDialog extends StatelessWidget {
             // 3. Subtitle / Message
             if (message != null) ...[
               const SizedBox(height: 8),
-              Text(
-                message!,
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 12.5),
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFF64748B),
-                  height: 1.42,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  message!,
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 13),
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF64748B),
+                    height: 1.45,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
 
-            // 4. Custom Slot (e.g. Order Highlight Card)
+            // 4. Custom Slot (Notice / Security / COD Switch Card)
             if (contentWidget != null) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               contentWidget!,
             ],
 
@@ -518,17 +653,19 @@ class AppConfirmationDialog extends StatelessWidget {
 
                 return Row(
                   children: [
-                    // Cancel Button (Soft Neutral Slate)
+                    // Cancel Button (Soft Neutral Slate with subtle border)
                     Expanded(
                       flex: cancelFlex,
                       child: SizedBox(
-                        height: 46,
+                        height: 48,
                         child: TextButton(
                           style: TextButton.styleFrom(
                             backgroundColor: const Color(0xFFF1F5F9),
-                            foregroundColor: const Color(0xFF475569),
+                            foregroundColor: const Color(0xFF334155),
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
+                              side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
                           ),
@@ -543,10 +680,10 @@ class AppConfirmationDialog extends StatelessWidget {
                             fit: BoxFit.scaleDown,
                             child: Text(
                               cancelLabel,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: Responsive.scaledFontSize(context, 13.5),
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF475569),
+                                color: const Color(0xFF334155),
                               ),
                               maxLines: 1,
                             ),
@@ -556,25 +693,37 @@ class AppConfirmationDialog extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
 
-                    // Confirm Button (Vibrant & Tactile with soft colored shadow)
+                    // Confirm Button (Vibrant gradient with soft colored shadow)
                     Expanded(
                       flex: confirmFlex,
                       child: SizedBox(
-                        height: 46,
+                        height: 48,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(14),
+                            gradient: LinearGradient(
+                              colors: type == ConfirmationDialogType.danger
+                                  ? const [Color(0xFFE11D48), Color(0xFFBE123C)]
+                                  : type == ConfirmationDialogType.success
+                                      ? const [Color(0xFF10B981), Color(0xFF059669)]
+                                      : type == ConfirmationDialogType.warning
+                                          ? const [Color(0xFFF59E0B), Color(0xFFD97706)]
+                                          : const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: _primaryColor.withValues(alpha: 0.30),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
+                                color: _primaryColor.withValues(alpha: 0.32),
+                                blurRadius: 14,
+                                offset: const Offset(0, 5),
                               ),
                             ],
                           ),
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _primaryColor,
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -596,15 +745,16 @@ class AppConfirmationDialog extends StatelessWidget {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         if (confirmIcon != null) ...[
-                                          Icon(confirmIcon, size: 16, color: Colors.white),
+                                          Icon(confirmIcon, size: 16.5, color: Colors.white),
                                           const SizedBox(width: 6),
                                         ],
                                         Text(
                                           confirmLabel,
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 13),
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: Responsive.scaledFontSize(context, 13.5),
                                             fontWeight: FontWeight.w800,
                                             color: Colors.white,
+                                            letterSpacing: -0.2,
                                           ),
                                           maxLines: 1,
                                         ),

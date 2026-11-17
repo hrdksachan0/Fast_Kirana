@@ -27,6 +27,7 @@ import 'widgets/cart_bottom_checkout_bar.dart';
 import 'widgets/cart_items_section.dart';
 import 'widgets/cart_upsell_carousel.dart';
 import 'widgets/swiggy_coupon_action_sheet.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -195,51 +196,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     });
   }
 
-  void _showClearCartConfirmation(BuildContext context, WidgetRef ref) {
-    HapticFeedback.mediumImpact();
-    showDialog(
+  void _showClearCartConfirmation(BuildContext context, WidgetRef ref) async {
+    final cartState = ref.read(cartProvider).valueOrNull;
+    final confirmed = await AppConfirmationDialog.showClearCart(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Clear Cart?',
-          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 17, color: const Color(0xFF0F172A)),
-        ),
-        content: Text(
-          'Are you sure you want to remove all items from your cart?',
-          style: GoogleFonts.inter(fontSize: 13.5, color: const Color(0xFF64748B), height: 1.4),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE11D48),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(cartProvider.notifier).clearCart();
-            },
-            child: Text(
-              'Clear',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
-      ),
+      itemCount: cartState?.totalItems,
+      storeName: cartState?.items.firstWhereOrNull((i) => i.product.restaurant != null)?.product.restaurant?.name,
     );
+    if (confirmed == true && mounted) {
+      ref.read(cartProvider.notifier).clearCart();
+    }
   }
 
   PreferredSizeWidget _buildPremiumAppBar(
