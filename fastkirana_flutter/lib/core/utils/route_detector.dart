@@ -34,6 +34,17 @@ class RouteInfo {
 class DeliveryRoutes {
   DeliveryRoutes._();
 
+  static const RouteInfo all = RouteInfo(
+    key: DeliveryRouteKey.all,
+    label: 'All Roads',
+    shortLabel: 'All Roads',
+    emoji: '🛣️',
+    primaryColor: Color(0xFF0F172A),
+    backgroundColor: Color(0xFFF1F5F9),
+    textColor: Color(0xFF0F172A),
+    description: 'All 4 arterial roads and town center orders',
+  );
+
   static const RouteInfo hamirpur = RouteInfo(
     key: DeliveryRouteKey.hamirpur,
     label: 'Hamirpur Road',
@@ -91,6 +102,8 @@ class DeliveryRoutes {
 
   static RouteInfo getByKey(DeliveryRouteKey key) {
     switch (key) {
+      case DeliveryRouteKey.all:
+        return all;
       case DeliveryRouteKey.hamirpur:
         return hamirpur;
       case DeliveryRouteKey.moosanagar:
@@ -100,30 +113,35 @@ class DeliveryRoutes {
       case DeliveryRouteKey.jahanabad:
         return jahanabad;
       case DeliveryRouteKey.townCenter:
-      case DeliveryRouteKey.all:
         return townCenter;
     }
   }
 
   static const List<String> _hamirpurKeywords = [
-    'hamirpur', 'hamir pur', 'bus stand', 'mandi', 'mandi samiti', 'yamuna', 'pul',
-    'bypass', 'by pass', 'patel nagar', 'kushwaha', 'south', 'nh34 south', 'nh-34 south',
-    'saukhara', 'bairi'
+    'hamirpur road', 'hamirpur rd', 'hamirpur', 'hamir pur', 'bus stand', 'bus adda',
+    'mandi samiti', 'mandi', 'yamuna pul', 'yamuna bridge', 'yamuna',
+    'bypass south', 'south bypass', 'by pass south', 'patel nagar', 'kushwaha nagar',
+    'kushwaha', 'south', 'nh34 south', 'nh-34 south', 'saukhara', 'bairi'
   ];
 
   static const List<String> _moosanagarKeywords = [
-    'moosanagar', 'moosangar', 'musa nagar', 'musanagar', 'mughal', 'mughal road', 'chc', 'hospital',
-    'degree college', 'college', 'block', 'sarvoday', 'sarvodaya', 'west', 'bindki road', 'ansar market'
+    'moosanagar road', 'moosanagar rd', 'moosanagar', 'moosangar', 'musa nagar', 'musanagar',
+    'mughal road', 'mughal rd', 'mughal', 'chc hospital', 'chc', 'samudayik', 'hospital',
+    'degree college', 'college', 'block office', 'block', 'sarvoday nagar', 'sarvoday',
+    'sarvodaya', 'west', 'bindki road', 'bindki rd', 'bindki', 'ansar market'
   ];
 
   static const List<String> _kanpurKeywords = [
-    'kanpur', 'kanpur road', 'railway', 'station', 'crossing', 'fatak', 'shahi gate',
-    'subhash nagar', 'subhash', 'north', 'nh34 north', 'nh-34 north', 'kora jahanabad'
+    'kanpur road', 'kanpur rd', 'kanpur highway', 'railway station', 'railway', 'crossing',
+    'railway crossing', 'fatak', 'railway fatak', 'station road', 'station rd', 'shahi gate',
+    'subhash nagar', 'subhash', 'north', 'nh34 north', 'nh-34 north', 'kora jahanabad',
+    'kora mode', 'kora mor'
   ];
 
   static const List<String> _jahanabadKeywords = [
-    'jahanabad', 'jahana bad', 'tiraha', 'kotwali', 'thana', 'police station', 'sabzi mandi',
-    'purana bazar', 'east', 'jahanabad road'
+    'jahanabad road', 'jahanabad rd', 'jahanabad', 'jahana bad', 'jahanabad tiraha', 'tiraha',
+    'kotwali', 'thana road', 'thana rd', 'thana', 'police station', 'sabzi mandi',
+    'purana bazar', 'purana bazaar', 'east', 'kasba'
   ];
 
   /// Helper to format or append a manual Route Override marker into the order's notes
@@ -198,79 +216,110 @@ class DeliveryRoutes {
       if (rProp == 'TOWN_CENTER') return townCenter;
     } catch (_) {}
 
-    String addressText = '';
+    final List<String> addressTokens = [];
     String notes = '';
-    num? lat;
-    num? lng;
+    double? lat;
+    double? lng;
+
+    void extractFromMap(Map addr) {
+      for (final key in [
+        'area',
+        'street',
+        'houseNo',
+        'landmark',
+        'label',
+        'locality',
+        'address',
+        'formattedAddress',
+        'addressLine1',
+        'addressLine2',
+        'city'
+      ]) {
+        final val = addr[key];
+        if (val != null && val.toString().trim().isNotEmpty && val.toString() != 'null') {
+          final str = val.toString().trim();
+          // Filter out generic city name "kanpur nagar" so it doesn't trick keyword detector
+          if (key == 'city' && (str.toLowerCase() == 'kanpur' || str.toLowerCase() == 'kanpur nagar')) {
+            continue;
+          }
+          addressTokens.add(str);
+        }
+      }
+      final rawLat = addr['lat'];
+      final rawLng = addr['lng'];
+      if (lat == null && rawLat != null) {
+        lat = rawLat is num ? rawLat.toDouble() : double.tryParse(rawLat.toString());
+      }
+      if (lng == null && rawLng != null) {
+        lng = rawLng is num ? rawLng.toDouble() : double.tryParse(rawLng.toString());
+      }
+    }
 
     if (order is Map) {
-      final rawAddr = order['address'] ?? order['addresses'] ?? order['customerAddress'];
+      final rawAddr = order['address'] ?? order['addresses'] ?? order['customerAddress'] ?? order['addressRaw'];
       if (rawAddr is Map) {
-        addressText = [
-          rawAddr['addressLine1'],
-          rawAddr['addressLine2'],
-          rawAddr['street'],
-          rawAddr['address'],
-          rawAddr['formattedAddress'],
-          rawAddr['landmark'],
-          rawAddr['city'],
-          rawAddr['locality'],
-        ].where((s) => s != null && s.toString().trim().isNotEmpty).join(' ');
-        lat = rawAddr['lat'] is num ? rawAddr['lat'] : null;
-        lng = rawAddr['lng'] is num ? rawAddr['lng'] : null;
+        extractFromMap(rawAddr);
+      } else if (rawAddr is List && rawAddr.isNotEmpty) {
+        for (final item in rawAddr) {
+          if (item is Map) extractFromMap(item);
+        }
       } else if (rawAddr is String) {
-        addressText = rawAddr;
+        addressTokens.add(rawAddr);
       }
+
+      // Also check subOrders for companion addresses
+      final subs = order['subOrders'];
+      if (subs is List) {
+        for (final s in subs) {
+          if (s is Map) {
+            final sAddr = s['address'] ?? s['addresses'] ?? s['customerAddress'];
+            if (sAddr is Map) extractFromMap(sAddr);
+            if (s['notes'] != null) addressTokens.add(s['notes'].toString());
+          }
+        }
+      }
+
       notes = (order['notes'] ?? order['deliveryInstructions'] ?? '').toString();
-      lat = order['deliveryLat'] ?? lat;
-      lng = order['deliveryLng'] ?? lng;
+      final oLat = order['deliveryLat'];
+      final oLng = order['deliveryLng'];
+      if (oLat != null) lat = oLat is num ? oLat.toDouble() : double.tryParse(oLat.toString());
+      if (oLng != null) lng = oLng is num ? oLng.toDouble() : double.tryParse(oLng.toString());
     } else {
-      // Order model from fastkirana_flutter
       try {
         final a = (order as dynamic).address;
         if (a != null) {
-          final fmt = a.formattedAddress;
-          final lbl = a.label;
-          addressText = '${fmt ?? ''} ${lbl ?? ''}';
-          lat = a.lat;
-          lng = a.lng;
+          if (a.formattedAddress != null) addressTokens.add(a.formattedAddress.toString());
+          if (a.area != null) addressTokens.add(a.area.toString());
+          if (a.street != null) addressTokens.add(a.street.toString());
+          if (a.label != null) addressTokens.add(a.label.toString());
+          if (a.landmark != null) addressTokens.add(a.landmark.toString());
+          if (a.lat != null) lat = (a.lat as num).toDouble();
+          if (a.lng != null) lng = (a.lng as num).toDouble();
         }
+      } catch (_) {}
+
+      try {
+        final raw = (order as dynamic).addressRaw;
+        if (raw is Map) extractFromMap(raw);
       } catch (_) {}
 
       try {
         final custAddr = (order as dynamic).customerAddress;
-        if (custAddr != null && custAddr.toString().isNotEmpty) {
-          addressText = '$addressText $custAddr';
-        }
-      } catch (_) {}
-
-      try {
-        final rawAddr = (order as dynamic).addressRaw;
-        if (rawAddr is Map) {
-          final extra = [
-            rawAddr['addressLine1'],
-            rawAddr['addressLine2'],
-            rawAddr['street'],
-            rawAddr['address'],
-            rawAddr['formattedAddress'],
-            rawAddr['landmark'],
-            rawAddr['city'],
-          ].where((s) => s != null && s.toString().trim().isNotEmpty).join(' ');
-          addressText = '$addressText $extra';
-          lat ??= rawAddr['lat'] is num ? rawAddr['lat'] : null;
-          lng ??= rawAddr['lng'] is num ? rawAddr['lng'] : null;
-        }
+        if (custAddr != null) addressTokens.add(custAddr.toString());
       } catch (_) {}
 
       try {
         notes = ((order as dynamic).notes ?? '').toString();
-        lat ??= (order as dynamic).deliveryLat;
-        lng ??= (order as dynamic).deliveryLng;
+        final oLat = (order as dynamic).deliveryLat;
+        final oLng = (order as dynamic).deliveryLng;
+        if (oLat != null) lat = oLat is num ? oLat.toDouble() : double.tryParse(oLat.toString());
+        if (oLng != null) lng = oLng is num ? oLng.toDouble() : double.tryParse(oLng.toString());
       } catch (_) {}
     }
 
-    final rawText = '$addressText $notes'.toLowerCase();
+    final rawText = '${addressTokens.join(" ")} $notes'.toLowerCase();
 
+    // 2. Keyword Matching across all 4 corridors
     for (final kw in _hamirpurKeywords) {
       if (rawText.contains(kw)) return hamirpur;
     }
@@ -287,18 +336,18 @@ class DeliveryRoutes {
       if (rawText.contains(kw)) return jahanabad;
     }
 
-    // Coordinate-based approximate direction if available (Ghatampur center is approx lat: 26.155, lng: 80.165)
-    if (lat != null && lng != null) {
+    // 3. Coordinate-based directional quadrant (Ghatampur Darkstore center: 26.155, 80.165)
+    if (lat != null && lng != null && lat > 20 && lng > 70) {
       const centerLat = 26.155;
       const centerLng = 80.165;
-      final dLat = lat.toDouble() - centerLat;
-      final dLng = lng.toDouble() - centerLng;
+      final dLat = lat - centerLat;
+      final dLng = lng - centerLng;
 
-      if (dLat.abs() > 0.005 || dLng.abs() > 0.005) {
-        if (dLat < -0.005) return hamirpur; // South
-        if (dLat > 0.005 && dLng.abs() < 0.01) return kanpur; // North
-        if (dLng < -0.005) return moosanagar; // West
-        if (dLng > 0.005) return jahanabad; // East
+      if (dLat.abs() > 0.004 || dLng.abs() > 0.004) {
+        if (dLat < -0.004 && dLat.abs() >= dLng.abs()) return hamirpur; // South
+        if (dLat > 0.004 && dLat.abs() >= dLng.abs()) return kanpur; // North
+        if (dLng < -0.004 && dLng.abs() > dLat.abs()) return moosanagar; // West
+        if (dLng > 0.004 && dLng.abs() > dLat.abs()) return jahanabad; // East
       }
     }
 

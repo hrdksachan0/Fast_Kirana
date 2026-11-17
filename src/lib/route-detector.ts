@@ -70,24 +70,30 @@ export const DELIVERY_ROUTES: Record<Exclude<DeliveryRouteKey, 'ALL'>, RouteInfo
 }
 
 const HAMIRPUR_KEYWORDS = [
-  'hamirpur', 'hamir pur', 'bus stand', 'mandi', 'mandi samiti', 'yamuna', 'pul',
-  'bypass', 'by pass', 'patel nagar', 'kushwaha', 'south', 'nh34 south', 'nh-34 south',
-  'saukhara', 'bairi'
+  'hamirpur road', 'hamirpur rd', 'hamirpur', 'hamir pur', 'bus stand', 'bus adda',
+  'mandi samiti', 'mandi', 'yamuna pul', 'yamuna bridge', 'yamuna',
+  'bypass south', 'south bypass', 'by pass south', 'patel nagar', 'kushwaha nagar',
+  'kushwaha', 'south', 'nh34 south', 'nh-34 south', 'saukhara', 'bairi'
 ]
 
 const MOOSANAGAR_KEYWORDS = [
-  'moosanagar', 'musa nagar', 'musanagar', 'mughal', 'mughal road', 'chc', 'hospital',
-  'degree college', 'college', 'block', 'sarvoday', 'sarvodaya', 'west', 'bindki road'
+  'moosanagar road', 'moosanagar rd', 'moosanagar', 'moosangar', 'musa nagar', 'musanagar',
+  'mughal road', 'mughal rd', 'mughal', 'chc hospital', 'chc', 'samudayik', 'hospital',
+  'degree college', 'college', 'block office', 'block', 'sarvoday nagar', 'sarvoday',
+  'sarvodaya', 'west', 'bindki road', 'bindki rd', 'bindki', 'ansar market'
 ]
 
 const KANPUR_KEYWORDS = [
-  'kanpur', 'kanpur road', 'railway', 'station', 'crossing', 'fatak', 'shahi gate',
-  'subhash nagar', 'subhash', 'north', 'nh34 north', 'nh-34 north', 'kora jahanabad mode'
+  'kanpur road', 'kanpur rd', 'kanpur highway', 'railway station', 'railway', 'crossing',
+  'railway crossing', 'fatak', 'railway fatak', 'station road', 'station rd', 'shahi gate',
+  'subhash nagar', 'subhash', 'north', 'nh34 north', 'nh-34 north', 'kora jahanabad',
+  'kora mode', 'kora mor'
 ]
 
 const JAHANABAD_KEYWORDS = [
-  'jahanabad', 'jahana bad', 'tiraha', 'kotwali', 'thana', 'police station', 'sabzi mandi',
-  'purana bazar', 'east', 'jahanabad road'
+  'jahanabad road', 'jahanabad rd', 'jahanabad', 'jahana bad', 'jahanabad tiraha', 'tiraha',
+  'kotwali', 'thana road', 'thana rd', 'thana', 'police station', 'sabzi mandi',
+  'purana bazar', 'purana bazaar', 'east', 'kasba'
 ]
 
 /**
@@ -127,18 +133,59 @@ export function detectOrderRoute(order: any): RouteInfo {
     return DELIVERY_ROUTES[order.deliveryRoute as keyof typeof DELIVERY_ROUTES]
   }
 
-  const addr = order.address || {}
-  const rawText = [
-    addr.addressLine1 || '',
-    addr.addressLine2 || '',
-    addr.landmark || '',
-    addr.city || '',
-    addr.locality || '',
-    order.notes || '',
-    order.deliveryInstructions || '',
-  ]
-    .join(' ')
-    .toLowerCase()
+  const addressTokens: string[] = []
+  let lat: number | null = null
+  let lng: number | null = null
+
+  const extractFromMap = (addr: any) => {
+    if (!addr || typeof addr !== 'object') return
+    for (const key of ['area', 'street', 'houseNo', 'landmark', 'label', 'locality', 'address', 'formattedAddress', 'addressLine1', 'addressLine2', 'city']) {
+      const val = addr[key]
+      if (val && typeof val === 'string' && val.trim()) {
+        const str = val.trim()
+        if (key === 'city' && (str.toLowerCase() === 'kanpur' || str.toLowerCase() === 'kanpur nagar')) {
+          continue
+        }
+        addressTokens.push(str)
+      }
+    }
+    if (lat === null && addr.lat !== undefined && addr.lat !== null) {
+      const parsed = Number(addr.lat)
+      if (!isNaN(parsed)) lat = parsed
+    }
+    if (lng === null && addr.lng !== undefined && addr.lng !== null) {
+      const parsed = Number(addr.lng)
+      if (!isNaN(parsed)) lng = parsed
+    }
+  }
+
+  const rawAddr = order.address || order.addresses || order.customerAddress || order.addressRaw
+  if (Array.isArray(rawAddr)) {
+    rawAddr.forEach(extractFromMap)
+  } else if (rawAddr && typeof rawAddr === 'object') {
+    extractFromMap(rawAddr)
+  } else if (typeof rawAddr === 'string') {
+    addressTokens.push(rawAddr)
+  }
+
+  if (Array.isArray(order.subOrders)) {
+    for (const sub of order.subOrders) {
+      const sAddr = sub.address || sub.addresses || sub.customerAddress
+      if (sAddr) extractFromMap(sAddr)
+      if (sub.notes) addressTokens.push(String(sub.notes))
+    }
+  }
+
+  if (order.deliveryLat !== undefined && order.deliveryLat !== null) {
+    const parsed = Number(order.deliveryLat)
+    if (!isNaN(parsed)) lat = parsed
+  }
+  if (order.deliveryLng !== undefined && order.deliveryLng !== null) {
+    const parsed = Number(order.deliveryLng)
+    if (!isNaN(parsed)) lng = parsed
+  }
+
+  const rawText = (addressTokens.join(' ') + ' ' + (order.notes || '') + ' ' + (order.deliveryInstructions || '')).toLowerCase()
 
   // Match Hamirpur Road
   if (HAMIRPUR_KEYWORDS.some((kw) => rawText.includes(kw))) {
@@ -161,20 +208,17 @@ export function detectOrderRoute(order: any): RouteInfo {
   }
 
   // Coordinate-based approximate direction if available (Ghatampur center is approx lat: 26.155, lng: 80.165)
-  const lat = order.deliveryLat || addr.lat
-  const lng = order.deliveryLng || addr.lng
-
-  if (lat && lng) {
+  if (lat && lng && lat > 20 && lng > 70) {
     const centerLat = 26.155
     const centerLng = 80.165
     const dLat = lat - centerLat
     const dLng = lng - centerLng
 
-    if (Math.abs(dLat) > 0.005 || Math.abs(dLng) > 0.005) {
-      if (dLat < -0.005) return DELIVERY_ROUTES.HAMIRPUR // South
-      if (dLat > 0.005 && Math.abs(dLng) < 0.01) return DELIVERY_ROUTES.KANPUR // North
-      if (dLng < -0.005) return DELIVERY_ROUTES.MOOSANAGAR // West
-      if (dLng > 0.005) return DELIVERY_ROUTES.JAHANABAD // East
+    if (Math.abs(dLat) > 0.004 || Math.abs(dLng) > 0.004) {
+      if (dLat < -0.004 && Math.abs(dLat) >= Math.abs(dLng)) return DELIVERY_ROUTES.HAMIRPUR // South
+      if (dLat > 0.004 && Math.abs(dLat) >= Math.abs(dLng)) return DELIVERY_ROUTES.KANPUR // North
+      if (dLng < -0.004 && Math.abs(dLng) > Math.abs(dLat)) return DELIVERY_ROUTES.MOOSANAGAR // West
+      if (dLng > 0.004 && Math.abs(dLng) > Math.abs(dLat)) return DELIVERY_ROUTES.JAHANABAD // East
     }
   }
 
