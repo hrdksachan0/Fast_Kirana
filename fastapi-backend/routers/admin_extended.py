@@ -792,7 +792,11 @@ async def admin_update_order_status(
     background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     """Update order status."""
-    result = await db.execute(select(Order).where(or_(
+    result = await db.execute(select(Order).options(
+        selectinload(Order.items),
+        selectinload(Order.address),
+        selectinload(Order.user)
+    ).where(or_(
         Order.id == order_id,
         Order.readableId == order_id,
         Order.readableId.ilike(f"{order_id}%"),

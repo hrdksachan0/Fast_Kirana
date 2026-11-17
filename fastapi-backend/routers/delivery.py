@@ -191,7 +191,11 @@ async def get_delivery_orders(
     combined_ids = list(set([o.combinedId for o in orders if o.combinedId]))
     companion_orders = []
     if combined_ids:
-        comp_stmt = select(Order).options(selectinload(Order.items).selectinload(OrderItem.product)).where(Order.combinedId.in_(combined_ids))
+        comp_stmt = select(Order).options(
+            selectinload(Order.items).selectinload(OrderItem.product),
+            selectinload(Order.address),
+            selectinload(Order.user)
+        ).where(Order.combinedId.in_(combined_ids))
         comp_res = await db.execute(comp_stmt)
         companion_orders = comp_res.scalars().all()
 

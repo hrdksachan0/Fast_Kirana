@@ -464,47 +464,9 @@ async def dispatch_isolated_order_fcm_notifications(
             picker_topic = f"picker_orders_{store_id}" if store_id else "picker_orders"
             await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
 
-        # ── 2B. ALERT RIDERS FOR DELIVERY (Rider phone rings with loud Order Buzzer) ──
-        rider_title = f"🛵 New Delivery Order #{readable_id}!"
-        rider_body = f"Order #{readable_id} ({safe_shop_name or 'FastMinute'}, ₹{total:.2f}) verified! Tap to deliver."
-        rider_data = {
-            "orderId": order_id,
-            "readableId": str(readable_id),
-            "storeId": str(store_id or ""),
-            "restaurantId": str(restaurant_id or ""),
-            "status": status_val,
-            "paymentStatus": "PAID" if is_paid else "PENDING",
-            "screen": "delivery",
-            "url": "/delivery",
-            "type": "NEW_ORDER",
-            "role": "DELIVERY",
-            "timestamp": now_ts,
-        }
-        # Strict Hub Isolation: Send ONLY to this hub's rider topic
-        rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
-        await send_fcm_topic_notification(rider_topic, rider_title, rider_body, rider_data)
-
-        # Direct multicast strictly to registered riders assigned to THIS store/hub
-        try:
-            async with AsyncSessionLocal() as session:
-                if store_id:
-                    r_stmt = select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
-                        User.role.in_([Role.DELIVERY]),
-                        User.assignedStoreId == store_id
-                    )
-                else:
-                    r_stmt = select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
-                        User.role.in_([Role.DELIVERY])
-                    )
-                r_res = await session.execute(r_stmt)
-                rider_tokens = [t[0] for t in r_res.fetchall() if t[0]]
-                if rider_tokens:
-                    await send_fcm_notification(rider_tokens, rider_title, rider_body, rider_data)
-        except Exception as r_err:
-            logger.warning(f"Direct rider tokens multicast warning: {r_err}")
-
-        # Note: Admin is notified ONLY when status_val == "ADMIN_PENDING" (Case 1 above).
-        # Auto-approved / confirmed orders bypass Admin buzzer and route directly to Rider + Restaurant/Picker.
+        # Note: Riders are NOT notified upon initial order creation.
+        # Store pickers/kitchen pack the order first; the designated rider is buzzed
+        # when the admin assigns the delivery partner to the order.
     except Exception as e:
         logger.error(f"Failed to dispatch isolated FCM push notification: {str(e)}")
 
@@ -594,24 +556,151 @@ async def dispatch_isolated_status_update_notifications(
         logger.error(f"Failed to dispatch isolated status FCM push notification: {str(e)}")
 
 
+async def dispatch_rider_assignment_notification(
+    order_id: str,
+    readable_id: str,
+    rider_identifier: str,
+    status_val: str,
+    total: float = 0.0,
+    store_id: Optional[str] = None
+):
+    """
+    Dispatches high-priority alarm notification & FCM buzzer to assigned rider.
+    Supports rider lookup by user ID or phone number.
+    Rings fastkirana_order_buzzer_v2 with order_chime sound.
+    """
+    try:
+        clean_rider_id = str(rider_identifier or "").strip()
+        if not clean_rider_id or clean_rider_id.upper() in ["UNASSIGNED", "NONE", "NULL", "STORE_ADMIN_SELF"]:
+            return
+
+        async with AsyncSessionLocal() as session:
+            clean_digits = re.sub(r"\D", "", clean_rider_id)[-10:]
+            rider_conditions = [User.id == clean_rider_id]
+            if clean_digits and len(clean_digits) == 10:
+                rider_conditions.append(User.phone == clean_rider_id)
+                rider_conditions.append(User.phone.like(f"%{clean_digits}"))
+
+            rider_stmt = select(User).where(or_(*rider_conditions))
+            rider_res = await session.execute(rider_stmt)
+            rider_user = rider_res.scalars().first()
+
+            rider_user_ids = {clean_rider_id}
+            rider_phone = clean_digits
+            if rider_user:
+                rider_user_ids.add(rider_user.id)
+                if rider_user.phone:
+                    clean_p = re.sub(r"\D", "", rider_user.phone)[-10:]
+                    if len(clean_p) == 10:
+                        rider_phone = clean_p
+
+            tokens_stmt = select(FcmToken.token).where(FcmToken.userId.in_(list(rider_user_ids)))
+            tokens_res = await session.execute(tokens_stmt)
+            rider_tokens = list(set([t for t in tokens_res.scalars().all() if t and len(t) > 10]))
+
+            clean_readable = str(readable_id or order_id).lstrip("#")
+            fcm_data = {
+                "orderId": order_id,
+                "readableId": clean_readable,
+                "screen": "delivery-dashboard",
+                "type": "DELIVERY_ASSIGNED",
+                "status": status_val or "CONFIRMED",
+                "orderStatus": status_val or "CONFIRMED",
+                "role": "DELIVERY",
+                "total": str(total or 0.0),
+            }
+
+            alarm_title = "🚨 New Delivery Assigned! 🛵"
+            alarm_body = f"Order #{clean_readable} has been assigned to you. Tap to view and deliver."
+
+            # 1. Direct Multicast to Rider Tokens with High-Priority Buzzer
+            if rider_tokens:
+                await send_fcm_notification(
+                    tokens=rider_tokens,
+                    title=alarm_title,
+                    body=alarm_body,
+                    data=fcm_data
+                )
+
+            # 2. Topic Broadcast to phone_<10digit>
+            if rider_phone and len(rider_phone) == 10:
+                await send_fcm_topic_notification(
+                    topic=f"phone_{rider_phone}",
+                    title=alarm_title,
+                    body=alarm_body,
+                    data=fcm_data
+                )
+
+            # 3. Topic Broadcast to user_<riderId>
+            for r_uid in rider_user_ids:
+                await send_fcm_topic_notification(
+                    topic=f"user_{r_uid}",
+                    title=alarm_title,
+                    body=alarm_body,
+                    data=fcm_data
+                )
+
+            # 4. Instant Supabase Realtime broadcast to rider & admin channels
+            try:
+                from utils.supabase_broadcast import broadcast_supabase_realtime
+                sb_topics = [
+                    "admin-global-orders-websocket",
+                    f"order-live-tracking-{order_id}",
+                ]
+                if clean_readable:
+                    sb_topics.append(f"order-live-tracking-{clean_readable}")
+                for r_uid in rider_user_ids:
+                    sb_topics.append(f"rider-orders-{r_uid}")
+
+                sb_payload = {
+                    "id": order_id,
+                    "orderId": order_id,
+                    "readableId": clean_readable,
+                    "status": status_val or "CONFIRMED",
+                    "deliveryUserId": rider_user.id if rider_user else clean_rider_id,
+                    "storeId": store_id,
+                    "updatedAt": datetime.utcnow().isoformat()
+                }
+                asyncio.create_task(broadcast_supabase_realtime(sb_topics, "status_update", sb_payload))
+                asyncio.create_task(broadcast_supabase_realtime(sb_topics, "order_claimed", sb_payload))
+            except Exception as sb_err:
+                logger.warning(f"Rider assignment Supabase broadcast note: {sb_err}")
+
+    except Exception as e:
+        logger.error(f"Failed to dispatch rider assignment alert for order {order_id}: {str(e)}")
+
+
 def _build_replayed_order_payload(main_match: Any, all_matches: List[Any]) -> Dict[str, Any]:
-    matched_user = main_match.user
-    matched_addr = main_match.address
-    matched_items = [
-        {
-            "id": item.id,
-            "productId": item.productId,
-            "name": item.name,
-            "price": float(item.price),
-            "quantity": item.quantity,
-            "imageUrl": item.imageUrl,
-            "selectedVariant": item.selectedVariant,
-            "costPrice": float(item.costPrice or 0),
-            "variants": item.variants,
-            "notes": item.notes,
-        }
-        for item in (main_match.items or [])
-    ]
+    matched_user = None
+    try:
+        matched_user = main_match.user
+    except Exception:
+        pass
+    matched_addr = None
+    try:
+        matched_addr = main_match.address
+    except Exception:
+        pass
+    matched_items = []
+    try:
+        raw_items = main_match.items or []
+        matched_items = [
+            {
+                "id": item.id,
+                "productId": item.productId,
+                "name": item.name,
+                "price": float(item.price),
+                "quantity": item.quantity,
+                "imageUrl": item.imageUrl,
+                "selectedVariant": item.selectedVariant,
+                "costPrice": float(item.costPrice or 0),
+                "variants": item.variants,
+                "notes": item.notes,
+            }
+            for item in raw_items
+        ]
+    except Exception:
+        pass
 
     return {
         "id": main_match.id,
@@ -3537,7 +3626,12 @@ async def update_order(
     role = current_user.get("role")
     assigned_restaurant_id = current_user.get("assignedRestaurantId")
 
-    stmt = select(Order).where(or_(
+    stmt = select(Order).options(
+        selectinload(Order.items).selectinload(OrderItem.product),
+        selectinload(Order.address),
+        selectinload(Order.user),
+        selectinload(Order.deliveryUser)
+    ).where(or_(
         Order.id == id,
         Order.readableId == id,
         Order.readableId.ilike(f"{id}%"),
@@ -3599,7 +3693,12 @@ async def update_order(
 
             companions = []
             if order.combinedId:
-                sibling_stmt = select(Order).where(Order.combinedId == order.combinedId, Order.id != order.id)
+                sibling_stmt = select(Order).options(
+                    selectinload(Order.items).selectinload(OrderItem.product),
+                    selectinload(Order.address),
+                    selectinload(Order.user),
+                    selectinload(Order.deliveryUser)
+                ).where(Order.combinedId == order.combinedId, Order.id != order.id)
                 sibling_res = await db.execute(sibling_stmt)
                 companions = list(sibling_res.scalars().all())
 
@@ -3619,6 +3718,18 @@ async def update_order(
                 clear_order_cache(companion.id)
                 if companion.combinedId:
                     clear_order_cache(companion.combinedId)
+
+            # 🚨 TRIGGER RIDER ASSIGNMENT BUZZER ALERT & REALTIME WHEN RIDER ASSIGNED (NO STATUS CHANGE)
+            if has_duid and order.deliveryUserId:
+                background_tasks.add_task(
+                    dispatch_rider_assignment_notification,
+                    order.id,
+                    order.readableId,
+                    order.deliveryUserId,
+                    order.status.value,
+                    float(order.total or 0.0),
+                    order.storeId
+                )
 
             return {
                 "success": True,
@@ -4025,7 +4136,12 @@ async def update_order(
 
     companions = []
     if order.combinedId:
-        sibling_stmt = select(Order).where(Order.combinedId == order.combinedId, Order.id != order.id)
+        sibling_stmt = select(Order).options(
+            selectinload(Order.items).selectinload(OrderItem.product),
+            selectinload(Order.address),
+            selectinload(Order.user),
+            selectinload(Order.deliveryUser)
+        ).where(Order.combinedId == order.combinedId, Order.id != order.id)
         sibling_res = await db.execute(sibling_stmt)
         companions = list(sibling_res.scalars().all())
 
@@ -4033,7 +4149,12 @@ async def update_order(
     if not companions and order.readableId and ("-G" in order.readableId or "-R" in order.readableId):
         base_readable = re.sub(r'-[GR\d]+$', '', order.readableId)
         if base_readable:
-            base_stmt = select(Order).where(
+            base_stmt = select(Order).options(
+                selectinload(Order.items).selectinload(OrderItem.product),
+                selectinload(Order.address),
+                selectinload(Order.user),
+                selectinload(Order.deliveryUser)
+            ).where(
                 Order.readableId.like(f"{base_readable}-%"),
                 Order.id != order.id
             )
@@ -4265,10 +4386,26 @@ async def update_order(
     cust_phone = None
     if hasattr(order, "customerPhone") and order.customerPhone:
         cust_phone = order.customerPhone
-    elif hasattr(order, "address") and order.address and hasattr(order.address, "phone"):
-        cust_phone = order.address.phone
-    elif hasattr(order, "user") and order.user and hasattr(order.user, "phone"):
-        cust_phone = order.user.phone
+    else:
+        try:
+            if order.address and getattr(order.address, "phone", None):
+                cust_phone = order.address.phone
+            elif order.user and getattr(order.user, "phone", None):
+                cust_phone = order.user.phone
+        except Exception:
+            pass
+
+    # 🚨 DISPATCH RIDER ALARM IF RIDER WAS ASSIGNED DURING THIS STATUS UPDATE
+    if order.deliveryUserId and (has_duid or "deliveryUserId" in payload or target_status == OrderStatus.SHIPPED):
+        background_tasks.add_task(
+            dispatch_rider_assignment_notification,
+            order.id,
+            order.readableId,
+            order.deliveryUserId,
+            order.status.value,
+            float(order.total or 0.0),
+            order.storeId
+        )
 
     background_tasks.add_task(
         send_pwa_notification_to_user,

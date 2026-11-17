@@ -466,25 +466,24 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       try {
         if (action == 'ASSIGN_RIDER') {
           final riderId = payload['riderId']?.toString();
-          final targetStatus = payload['status']?.toString() ?? 'PACKED';
+          final targetStatus = payload['status']?.toString();
           final combinedId = payload['combinedId']?.toString();
           if (sb != null && riderId != null) {
-            await sb.from('orders').update({
+            final updateData = <String, dynamic>{
               'deliveryUserId': riderId,
-              'status': targetStatus,
               'updatedAt': DateTime.now().toIso8601String(),
-            }).eq('id', id);
+            };
+            if (targetStatus != null && targetStatus.isNotEmpty) {
+              updateData['status'] = targetStatus;
+            }
+            await sb.from('orders').update(updateData).eq('id', id);
             if (combinedId != null && combinedId.isNotEmpty) {
-              await sb.from('orders').update({
-                'deliveryUserId': riderId,
-                'status': targetStatus,
-                'updatedAt': DateTime.now().toIso8601String(),
-              }).eq('combinedId', combinedId);
+              await sb.from('orders').update(updateData).eq('combinedId', combinedId);
             }
           }
           await dio.patch('/api/orders/$id', data: {
             if (riderId != null) 'deliveryUserId': riderId,
-            'status': targetStatus,
+            if (targetStatus != null && targetStatus.isNotEmpty) 'status': targetStatus,
           });
           return true;
         } else {
@@ -1363,12 +1362,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         : [order.id];
 
     // Status preservation:
-    // If order was ALREADY picked up (SHIPPED), keep it SHIPPED so new rider sees it in "Out for Delivery".
-    // If order was still in store (PENDING/CONFIRMED/PACKED), keep it PACKED so new rider sees it in "Ready for Pickup".
-    // If unassigning, always reset to PACKED so other riders can claim from Open Pool!
-    final bool wasShipped = order.status == OrderStatus.shipped;
-    final targetStatus = isUnassigning ? OrderStatus.packed : (wasShipped ? OrderStatus.shipped : OrderStatus.packed);
-    final targetStatusStr = isUnassigning ? 'PACKED' : (wasShipped ? 'SHIPPED' : 'PACKED');
+    // When assigning a rider, preserve the order's existing status (CONFIRMED, PENDING, PACKED, SHIPPED).
+    // Do NOT force status to PACKED!
+    final targetStatus = order.status;
+    final targetStatusStr = order.status.name.toUpperCase();
 
     // 1. Instant Optimistic UI Update (0ms)
     setState(() {
@@ -1386,8 +1383,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
     if (mounted) {
       final statusLabel = isUnassigning
-          ? 'Order moved to Open Pool (Unassigned)'
-          : 'Assigned to $riderName · ${wasShipped ? "Out for Delivery" : "Ready for Pickup"}';
+          ? 'Order unassigned'
+          : 'Assigned to $riderName';
       if (isUnassigning) {
         AppToast.showInfo(context, statusLabel);
       } else {
