@@ -41,6 +41,20 @@ import '../common/widgets/battery_optimization_dialog.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../widgets/app_confirmation_dialog.dart';
 
+class _OptimisticStatusLock {
+  final OrderStatus status;
+  final DateTime lockedAt;
+  final int durationSeconds;
+
+  _OptimisticStatusLock({
+    required this.status,
+    required this.lockedAt,
+    this.durationSeconds = 8,
+  });
+
+  bool get isExpired => DateTime.now().difference(lockedAt).inSeconds >= durationSeconds;
+}
+
 class AdminOrdersScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
   const AdminOrdersScreen({super.key, this.showAppBar = true});
@@ -65,6 +79,30 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   List<Order> _allOrders = _cachedOrders;
   bool _isLoading = _cachedOrders.isEmpty;
   static final Map<String, DateTime> _recentlyDeliveredOrderIds = {};
+  static final Map<String, _OptimisticStatusLock> _optimisticStatusLocks = {};
+  final Set<String> _inProgressOrderIds = {};
+
+  static void _lockOrderStatus(String orderId, OrderStatus status, {int durationSeconds = 8}) {
+    final cleanId = orderId.trim();
+    if (cleanId.isEmpty) return;
+    _optimisticStatusLocks[cleanId] = _OptimisticStatusLock(
+      status: status,
+      lockedAt: DateTime.now(),
+      durationSeconds: durationSeconds,
+    );
+  }
+
+  static OrderStatus? _getLockedStatus(String? orderId) {
+    if (orderId == null || orderId.trim().isEmpty) return null;
+    final cleanId = orderId.trim();
+    final lock = _optimisticStatusLocks[cleanId];
+    if (lock == null) return null;
+    if (lock.isExpired) {
+      _optimisticStatusLocks.remove(cleanId);
+      return null;
+    }
+    return lock.status;
+  }
 
   static int _orderStatusRank(OrderStatus s) {
     switch (s) {
@@ -394,6 +432,13 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           debugPrint('[Admin WebSocket] Live order update event: ${record['id']}');
           final orderId = (record['orderId'] ?? record['id'])?.toString();
           final readableId = record['readableId']?.toString();
+
+          // Suppress echo if this order is actively locked by our own optimistic action
+          if ((orderId != null && _getLockedStatus(orderId) != null) ||
+              (readableId != null && _getLockedStatus(readableId) != null)) {
+            debugPrint('[Admin WebSocket] Skipping echo for actively locked order: $orderId / $readableId');
+            return;
+          }
           final rawStatus = (record['status'] ?? '').toString();
           if (orderId != null && rawStatus.isNotEmpty) {
             final parsedStatus = Order.parseStatus(rawStatus);
@@ -629,15 +674,30 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           o = o.copyWith(status: OrderStatus.delivered, paymentStatus: 'PAID');
         }
 
+        // Respect active optimistic status locks from user actions
+        final lockedStatus = _getLockedStatus(o.id) ??
+            (o.combinedId != null ? _getLockedStatus(o.combinedId!) : null) ??
+            (o.readableId != null ? _getLockedStatus(o.readableId!) : null);
+        if (lockedStatus != null) {
+          o = o.copyWith(
+            status: lockedStatus,
+            paymentStatus: lockedStatus == OrderStatus.delivered ? 'PAID' : o.paymentStatus,
+          );
+        }
+
         final existing = orderMap[o.id];
         if (existing == null) {
           orderMap[o.id] = o;
         } else {
-          // Never downgrade a DELIVERED or CANCELLED order!
+          // Never downgrade a DELIVERED or CANCELLED order, or an actively locked order!
           if (existing.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
             return;
           }
           if (existing.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
+            return;
+          }
+          final existingLocked = _getLockedStatus(existing.id) ?? (existing.combinedId != null ? _getLockedStatus(existing.combinedId!) : null);
+          if (existingLocked != null && o.status != existingLocked) {
             return;
           }
 
@@ -836,7 +896,14 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
       OrderStatus combinedStatus(List<OrderStatus> statuses) {
         if (isCombinedRecentlyDelivered) return OrderStatus.delivered;
-        final active = statuses.where((s) => s != OrderStatus.cancelled).toList();
+        final lockedCombined = _getLockedStatus(entry.key);
+        if (lockedCombined != null) return lockedCombined;
+
+        final resolvedSubStatuses = resolvedSubOrders.map((s) {
+          return _getLockedStatus(s.id) ?? (s.readableId != null ? _getLockedStatus(s.readableId!) : null) ?? s.status;
+        }).toList();
+
+        final active = resolvedSubStatuses.where((s) => s != OrderStatus.cancelled).toList();
         if (active.isEmpty) return OrderStatus.cancelled;
         if (active.contains(OrderStatus.adminPending)) return OrderStatus.adminPending;
         if (active.contains(OrderStatus.pending)) return OrderStatus.pending;
@@ -920,15 +987,30 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           o = o.copyWith(status: OrderStatus.delivered, paymentStatus: 'PAID');
         }
 
+        // Respect active optimistic status locks from user actions
+        final lockedStatus = _getLockedStatus(o.id) ??
+            (o.combinedId != null ? _getLockedStatus(o.combinedId!) : null) ??
+            (o.readableId != null ? _getLockedStatus(o.readableId!) : null);
+        if (lockedStatus != null) {
+          o = o.copyWith(
+            status: lockedStatus,
+            paymentStatus: lockedStatus == OrderStatus.delivered ? 'PAID' : o.paymentStatus,
+          );
+        }
+
         final existing = orderMap[o.id];
         if (existing == null) {
           orderMap[o.id] = o;
         } else {
-          // Never downgrade a DELIVERED or CANCELLED order!
+          // Never downgrade a DELIVERED or CANCELLED order, or an actively locked order!
           if (existing.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
             return;
           }
           if (existing.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
+            return;
+          }
+          final existingLocked = _getLockedStatus(existing.id) ?? (existing.combinedId != null ? _getLockedStatus(existing.combinedId!) : null);
+          if (existingLocked != null && o.status != existingLocked) {
             return;
           }
 
@@ -1091,9 +1173,37 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       }
 
       // 1. Instant Optimistic UI Update (0ms)
-      final List<String> idsToUpdate = (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty)
-          ? order.subOrders!.map((s) => s.id).toList()
-          : [order.id];
+      final Set<String> idSet = {order.id};
+      if (order.readableId != null && order.readableId!.isNotEmpty) {
+        idSet.add(order.readableId!);
+      }
+      if (order.subOrders != null && order.subOrders!.isNotEmpty) {
+        for (final s in order.subOrders!) {
+          idSet.add(s.id);
+          if (s.readableId != null && s.readableId!.isNotEmpty) {
+            idSet.add(s.readableId!);
+          }
+        }
+      }
+      final baseReadable = (order.readableId ?? '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim();
+      for (final o in _allOrders) {
+        if (order.combinedId != null && order.combinedId!.isNotEmpty && o.combinedId == order.combinedId) {
+          idSet.add(o.id);
+          if (o.readableId != null && o.readableId!.isNotEmpty) idSet.add(o.readableId!);
+        }
+        if (baseReadable.isNotEmpty && (o.readableId ?? '').startsWith(baseReadable)) {
+          idSet.add(o.id);
+          if (o.readableId != null && o.readableId!.isNotEmpty) idSet.add(o.readableId!);
+        }
+      }
+      final List<String> idsToUpdate = idSet.toList();
+
+      for (final id in idsToUpdate) {
+        _lockOrderStatus(id, newStatus, durationSeconds: 8);
+      }
+      if (order.combinedId != null && order.combinedId!.isNotEmpty) {
+        _lockOrderStatus(order.combinedId!, newStatus, durationSeconds: 8);
+      }
 
       if (newStatus == OrderStatus.delivered) {
         final now = DateTime.now();
@@ -1107,10 +1217,15 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       }
 
       setState(() {
+        _inProgressOrderIds.add(order.id);
         _allOrders = _allOrders.map((o) {
-          if (o.id == order.id || idsToUpdate.contains(o.id) || (order.combinedId != null && o.combinedId == order.combinedId)) {
+          final isSameOrder = o.id == order.id || idsToUpdate.contains(o.id);
+          final isSameCombined = order.combinedId != null && order.combinedId!.isNotEmpty && o.combinedId == order.combinedId;
+          final isSameBase = baseReadable.isNotEmpty && (o.readableId ?? '').startsWith(baseReadable);
+
+          if (isSameOrder || isSameCombined || isSameBase) {
             final updatedSubs = o.subOrders?.map((s) {
-              if (idsToUpdate.contains(s.id) || s.id == order.id) {
+              if (idsToUpdate.contains(s.id) || s.id == order.id || idsToUpdate.contains(s.readableId)) {
                 return s.copyWith(
                   status: newStatus,
                   paymentStatus: newStatus == OrderStatus.delivered ? 'PAID' : s.paymentStatus,
@@ -1165,6 +1280,12 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
               'status': statusUpper,
               'updatedAt': DateTime.now().toIso8601String(),
             }).eq('combinedId', order.combinedId!.trim()).catchError((_) {}));
+          }
+          if (baseReadable.isNotEmpty) {
+            futures.add(sb.from('orders').update({
+              'status': statusUpper,
+              'updatedAt': DateTime.now().toIso8601String(),
+            }).ilike('readableId', '$baseReadable%').catchError((_) {}));
           }
         }
 
@@ -1240,6 +1361,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       }
     } catch (e) {
       debugPrint('[Admin status update error]: $e');
+    } finally {
+      if (mounted) setState(() => _inProgressOrderIds.remove(order.id));
     }
   }
 
@@ -1247,6 +1370,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     HapticFeedback.heavyImpact();
     try {
       final statusUpper = newStatus == OrderStatus.adminPending ? 'ADMIN_PENDING' : newStatus.name.toUpperCase();
+      _lockOrderStatus(subOrder.id, newStatus, durationSeconds: 8);
+      if (subOrder.readableId != null && subOrder.readableId!.isNotEmpty) {
+        _lockOrderStatus(subOrder.readableId!, newStatus, durationSeconds: 8);
+      }
 
       // 1. Instant Optimistic UI Update (0ms)
       setState(() {
@@ -2336,6 +2463,7 @@ $formattedItems
                       return AdminOrderCard(
                         key: ValueKey(order.id),
                         order: order,
+                        isProcessing: _inProgressOrderIds.contains(order.id),
                         isLive: _isLiveOrder(order),
                         isKOTPrinted: _printedKOTOrders.contains(order.id) ||
                             (order.readableId != null && _printedKOTOrders.contains(order.readableId)),

@@ -37,6 +37,20 @@ import '../common/widgets/battery_optimization_dialog.dart';
 import '../../core/services/notification_service.dart';
 import '../../widgets/app_confirmation_dialog.dart';
 
+class _OptimisticStatusLock {
+  final String status;
+  final DateTime lockedAt;
+  final int durationSeconds;
+
+  _OptimisticStatusLock({
+    required this.status,
+    required this.lockedAt,
+    this.durationSeconds = 8,
+  });
+
+  bool get isExpired => DateTime.now().difference(lockedAt).inSeconds >= durationSeconds;
+}
+
 class DeliveryDashboard extends ConsumerStatefulWidget {
   const DeliveryDashboard({super.key});
 
@@ -54,6 +68,29 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
   List<Map<String, dynamic>> _orders = _cachedDeliveryOrders;
   final Map<String, DateTime> _recentlyDeliveredOrders = {};
+  final Map<String, _OptimisticStatusLock> _optimisticStatusLocks = {};
+
+  void _lockOrderStatus(String orderId, String status, {int durationSeconds = 8}) {
+    final cleanId = orderId.trim();
+    if (cleanId.isEmpty) return;
+    _optimisticStatusLocks[cleanId] = _OptimisticStatusLock(
+      status: status,
+      lockedAt: DateTime.now(),
+      durationSeconds: durationSeconds,
+    );
+  }
+
+  String? _getLockedStatus(String? orderId) {
+    if (orderId == null || orderId.trim().isEmpty) return null;
+    final cleanId = orderId.trim();
+    final lock = _optimisticStatusLocks[cleanId];
+    if (lock == null) return null;
+    if (lock.isExpired) {
+      _optimisticStatusLocks.remove(cleanId);
+      return null;
+    }
+    return lock.status;
+  }
 
   Map<String, dynamic>? _walletInfo;
   Timer? _autoRefreshTimer;
@@ -145,6 +182,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             );
           }
           debugPrint('[DeliveryDashboard] Realtime order change detected: order=$orderId status=$newStatus rider=$deliveryUserId');
+
+          // Suppress echo if this order is actively locked by our own optimistic action
+          if (_getLockedStatus(orderId) != null || _getLockedStatus(readableId) != null) {
+            debugPrint('[DeliveryDashboard] Skipping realtime echo for actively locked order: $orderId / $readableId');
+            return;
+          }
 
           // Ensure normalized keys
           record['deliveryUserId'] ??= record['delivery_user_id'];
@@ -596,17 +639,45 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         notes.contains('STORE PICKUP');
   }
 
-  /// Guards against replica replication lag resurrecting recently delivered orders
+  /// Guards against replica replication lag resurrecting recently delivered or modified orders
   void _applyDeliveredGuard(List<Map<String, dynamic>> list) {
     final now = DateTime.now();
     _recentlyDeliveredOrders.removeWhere((_, time) => now.difference(time).inMinutes >= 3);
 
     for (final o in list) {
       final id = o['id']?.toString() ?? '';
+      final rid = o['readableId']?.toString() ?? '';
       final cid = o['combinedId']?.toString() ?? '';
       final subIds = (o['subOrderIds'] is List)
           ? (o['subOrderIds'] as List).map((e) => e.toString()).toList()
           : <String>[];
+
+      // 1. First priority: Check active optimistic status lock
+      final locked = _getLockedStatus(id) ??
+          _getLockedStatus(rid) ??
+          _getLockedStatus(cid) ??
+          subIds.map(_getLockedStatus).firstWhere((s) => s != null, orElse: () => null);
+
+      if (locked != null) {
+        o['status'] = locked;
+        if (locked == 'DELIVERED') {
+          o['paymentStatus'] = 'PAID';
+          o['deliveredAt'] ??= now.toIso8601String();
+        }
+        if (o['subOrders'] is List) {
+          for (final sub in (o['subOrders'] as List)) {
+            if (sub is Map) {
+              sub['status'] = locked;
+              if (locked == 'DELIVERED') {
+                sub['paymentStatus'] = 'PAID';
+                sub['deliveredAt'] ??= now.toIso8601String();
+              }
+            }
+          }
+        }
+        continue;
+      }
+
       final isRecentlyDelivered = _recentlyDeliveredOrders.containsKey(id) ||
           (cid.isNotEmpty && _recentlyDeliveredOrders.containsKey(cid)) ||
           subIds.any((sid) => _recentlyDeliveredOrders.containsKey(sid));
@@ -874,7 +945,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       // Determine combined status (lowest progress wins, but DELIVERED if all active are DELIVERED or recently delivered)
       String combinedStatus(List<String> statuses) {
         if (isCombinedRecentlyDelivered) return 'DELIVERED';
-        final active = statuses.where((s) => s != 'CANCELLED').toList();
+        final lockedCombined = _getLockedStatus(entry.key);
+        if (lockedCombined != null) return lockedCombined;
+
+        final resolvedStatuses = subOrders.map((s) {
+          final sId = s['id']?.toString() ?? '';
+          final sRId = s['readableId']?.toString() ?? '';
+          return (_getLockedStatus(sId) ?? _getLockedStatus(sRId) ?? s['status'] ?? 'CONFIRMED').toString().toUpperCase();
+        }).toList();
+
+        final active = resolvedStatuses.where((s) => s != 'CANCELLED').toList();
         if (active.isEmpty) return 'CANCELLED';
         if (active.contains('PENDING')) return 'PENDING';
         if (active.contains('CONFIRMED')) return 'CONFIRMED';
@@ -1181,6 +1261,20 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         ? subOrderIds
         : ((partnerId != null && partnerId.isNotEmpty && partnerId != orderId) ? [orderId, partnerId] : [orderId]);
 
+    // Lock all related IDs optimistically for 8 seconds to prevent race condition bounce-backs
+    for (final id in idsToUpdate) {
+      _lockOrderStatus(id, newStatus, durationSeconds: 8);
+    }
+    _lockOrderStatus(orderId, newStatus, durationSeconds: 8);
+    final cid = safeOrder['combinedId']?.toString();
+    if (cid != null && cid.isNotEmpty) {
+      _lockOrderStatus(cid, newStatus, durationSeconds: 8);
+    }
+    final rid = safeOrder['readableId']?.toString();
+    if (rid != null && rid.isNotEmpty) {
+      _lockOrderStatus(rid, newStatus, durationSeconds: 8);
+    }
+
     // 0ms Instant Optimistic UI Update (Update local UI instantly before network)
     final now = DateTime.now();
     if (newStatus == 'DELIVERED') {
@@ -1188,7 +1282,6 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       for (final id in idsToUpdate) {
         _recentlyDeliveredOrders[id] = now;
       }
-      final cid = safeOrder['combinedId']?.toString();
       if (cid != null && cid.isNotEmpty) {
         _recentlyDeliveredOrders[cid] = now;
       }
@@ -1272,6 +1365,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
       orderPayloads[currentId] = {
         'status': newStatus,
+        'scope': 'ALL',
+        'updateCombined': true,
         if (_currentUserId != null) 'deliveryUserId': _currentUserId,
         if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
         if (newStatus == 'DELIVERED') 'paymentMethod': effectivePayMethod,
@@ -1316,6 +1411,13 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           final cid = safeOrder['combinedId']?.toString();
           if (cid != null && cid.isNotEmpty) {
             sb.from('orders').update(sbData).eq('combinedId', cid).catchError((_) {});
+          }
+          final rid = safeOrder['readableId']?.toString();
+          if (rid != null && rid.isNotEmpty) {
+            final baseRid = rid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim();
+            if (baseRid.isNotEmpty) {
+              sb.from('orders').update(sbData).ilike('readableId', '$baseRid%').catchError((_) {});
+            }
           }
         }
       } catch (_) {}

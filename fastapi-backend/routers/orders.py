@@ -4217,10 +4217,11 @@ async def update_order(
                     order.deliveryLat = float(r_user.liveLat)
                     order.deliveryLng = float(r_user.liveLng)
 
-    # Sibling synchronization (H6 FIX: outlet isolation, never cascade-cancel sibling)
+    # Sibling synchronization (H6 FIX: outlet isolation, cascade-cancel on explicit all, customer cancel, or admin cancel)
     is_explicit_all = payload.get("scope") == "ALL" or payload.get("updateCombined") is True
     is_customer_cancel = is_owner and target_status == OrderStatus.CANCELLED
-    should_sync_status = is_explicit_all or is_customer_cancel or target_status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]
+    is_admin_cancel = is_admin and target_status == OrderStatus.CANCELLED
+    should_sync_status = is_explicit_all or is_customer_cancel or is_admin_cancel or target_status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]
 
     companions = []
     if order.combinedId:

@@ -42,6 +42,7 @@ class AdminOrderCard extends ConsumerWidget {
   final void Function(Order order)? onShowRecordRefund;
   final void Function(Order order)? onSendRemoteKOT;
   final void Function(Order order)? onSendWhatsAppKOT;
+  final bool isProcessing;
 
   const AdminOrderCard({
     super.key,
@@ -65,6 +66,7 @@ class AdminOrderCard extends ConsumerWidget {
     this.onShowRecordRefund,
     this.onSendRemoteKOT,
     this.onSendWhatsAppKOT,
+    this.isProcessing = false,
   });
 
   static Color getStatusColor(OrderStatus? status) {
@@ -1231,14 +1233,28 @@ class AdminOrderCard extends ConsumerWidget {
                       Expanded(
                         flex: 3,
                         child: ElevatedButton.icon(
-                          onPressed: onUpdateStatus != null ? () => onUpdateStatus!(order, OrderStatus.confirmed) : null,
-                          icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                          onPressed: (onUpdateStatus != null && !isProcessing)
+                              ? () => onUpdateStatus!(order, OrderStatus.confirmed)
+                              : null,
+                          icon: isProcessing
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
                           label: Text(
-                            'APPROVE & CONFIRM',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w900, color: Colors.white),
+                            isProcessing ? 'CONFIRMING...' : 'APPROVE & CONFIRM',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppDesignSystem.green600,
+                            backgroundColor: isProcessing
+                                ? AppDesignSystem.green600.withValues(alpha: 0.6)
+                                : AppDesignSystem.green600,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             elevation: 0,
@@ -1250,14 +1266,28 @@ class AdminOrderCard extends ConsumerWidget {
                       Expanded(
                         flex: 2,
                         child: ElevatedButton.icon(
-                          onPressed: onUpdateStatus != null ? () => onUpdateStatus!(order, OrderStatus.cancelled) : null,
-                          icon: const Icon(Icons.cancel_rounded, size: 18, color: Colors.white),
+                          onPressed: (onUpdateStatus != null && !isProcessing)
+                              ? () => onUpdateStatus!(order, OrderStatus.cancelled)
+                              : null,
+                          icon: isProcessing
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.cancel_rounded, size: 18, color: Colors.white),
                           label: Text(
-                            'REJECT',
-                            style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12.5), fontWeight: FontWeight.w900, color: Colors.white),
+                            isProcessing ? 'CANCELLING...' : 'REJECT',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppDesignSystem.red600,
+                            backgroundColor: isProcessing
+                                ? AppDesignSystem.red600.withValues(alpha: 0.6)
+                                : AppDesignSystem.red600,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             elevation: 0,
