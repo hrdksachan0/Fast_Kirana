@@ -749,39 +749,8 @@ async def get_products(
             res_fallback = await db.execute(stmt_fallback)
             matched_products = res_fallback.scalars().all()
 
-        # ── 1.5 Supabase PgVector Semantic AI Search ──
+        # ── 1.5 Semantic AI Search Vector Map (Fallback gracefully to pure lexical matching) ──
         vec_sim_map = {}
-        try:
-            async with db.begin_nested():
-                from utils.gemini_embedding import get_query_embedding
-                q_emb = get_query_embedding(normalized_search)
-                if q_emb and len(q_emb) == 768:
-                    emb_str = f"[{','.join(str(round(v, 6)) for v in q_emb)}]"
-                    stmt_vec = text("""
-                        SELECT p.id, (1 - (p.embedding <=> CAST(:emb AS vector))) AS sim
-                        FROM products p
-                        WHERE p."isAvailable" = TRUE 
-                          AND p.embedding IS NOT NULL
-                          AND (1 - (p.embedding <=> CAST(:emb AS vector))) > 0.38
-                        ORDER BY sim DESC
-                        LIMIT 60;
-                    """)
-                    res_vec = await db.execute(stmt_vec, {"emb": emb_str})
-                    vec_rows = res_vec.fetchall()
-                    if vec_rows:
-                        for r in vec_rows:
-                            vec_sim_map[r[0]] = float(r[1])
-                        vec_ids = list(vec_sim_map.keys())
-                        stmt_v_prods = select(Product).options(
-                            selectinload(Product.category),
-                            selectinload(Product.restaurant)
-                        ).where(Product.id.in_(vec_ids))
-                        res_v_prods = await db.execute(stmt_v_prods)
-                        v_prods = list(res_v_prods.scalars().all())
-                        # Merge with matched_products to ensure rich catalog coverage
-                        matched_products = list({p.id: p for p in v_prods + matched_products}.values())
-        except Exception as e:
-            logger.warning(f"[PgVector] Execution error fallback: {e}")
 
         # Score matching
         scored_products = []
