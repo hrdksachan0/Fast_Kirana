@@ -679,31 +679,77 @@ export async function PATCH(
 
           const { fcmMessaging } = await import('@/lib/firebase-admin')
           if (fcmMessaging) {
+            // Support lookup by both User ID and Phone Number
+            const riderUser = await prisma.user.findFirst({
+              where: {
+                OR: [
+                  { id: cleanDeliveryUserId },
+                  { phone: cleanDeliveryUserId },
+                  { phone: { endsWith: cleanDeliveryUserId.replace(/\D/g, '').slice(-10) } },
+                ]
+              },
+              select: { id: true, phone: true }
+            })
+
+            const targetUserIds = Array.from(new Set([cleanDeliveryUserId, riderUser?.id].filter(Boolean))) as string[]
             const riderTokens = await prisma.fcmToken.findMany({
-              where: { userId: cleanDeliveryUserId },
+              where: { userId: { in: targetUserIds } },
               select: { token: true }
             })
-            for (const t of riderTokens) {
-              fcmMessaging.send({
-                token: t.token,
-                notification: {
-                  title: 'New Delivery Assigned! 🛵',
-                  body: `Order #${readableNo} has been assigned to you.`,
-                },
-                data: {
-                  orderId: existingOrder.id,
-                  screen: 'delivery-dashboard',
-                  type: 'DELIVERY_ASSIGNED',
-                },
-                android: {
-                  priority: 'high',
-                  notification: {
-                    sound: 'order_chime',
-                    channelId: 'fastkirana_order_buzzer_v2',
-                  },
-                },
-              }).catch(() => {})
+
+            const fcmDataPayload = {
+              orderId: existingOrder.id,
+              screen: 'delivery-dashboard',
+              type: 'DELIVERY_ASSIGNED',
+              status: targetStatus || 'PACKED',
+              orderStatus: targetStatus || 'PACKED',
             }
+
+            const sendPromises: Promise<any>[] = []
+
+            for (const t of riderTokens) {
+              sendPromises.push(
+                fcmMessaging.send({
+                  token: t.token,
+                  notification: {
+                    title: 'New Delivery Assigned! 🛵',
+                    body: `Order #${readableNo} has been assigned to you.`,
+                  },
+                  data: fcmDataPayload,
+                  android: {
+                    priority: 'high',
+                    notification: {
+                      sound: 'order_chime',
+                      channelId: 'fastkirana_order_buzzer_v2',
+                    },
+                  },
+                }).catch(() => {})
+              )
+            }
+
+            // Also broadcast to rider phone topic if available
+            const cleanPhone = (riderUser?.phone || cleanDeliveryUserId).replace(/\D/g, '').slice(-10)
+            if (cleanPhone.length === 10) {
+              sendPromises.push(
+                sendTopicWithRetry(fcmMessaging, {
+                  topic: `phone_${cleanPhone}`,
+                  notification: {
+                    title: 'New Delivery Assigned! 🛵',
+                    body: `Order #${readableNo} has been assigned to you.`,
+                  },
+                  data: fcmDataPayload,
+                  android: {
+                    priority: 'high',
+                    notification: {
+                      sound: 'order_chime',
+                      channelId: 'fastkirana_order_buzzer_v2',
+                    },
+                  },
+                }).catch(() => {})
+              )
+            }
+
+            await Promise.allSettled(sendPromises)
           }
         } catch (notifErr) {
           console.warn('Error sending rider assignment notification:', notifErr)

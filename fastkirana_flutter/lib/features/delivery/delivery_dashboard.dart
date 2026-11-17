@@ -70,7 +70,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
   bool _isDarkMode = false;
   bool _isDeviceOffline = false;
-  final Set<String> _knownOrderIds = {};
+  final Set<String> _knownAssignedOrderIds = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
   StreamSubscription? _connectivitySubscription;
   RealtimeChannel? _ordersRealtimeChannel;
@@ -90,13 +90,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
 
-    _loadUserInfo();
-    _loadPersistedOfflineCache();
-    _initConnectivityAndOfflineQueue();
-    _initOrdersRealtime();
-    _hydrateRestaurants();
-    _fetchOrders();
-    _fetchWallet();
+    _initDashboard();
     SharedPreferences.getInstance().then((prefs) {
       final userRole = (prefs.getString('user_role') ?? '').toUpperCase().trim();
       if (userRole != 'ADMIN' && userRole != 'SUPER_ADMIN') {
@@ -116,6 +110,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       _fetchOrders(silent: true);
       _fetchWallet();
     });
+  }
+
+  Future<void> _initDashboard() async {
+    await _loadUserInfo();
+    await _loadPersistedOfflineCache();
+    _initConnectivityAndOfflineQueue();
+    _initOrdersRealtime();
+    _hydrateRestaurants();
+    await _fetchOrders();
+    _fetchWallet();
   }
 
   void _initOrdersRealtime() {
@@ -142,14 +146,29 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           }
           debugPrint('[DeliveryDashboard] Realtime order change detected: order=$orderId status=$newStatus rider=$deliveryUserId');
 
-          // Instant peer rider drop: If another rider picked up or order was completed, remove immediately from available list
-          if (orderId.isNotEmpty || readableId.isNotEmpty) {
-            final myId = _currentUserId;
-            final isAssignedToOther = deliveryUserId != null && deliveryUserId.isNotEmpty && myId != null && deliveryUserId != myId;
-            final isCompleted = newStatus == 'DELIVERED' || newStatus == 'CANCELLED';
-            final isPickedByOther = (newStatus == 'SHIPPED' || newStatus == 'PACKED') && isAssignedToOther;
+          // Ensure normalized keys
+          record['deliveryUserId'] ??= record['delivery_user_id'];
+          final isAssignedToMe = _isAssignedToMe(record);
+          final isCompleted = newStatus == 'DELIVERED' || newStatus == 'CANCELLED';
+          final isAssignedToOther = deliveryUserId != null &&
+              deliveryUserId.isNotEmpty &&
+              !isAssignedToMe;
 
-            if (isAssignedToOther || isCompleted || isPickedByOther) {
+          // 🚨 INSTANT REALTIME ALARM: If admin just assigned this order to current rider, sound buzzer immediately!
+          final isNewAssignment = isAssignedToMe &&
+              !isCompleted &&
+              orderId.isNotEmpty &&
+              !_knownAssignedOrderIds.contains(orderId);
+
+          if (isNewAssignment) {
+            _knownAssignedOrderIds.add(orderId);
+            _triggerContinuousRiderAlarm(record);
+          }
+
+          // Instant peer rider drop: If another rider was assigned or order completed, remove immediately
+          if (orderId.isNotEmpty || readableId.isNotEmpty) {
+            if (isAssignedToOther || isCompleted) {
+              _knownAssignedOrderIds.remove(orderId);
               setState(() {
                 _orders.removeWhere((o) {
                   final oid = o['id']?.toString();
@@ -157,7 +176,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
                   return (orderId.isNotEmpty && oid == orderId) || (readableId.isNotEmpty && rid == readableId);
                 });
               });
-            } else if (newStatus.isNotEmpty) {
+            } else if (newStatus.isNotEmpty && isAssignedToMe) {
               // Update status in local memory immediately
               setState(() {
                 for (var o in _orders) {
@@ -401,37 +420,46 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   }
 
   void _checkAndTriggerNewOrderAlert(List<Map<String, dynamic>> ordersList) {
-    final pending = ordersList.where((o) {
+    // Only alert for active orders ASSIGNED TO CURRENT RIDER!
+    final myAssignedPending = ordersList.where((o) {
       if (!['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING'].contains(o['status'])) return false;
       if (_isSelfPickupOrder(o)) return false;
-      if (_currentUserId != null && _currentUserId!.isNotEmpty) {
-        final dId = o['deliveryUserId']?.toString();
-        if (dId != null && dId.isNotEmpty && dId != _currentUserId) return false;
-      }
-      return true;
+      return _isAssignedToMe(o);
     }).toList();
-    if (pending.isEmpty) {
+
+    if (myAssignedPending.isEmpty) {
       if (OrderAlarmService.instance.isPlaying) {
         OrderAlarmService.instance.stopAlarm();
       }
       return;
     }
 
-    final currentIds = pending.map((o) => o['id']?.toString() ?? '').where((id) => id.isNotEmpty).toSet();
+    final currentAssignedIds = myAssignedPending
+        .map((o) => o['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
 
-    if (_knownOrderIds.isNotEmpty) {
-      final newIds = currentIds.difference(_knownOrderIds);
-      if (newIds.isNotEmpty) {
-        final newOrder = pending.firstWhere((o) => newIds.contains(o['id']?.toString()), orElse: () => pending.first);
+    if (_knownAssignedOrderIds.isNotEmpty) {
+      final newAssignedIds = currentAssignedIds.difference(_knownAssignedOrderIds);
+      if (newAssignedIds.isNotEmpty) {
+        final newOrder = myAssignedPending.firstWhere(
+          (o) => newAssignedIds.contains(o['id']?.toString()),
+          orElse: () => myAssignedPending.first,
+        );
         _triggerContinuousRiderAlarm(newOrder);
       }
     }
-    _knownOrderIds.addAll(currentIds);
+    _knownAssignedOrderIds.addAll(currentAssignedIds);
   }
 
   void _triggerContinuousRiderAlarm(Map<String, dynamic> newOrder) {
-    // Subtle audio chime alert only - NO disruptive blocking dialogs!
-    OrderAlarmService.instance.playChime();
+    OrderAlarmService.instance.startRiderAlarm(
+      orderMap: newOrder,
+      context: mounted ? context : null,
+      onAccept: () {
+        _fetchOrders(silent: true);
+      },
+    );
   }
 
   void _toggleDarkMode() async {
@@ -1444,11 +1472,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final activeDeliveries = _orders
         .where((o) {
           if (o['status'] != 'SHIPPED' || _isSelfPickupOrder(o)) return false;
-          final dId = o['deliveryUserId']?.toString();
-          if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) {
-            return false;
-          }
-          return true;
+          return _isAssignedToMe(o);
         })
         .toList()
       ..sort((a, b) {
@@ -1462,12 +1486,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           if (!['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING'].contains(o['status']) || _isSelfPickupOrder(o)) {
             return false;
           }
-          final dId = o['deliveryUserId']?.toString();
-          // Show if assigned to me, OR if unassigned in open pool so rider can pick it up!
-          if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) {
-            return false;
-          }
-          return true;
+          return _isAssignedToMe(o);
         })
         .toList()
       ..sort((a, b) {
@@ -1478,10 +1497,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
     final completedToday = _orders.where((o) {
       if (o['status'] != 'DELIVERED' || _isSelfPickupOrder(o)) return false;
-      final dId = o['deliveryUserId']?.toString();
-      if (dId != null && dId.isNotEmpty && !_isAssignedToMe(o)) {
-        return false;
-      }
+      if (!_isAssignedToMe(o)) return false;
       final dateStr = o['deliveredAt'] ?? o['createdAt'];
       if (dateStr == null) return false;
       final dt = DateTime.tryParse(dateStr.toString())?.toLocal();

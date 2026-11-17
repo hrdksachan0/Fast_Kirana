@@ -218,11 +218,11 @@ title.toString().contains('🛵') ||
       (body ?? '').toString().toLowerCase().contains('on the way') ||
       (body ?? '').toString().toLowerCase().contains('arriving'));
 
-  final isDeliveryRiderAlert = (data['screen'] == 'delivery' ||
-data['screen'] == 'delivery-dashboard' ||
-data['type'] == 'DELIVERY_ASSIGNED' ||
-title.toString().contains('🛵') || data['role'] == 'DELIVERY') &&
-      (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED');
+  final isDeliveryRiderAlert = data['type'] == 'DELIVERY_ASSIGNED' ||
+      title.toString().contains('🛵') ||
+      title.toString().toLowerCase().contains('delivery assigned') ||
+      ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
+          (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED'));
 
   final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && !isOrderStatusUpdate && (
       data['type'] == 'NEW_ORDER' ||
@@ -923,11 +923,11 @@ title.toString().contains('🛵') ||
         body.toString().toLowerCase().contains('on the way') ||
         body.toString().toLowerCase().contains('arriving'));
 
-    final isDeliveryRiderAlert = (data['screen'] == 'delivery' ||
-data['screen'] == 'delivery-dashboard' ||
-data['type'] == 'DELIVERY_ASSIGNED' ||
-title.toString().contains('🛵') || data['role'] == 'DELIVERY') &&
-        (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED');
+    final isDeliveryRiderAlert = data['type'] == 'DELIVERY_ASSIGNED' ||
+        title.toString().contains('🛵') ||
+        title.toString().toLowerCase().contains('delivery assigned') ||
+        ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
+            (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED'));
 
     final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && !isOrderStatusUpdate && (
         data['type'] == 'NEW_ORDER' ||

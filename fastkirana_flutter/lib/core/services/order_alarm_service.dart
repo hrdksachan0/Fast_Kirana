@@ -632,7 +632,7 @@ class OrderAlarmService {
     );
   }
 
-  /// Start audio chime notification specifically for Riders (no intrusive blocking dialog)
+  /// Start continuous alarm loop and interactive popup specifically for Riders on assignment
   Future<void> startRiderAlarm({
     required Map<String, dynamic> orderMap,
     BuildContext? context,
@@ -644,9 +644,312 @@ class OrderAlarmService {
     if (_isPlaying && _activeOrderId == orderId) return;
 
     _activeOrderId = orderId;
+    _isPlaying = true;
 
-    // Play subtle chime & haptic vibration (No intrusive popup dialog)
+    // Play initial chime & vibration
     await _playChime();
+
+    // Loop alarm every 3.5 seconds until accepted, muted, or dismissed
+    _alarmLoopTimer?.cancel();
+    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3500), (_) async {
+      if (!_isPlaying || _isMuted) {
+        _alarmLoopTimer?.cancel();
+        return;
+      }
+      await _playChime();
+    });
+
+    if (context != null && context.mounted) {
+      _showRiderOrderModal(
+        context: context,
+        orderMap: orderMap,
+        onAccept: onAccept,
+      );
+    }
+  }
+
+  void _showRiderOrderModal({
+    required BuildContext context,
+    required Map<String, dynamic> orderMap,
+    VoidCallback? onAccept,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final isCombo = orderMap['isCombined'] == true ||
+            (orderMap['subOrders'] is List && (orderMap['subOrders'] as List).length > 1);
+        final baseToken = (orderMap['readableId'] ?? '').toString().replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+        final rawId = (orderMap['id'] ?? '').toString();
+        final rawReadable = (orderMap['readableId'] ?? '').toString();
+        final orderToken = isCombo && baseToken.isNotEmpty
+            ? baseToken
+            : (rawReadable.isNotEmpty
+                ? rawReadable
+                : (rawId.length > 6
+                    ? rawId.substring(rawId.length - 6).toUpperCase()
+                    : rawId));
+
+        final num total = (orderMap['total'] is num)
+            ? (orderMap['total'] as num)
+            : (num.tryParse(orderMap['total']?.toString() ?? '0') ?? 0);
+
+        final pm = (orderMap['paymentMethod'] ?? '').toString().toUpperCase().trim();
+        final ps = (orderMap['paymentStatus'] ?? '').toString().toUpperCase().trim();
+        final isPaid = ps == 'PAID' || pm == 'ONLINE' || pm == 'UPI';
+
+        String shopName = (orderMap['shopName'] ?? 'FastMinute Dark Store').toString().replaceAll('FastKirana', 'FastMinute');
+        final rawRest = orderMap['restaurant'];
+        if (rawRest is Map && rawRest['name'] != null) {
+          shopName = '🍽️ ${rawRest['name']}';
+        }
+
+        // Customer details
+        final addressMap = orderMap['address'] is Map
+            ? orderMap['address'] as Map
+            : (orderMap['addresses'] is Map ? orderMap['addresses'] as Map : null);
+        final customerName = addressMap?['name'] ?? addressMap?['userName'] ?? orderMap['customerName'] ?? 'Customer';
+        final customerStreet = addressMap?['street'] ?? addressMap?['address'] ?? addressMap?['area'] ?? 'Kanpur Nagar';
+
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                    blurRadius: 30,
+                    spreadRadius: 4,
+                  ),
+                ],
+                border: Border.all(
+                  color: const Color(0xFF10B981),
+                  width: 2.5,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header Alert Bar
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(21),
+                        topRight: Radius.circular(21),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 24),
+                        const SizedBox(width: 8),
+                        Text(
+                          '🚨 NEW DELIVERY ASSIGNED!',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'ORDER TOKEN',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.slate500,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                Text(
+                                  '#$orderToken',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppDesignSystem.slate900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isPaid ? const Color(0xFFECFDF5) : const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: isPaid ? const Color(0xFFA7F3D0) : const Color(0xFFFED7AA)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '₹${total.toInt()}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      color: isPaid ? const Color(0xFF047857) : const Color(0xFFC2410C),
+                                    ),
+                                  ),
+                                  Text(
+                                    isPaid ? 'PAID ONLINE' : 'CASH ON DELIVERY',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: isPaid ? const Color(0xFF047857) : const Color(0xFFC2410C),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Pickup Location Info
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.slate50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppDesignSystem.slate200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.storefront_rounded, size: 16, color: Color(0xFF10B981)),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      shopName,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppDesignSystem.slate800,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on_rounded, size: 16, color: AppDesignSystem.primary),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      '$customerName • $customerStreet',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: AppDesignSystem.slate600,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Action Buttons: Mute & Accept/View
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  stopAlarm();
+                                  Navigator.pop(ctx);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  side: const BorderSide(color: AppDesignSystem.slate300),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Text(
+                                  'Mute',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.slate600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 3,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  stopAlarm();
+                                  Navigator.pop(ctx);
+                                  onAccept?.call();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF10B981),
+                                  foregroundColor: Colors.white,
+                                  elevation: 4,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'View Order',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
 }
