@@ -1528,6 +1528,9 @@ export async function POST(request: NextRequest) {
             : `FK-${baseReadableId}-G`
         }
         const orderItemsData = orderInfo.items.map((item: any) => {
+          const rawId = (item.productId || item.id || '').toString()
+          const isVariant = rawId.includes('_')
+          const variantNameFromId = isVariant ? rawId.split('_')[1] : null
           const rawVariant = (item.selectedVariant || variantNameFromId || '').trim()
           const pName = (item.product?.name || item.dbProduct?.name || '').toLowerCase()
           const isVernacular = rawVariant && !/\d/.test(rawVariant) && (pName.includes(rawVariant.toLowerCase()) || ['tamatar', 'pyaaz', 'aalo', 'alu', 'pyaz', 'kanda', 'karela', 'lauki', 'bhindi', 'baingan', 'gobhi', 'adrak', 'lahsun', 'mirch', 'dhaniya'].includes(rawVariant.toLowerCase()))
