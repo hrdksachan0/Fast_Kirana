@@ -94,14 +94,23 @@ def is_order_buzzer_alert(title: str, body: str, data: Optional[Dict[str, Any]])
     if is_cancelled:
         return False
 
-    # Status updates for restaurant / store / customer must NEVER ring the loud order buzzer.
-    # Only riders need a buzzer alert when an order is confirmed/packed for pickup.
-    is_rider_target = (role == "DELIVERY" or screen == "delivery")
-    if not is_rider_target:
-        if msg_type in ["ORDER_STATUS_UPDATE", "STATUS_UPDATE"]:
-            return False
-        if status_val in ["CONFIRMED", "PREPARING", "COOKING", "PACKED", "OUT_FOR_DELIVERY", "DISPATCHED", "DELIVERED"]:
-            return False
+    # Status updates for customer must NEVER ring the loud order buzzer
+    if role == "CUSTOMER" or screen == "order-tracking":
+        return False
+
+    # Restaurant / Kitchen Target: Ring loud buzzer when order is verified/assigned for cooking!
+    is_restaurant = (role in ["RESTAURANT", "RESTAURANT_OWNER", "CHEF"] or screen == "restaurant-console" or bool(d.get("restaurantId")))
+    if is_restaurant:
+        if msg_type in ["NEW_ORDER", "STAFF_ALERT", "RESTAURANT_ORDER_VERIFIED", "KITCHEN_ALERT"] or "👨‍🍳" in title or "kitchen" in t_lower or "verified" in t_lower:
+            return True
+        if status_val in ["CONFIRMED", "PENDING"] and msg_type not in ["ORDER_STATUS_UPDATE", "STATUS_UPDATE"]:
+            return True
+
+    # Rider Target: Ring loud buzzer when assigned by admin!
+    is_rider_target = (role == "DELIVERY" or screen in ["delivery", "delivery-dashboard"])
+    if is_rider_target:
+        if msg_type in ["DELIVERY_ASSIGNED", "NEW_ORDER", "ORDER_PACKED"] or "🛵" in title or "assigned" in t_lower:
+            return True
 
     return (
         screen in ["restaurant-console", "admin-orders", "delivery", "picker", "vendor-console"] or

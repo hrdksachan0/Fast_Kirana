@@ -230,8 +230,8 @@ title.toString().contains('🛵') ||
       orderStatus == 'PENDING' ||
       orderStatus == 'PLACED' ||
       data['screen'] == 'admin-orders' ||
-      (data['screen'] == 'restaurant-console' && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
-      (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
+      (data['screen'] == 'restaurant-console' && (orderStatus == 'PENDING' || orderStatus == 'CONFIRMED' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
+      (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'CONFIRMED' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
       title.toString().contains('👨‍🍳') ||
       title.toString().contains('🛎️') ||
       title.toString().contains('💳') ||

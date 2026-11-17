@@ -670,6 +670,95 @@ async def dispatch_rider_assignment_notification(
         logger.error(f"Failed to dispatch rider assignment alert for order {order_id}: {str(e)}")
 
 
+async def dispatch_restaurant_order_verified_notification(
+    order_id: str,
+    readable_id: str,
+    restaurant_id: str,
+    shop_name: Optional[str] = None,
+    total: float = 0.0
+):
+    """
+    Dispatches high-priority kitchen buzzer notification to restaurant owner/chef
+    ONLY when Admin verification is completed.
+    Strictly outlet-isolated: only sent to this restaurant's topic & registered owner tokens.
+    """
+    try:
+        clean_rest_id = str(restaurant_id or "").strip()
+        if not clean_rest_id:
+            return
+
+        now_ts = str(int(datetime.utcnow().timestamp() * 1000))
+        clean_readable = str(readable_id or order_id).lstrip("#")
+        safe_name = str(shop_name or "Kitchen").replace("FastKirana", "FastMinute")
+
+        rest_title = f"👨‍🍳 New Order Verified by Admin! 🛎️"
+        rest_body = f"Order #{clean_readable} for {safe_name} (₹{total:.2f}) verified! Open kitchen console to prepare dishes."
+        rest_data = {
+            "orderId": order_id,
+            "readableId": clean_readable,
+            "restaurantId": clean_rest_id,
+            "status": "CONFIRMED",
+            "orderStatus": "CONFIRMED",
+            "screen": "restaurant-console",
+            "type": "NEW_ORDER",
+            "role": "RESTAURANT",
+            "timestamp": now_ts,
+            "total": str(total or 0.0),
+        }
+
+        # 1. Send to restaurant topic
+        await send_fcm_topic_notification(f"restaurant_{clean_rest_id}", rest_title, rest_body, rest_data)
+
+        # 2. Direct multicast to restaurant owners / chefs assigned to this outlet
+        async with AsyncSessionLocal() as session:
+            u_stmt = select(User.id, User.phone).where(
+                or_(User.assignedRestaurantId == clean_rest_id, User.assignedRestaurantId.ilike(f"%{clean_rest_id}%")),
+                User.role.in_([Role.RESTAURANT, Role.CHEF, Role.RESTAURANT_OWNER])
+            )
+            u_res = await session.execute(u_stmt)
+            matched_users = u_res.all()
+            matched_uids = [u[0] for u in matched_users if u[0]]
+            matched_phones = [re.sub(r"\D", "", u[1])[-10:] for u in matched_users if u[1]]
+
+            if matched_uids:
+                t_stmt = select(FcmToken.token).where(FcmToken.userId.in_(matched_uids))
+                t_res = await session.execute(t_stmt)
+                owner_tokens = list(set([t for t in t_res.scalars().all() if t and len(t) > 10]))
+                if owner_tokens:
+                    await send_fcm_notification(owner_tokens, rest_title, rest_body, rest_data)
+
+            for p in matched_phones:
+                if p and len(p) == 10:
+                    await send_fcm_topic_notification(f"phone_{p}", rest_title, rest_body, rest_data)
+
+        # 3. Supabase Realtime broadcast to this restaurant's live orders channel
+        try:
+            from utils.supabase_broadcast import broadcast_supabase_realtime
+            sb_topics = [
+                f"restaurant-orders-{clean_rest_id}",
+                f"kitchen_{clean_rest_id}",
+                "admin-global-orders-websocket",
+                f"order-live-tracking-{order_id}",
+            ]
+            sb_payload = {
+                "id": order_id,
+                "orderId": order_id,
+                "readableId": clean_readable,
+                "restaurantId": clean_rest_id,
+                "shopName": safe_name,
+                "status": "CONFIRMED",
+                "total": float(total or 0.0),
+                "updatedAt": datetime.utcnow().isoformat()
+            }
+            asyncio.create_task(broadcast_supabase_realtime(sb_topics, "new_order", sb_payload))
+            asyncio.create_task(broadcast_supabase_realtime(sb_topics, "status_update", sb_payload))
+        except Exception as sb_err:
+            logger.warning(f"Restaurant order realtime broadcast note: {sb_err}")
+
+    except Exception as e:
+        logger.error(f"Failed to dispatch restaurant order verified notification: {str(e)}")
+
+
 def _build_replayed_order_payload(main_match: Any, all_matches: List[Any]) -> Dict[str, Any]:
     matched_user = None
     try:
@@ -2227,7 +2316,11 @@ async def create_order(
 
         auto_approve_setting = settings_map.get("admin_auto_approve_orders", "true")
         is_auto_approve = auto_approve_setting.lower() == "true"
-        initial_order_status = OrderStatus.PENDING if (is_online_paid or is_auto_approve) else OrderStatus.ADMIN_PENDING
+        # Restaurant orders always require Admin verification first before alerting the kitchen!
+        if restaurant_groups:
+            initial_order_status = OrderStatus.ADMIN_PENDING
+        else:
+            initial_order_status = OrderStatus.PENDING if (is_online_paid or is_auto_approve) else OrderStatus.ADMIN_PENDING
 
         # Construct notes — strip any injected fake gateway markers like [CF_ORDER:...] from customer text
         raw_notes = (payload.get("notes") or "").strip()
@@ -4405,6 +4498,17 @@ async def update_order(
             order.status.value,
             float(order.total or 0.0),
             order.storeId
+        )
+
+    # 👨‍🍳 DISPATCH KITCHEN BUZZER ALARM WHEN ADMIN VERIFICATION IS DONE
+    if order.restaurantId and target_status in [OrderStatus.CONFIRMED, OrderStatus.PENDING]:
+        background_tasks.add_task(
+            dispatch_restaurant_order_verified_notification,
+            order.id,
+            order.readableId,
+            order.restaurantId,
+            order.shopName,
+            float(order.total or 0.0)
         )
 
     background_tasks.add_task(

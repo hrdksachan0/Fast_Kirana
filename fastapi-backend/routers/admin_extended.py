@@ -1159,7 +1159,7 @@ async def admin_update_order_status(
     except Exception as ws_e:
         logger.warning(f"Admin status ws broadcast note: {ws_e}")
 
-    # If admin just APPROVED an ADMIN_PENDING order to PENDING:
+    # If admin just APPROVED an ADMIN_PENDING order to PENDING or CONFIRMED:
     if old_status == OrderStatus.ADMIN_PENDING and order.status in [OrderStatus.PENDING, OrderStatus.CONFIRMED]:
         background_tasks.add_task(
             dispatch_isolated_order_fcm_notifications,
@@ -1171,7 +1171,27 @@ async def admin_update_order_status(
             order.status.value,
             order.storeId
         )
+        if order.restaurantId:
+            from routers.orders import dispatch_restaurant_order_verified_notification
+            background_tasks.add_task(
+                dispatch_restaurant_order_verified_notification,
+                order.id,
+                order.readableId,
+                order.restaurantId,
+                order.shopName,
+                float(order.total)
+            )
     elif new_status and old_status != order.status:
+        if order.restaurantId and order.status in [OrderStatus.CONFIRMED, OrderStatus.PENDING]:
+            from routers.orders import dispatch_restaurant_order_verified_notification
+            background_tasks.add_task(
+                dispatch_restaurant_order_verified_notification,
+                order.id,
+                order.readableId,
+                order.restaurantId,
+                order.shopName,
+                float(order.total)
+            )
         background_tasks.add_task(
             dispatch_isolated_status_update_notifications,
             order.id,
