@@ -471,7 +471,7 @@ async def restaurant_dashboard_stats(
 async def restaurant_dashboard_orders(
     restaurantId: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
-    limit: int = Query(100, le=200),
+    limit: int = Query(500, le=5000),
     startDate: Optional[str] = Query(None),
     endDate: Optional[str] = Query(None),
     current_user: dict = Depends(require_auth),

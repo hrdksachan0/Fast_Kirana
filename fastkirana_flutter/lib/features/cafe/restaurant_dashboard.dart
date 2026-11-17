@@ -949,6 +949,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     try {
       final dio = ref.read(dioProvider);
       final params = <String>[];
+      params.add('limit=2000');
       if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty) {
         params.add('restaurantId=$_assignedRestaurantId');
       }
