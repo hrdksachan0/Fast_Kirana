@@ -850,12 +850,6 @@ export default function DeliveryDashboard() {
                 )}
               </div>
             )}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
 
             {activeTab === 'wallet' && (
               <RiderWalletView
