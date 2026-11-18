@@ -467,7 +467,7 @@ class AdminOrderCard extends ConsumerWidget {
         (order.deliveryMethod ?? '').toUpperCase().contains('TAKEAWAY');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -1192,121 +1192,10 @@ class AdminOrderCard extends ConsumerWidget {
             ),
           ),
 
-          // 2.5 Assigned Delivery Partner / Rider Box
-          if (!isPickup && (order.deliveryBoyName != null || order.deliveryUser != null || order.status == OrderStatus.shipped || order.status == OrderStatus.delivered)) ...[
-            const Divider(height: 1, color: AppDesignSystem.slate100),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              color: const Color(0xFFF0FDF4),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD1FAE5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Center(
-                      child: Text('🛵', style: TextStyle(fontSize: 16)),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              order.status == OrderStatus.delivered
-                                  ? 'DELIVERED BY RIDER'
-                                  : 'RIDER PICKED UP',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 9.5),
-                                fontWeight: FontWeight.w900,
-                                color: AppDesignSystem.emerald700,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Container(
-                              width: 5,
-                              height: 5,
-                              decoration: const BoxDecoration(
-                                color: AppDesignSystem.emerald600,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          order.deliveryBoyName ?? order.deliveryUser?.name ?? 'FastMinute Delivery Partner',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12),
-                            fontWeight: FontWeight.w800,
-                            color: AppDesignSystem.slate900,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (order.deliveryBoyPhone != null || order.deliveryUser?.phone != null) ...[
-                          const SizedBox(height: 1),
-                          Text(
-                            '📞 ${order.deliveryBoyPhone ?? order.deliveryUser?.phone}',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w600,
-                              color: AppDesignSystem.slate600,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (order.deliveryBoyPhone != null || order.deliveryUser?.phone != null) ...[
-                    IconButton(
-                      onPressed: () {
-                        final phone = (order.deliveryBoyPhone ?? order.deliveryUser?.phone ?? '').replaceAll(RegExp(r'\D'), '');
-                        if (phone.isNotEmpty) {
-                          AppUrlLauncher.launchString('https://wa.me/$phone?text=Hello%20FastMinute%20Rider,%20regarding%20Order%20%23${order.displayId}:', context: context);
-                        }
-                      },
-                      icon: const Icon(Icons.chat_rounded, color: AppDesignSystem.green600, size: 16),
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppDesignSystem.green100,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.all(6),
-                      ),
-                      tooltip: 'WhatsApp Rider',
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      onPressed: () {
-                        final phone = order.deliveryBoyPhone ?? order.deliveryUser?.phone;
-                        if (phone != null && phone.isNotEmpty) {
-                          AppUrlLauncher.launchString('tel:$phone', context: context);
-                        }
-                      },
-                      icon: const Icon(Icons.phone, color: Colors.white, size: 16),
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppDesignSystem.emerald600,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.all(6),
-                      ),
-                      tooltip: 'Call Rider',
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-
           // 3. Ordered Items List with Photo Preview Strip & View Cart Modal (Like Rider)
           if (itemsList.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+              padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
               child: RiderCartPreviewWidget(
                 order: order.toJson(),
                 onViewCart: () => showRiderCartModal(context, order.toJson()),
@@ -1440,23 +1329,23 @@ class AdminOrderCard extends ConsumerWidget {
                 }
 
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(5.5),
                         decoration: BoxDecoration(
                           color: isStorePartner ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           isStorePartner ? Icons.storefront_rounded : Icons.two_wheeler_rounded,
-                          size: 16,
+                          size: 15,
                           color: isStorePartner ? const Color(0xFF15803D) : const Color(0xFF2563EB),
                         ),
                       ),
@@ -1464,96 +1353,111 @@ class AdminOrderCard extends ConsumerWidget {
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Row(
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 5,
+                              runSpacing: 2,
                               children: [
-                                Flexible(
-                                  child: Text(
-                                    order.deliveryBoyName!,
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 12),
-                                      fontWeight: FontWeight.w900,
-                                      color: AppDesignSystem.slate900,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                Text(
+                                  order.deliveryBoyName!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: AppDesignSystem.slate900,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFDCFCE7),
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: isStorePartner ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(
+                                      color: isStorePartner ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
+                                      width: 0.8,
+                                    ),
                                   ),
                                   child: Text(
                                     isStorePartner ? 'SELF' : 'RIDER',
                                     style: GoogleFonts.inter(
-                                      fontSize: 9,
+                                      fontSize: 8.5,
                                       fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF166534),
+                                      color: isStorePartner ? const Color(0xFF166534) : const Color(0xFF1D4ED8),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                             if (order.deliveryBoyPhone != null && order.deliveryBoyPhone!.isNotEmpty)
-                              Text(
-                                order.deliveryBoyPhone!,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 10.5),
-                                  fontWeight: FontWeight.w600,
-                                  color: AppDesignSystem.slate500,
+                              Padding(
+                                padding: const EdgeInsets.only(top: 1),
+                                child: Text(
+                                  order.deliveryBoyPhone!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                    fontWeight: FontWeight.w600,
+                                    color: AppDesignSystem.slate500,
+                                  ),
                                 ),
                               ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 6),
                       if (order.deliveryBoyPhone != null && order.deliveryBoyPhone!.isNotEmpty) ...[
                         InkWell(
                           borderRadius: BorderRadius.circular(8),
                           onTap: () => onCallCustomer?.call(order.deliveryBoyPhone!),
                           child: Container(
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(5.5),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
                             ),
-                            child: const Icon(Icons.call_rounded, size: 16, color: Color(0xFF2563EB)),
+                            child: const Icon(Icons.call_rounded, size: 15, color: Color(0xFF2563EB)),
                           ),
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 4),
                         InkWell(
                           borderRadius: BorderRadius.circular(8),
                           onTap: () => onWhatsappCustomer?.call(order.deliveryBoyPhone!, order.readableId ?? order.id),
                           child: Container(
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(5.5),
                             decoration: BoxDecoration(
                               color: const Color(0xFFDCFCE7),
                               borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF86EFAC), width: 0.8),
                             ),
-                            child: const Icon(Icons.chat_bubble_rounded, size: 16, color: Color(0xFF15803D)),
+                            child: const Icon(Icons.chat_bubble_rounded, size: 15, color: Color(0xFF15803D)),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                       ],
                       InkWell(
                         borderRadius: BorderRadius.circular(8),
                         onTap: () => _showRiderSelectionSheet(context, ref),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
                           decoration: BoxDecoration(
                             color: AppDesignSystem.slate100,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppDesignSystem.slate300, width: 1),
+                            borderRadius: BorderRadius.circular(7),
+                            border: Border.all(color: AppDesignSystem.slate300, width: 0.9),
                           ),
-                          child: Text(
-                            'Change',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w800,
-                              color: AppDesignSystem.slate700,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Change',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w800,
+                                  color: AppDesignSystem.slate700,
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down_rounded, size: 14, color: AppDesignSystem.slate600),
+                            ],
                           ),
                         ),
                       ),
@@ -1677,14 +1581,14 @@ class AdminOrderCard extends ConsumerWidget {
 
           // ───── 3.5 UNIFIED DYNAMIC STAGE PROGRESSION ACTION BAR ─────
           Container(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
             color: AppDesignSystem.background,
             child: Row(
               children: [
                 // Dynamic Primary Stage Action Button
                 Expanded(
                   child: () {
-                    // 1. ADMIN PENDING / PENDING → APPROVE & CONFIRM + REJECT
+                    // 1. ADMIN PENDING / PENDING → Confirm Order ✓ + Reject
                     if (order.status == OrderStatus.adminPending || order.status == OrderStatus.pending) {
                       return Row(
                         children: [
@@ -1699,15 +1603,15 @@ class AdminOrderCard extends ConsumerWidget {
                                   : null,
                               icon: isProcessing
                                   ? const SizedBox(
-                                      width: 14,
-                                      height: 14,
+                                      width: 13,
+                                      height: 13,
                                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                     )
-                                  : const Icon(Icons.check_circle_rounded, size: 17, color: Colors.white),
+                                  : const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                               label: Text(
-                                isProcessing ? 'CONFIRMING...' : 'APPROVE & CONFIRM',
+                                isProcessing ? 'CONFIRMING...' : 'Confirm Order ✓',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12),
+                                  fontSize: Responsive.scaledFontSize(context, 11.5),
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
                                 ),
@@ -1716,13 +1620,13 @@ class AdminOrderCard extends ConsumerWidget {
                                 backgroundColor: isProcessing
                                     ? AppDesignSystem.green600.withValues(alpha: 0.6)
                                     : AppDesignSystem.green600,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 elevation: 0,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             flex: 2,
                             child: OutlinedButton.icon(
@@ -1732,20 +1636,20 @@ class AdminOrderCard extends ConsumerWidget {
                                       onUpdateStatus!(order, OrderStatus.cancelled);
                                     }
                                   : null,
-                              icon: const Icon(Icons.cancel_rounded, size: 16, color: AppDesignSystem.red600),
+                              icon: const Icon(Icons.cancel_rounded, size: 15, color: AppDesignSystem.red600),
                               label: Text(
-                                'REJECT',
+                                'Reject',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12),
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: FontWeight.w800,
                                   color: AppDesignSystem.red600,
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFFFCA5A5), width: 1.2),
+                                side: const BorderSide(color: Color(0xFFFCA5A5), width: 1.1),
                                 backgroundColor: const Color(0xFFFEF2F2),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                             ),
                           ),
@@ -1753,7 +1657,7 @@ class AdminOrderCard extends ConsumerWidget {
                       );
                     }
 
-                    // 2. CONFIRMED → MARK ALL ITEMS PACKED
+                    // 2. CONFIRMED → Mark Packed 📦
                     if (order.status == OrderStatus.confirmed) {
                       return ElevatedButton.icon(
                         onPressed: (onUpdateStatus != null && !isProcessing)
@@ -1764,47 +1668,47 @@ class AdminOrderCard extends ConsumerWidget {
                             : null,
                         icon: isProcessing
                             ? const SizedBox(
-                                width: 14,
-                                height: 14,
+                                width: 13,
+                                height: 13,
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                               )
-                            : const Icon(Icons.inventory_2_rounded, size: 18, color: Colors.white),
+                            : const Icon(Icons.inventory_2_rounded, size: 16, color: Colors.white),
                         label: Text(
-                          isProcessing ? 'PACKING ORDER...' : '📦 MARK PACKED / READY ➔',
+                          isProcessing ? 'PACKING...' : 'Mark Packed 📦',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12.5),
+                            fontSize: Responsive.scaledFontSize(context, 12),
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4F46E5), // Indigo
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           elevation: 0,
                         ),
                       );
                     }
 
-                    // 3. PACKED → DISPATCH TO RIDER (or ASSIGN RIDER if not yet assigned)
+                    // 3. PACKED → On the Way 🚀 (or Assign Rider 🛵)
                     if (order.status == OrderStatus.packed) {
                       final hasRider = (order.deliveryBoyName != null && order.deliveryBoyName!.trim().isNotEmpty);
                       if (!hasRider && !isPickup) {
                         return ElevatedButton.icon(
                           onPressed: () => _showRiderSelectionSheet(context, ref),
-                          icon: const Icon(Icons.two_wheeler_rounded, size: 18, color: Colors.white),
+                          icon: const Icon(Icons.two_wheeler_rounded, size: 16, color: Colors.white),
                           label: Text(
-                            '🛵 ASSIGN RIDER TO DISPATCH ➔',
+                            'Assign Rider 🛵',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12),
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0284C7), // Sky/Cyan
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             elevation: 0,
                           ),
                         );
@@ -1819,29 +1723,29 @@ class AdminOrderCard extends ConsumerWidget {
                             : null,
                         icon: isProcessing
                             ? const SizedBox(
-                                width: 14,
-                                height: 14,
+                                width: 13,
+                                height: 13,
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                               )
-                            : const Icon(Icons.delivery_dining_rounded, size: 20, color: Colors.white),
+                            : const Icon(Icons.delivery_dining_rounded, size: 18, color: Colors.white),
                         label: Text(
-                          isProcessing ? 'DISPATCHING...' : '🚀 DISPATCH / HANDOVER ➔',
+                          isProcessing ? 'DISPATCHING...' : 'On the Way 🚀',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12.5),
+                            fontSize: Responsive.scaledFontSize(context, 12),
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFEA580C), // Sunset Orange
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           elevation: 0,
                         ),
                       );
                     }
 
-                    // 4. SHIPPED → MARK DELIVERED
+                    // 4. SHIPPED → Delivered ✓
                     if (order.status == OrderStatus.shipped) {
                       return ElevatedButton.icon(
                         onPressed: (onUpdateStatus != null && !isProcessing)
@@ -1852,23 +1756,23 @@ class AdminOrderCard extends ConsumerWidget {
                             : null,
                         icon: isProcessing
                             ? const SizedBox(
-                                width: 14,
-                                height: 14,
+                                width: 13,
+                                height: 13,
                                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                               )
-                            : const Icon(Icons.task_alt_rounded, size: 18, color: Colors.white),
+                            : const Icon(Icons.task_alt_rounded, size: 16, color: Colors.white),
                         label: Text(
-                          isProcessing ? 'COMPLETING...' : '✓ MARK ORDER DELIVERED',
+                          isProcessing ? 'DELIVERING...' : 'Delivered ✓',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12.5),
+                            fontSize: Responsive.scaledFontSize(context, 12),
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppDesignSystem.green600,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           elevation: 0,
                         ),
                       );
@@ -1877,21 +1781,21 @@ class AdminOrderCard extends ConsumerWidget {
                     // 5. DELIVERED → Complete banner
                     if (order.status == OrderStatus.delivered) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                         decoration: BoxDecoration(
                           color: const Color(0xFFECFDF5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFA7F3D0), width: 1.1),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF059669)),
-                            const SizedBox(width: 8),
+                            const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF059669)),
+                            const SizedBox(width: 6),
                             Text(
-                              'Delivered · Order Completed',
+                              'Delivered ✓',
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12.5),
+                                fontSize: Responsive.scaledFontSize(context, 12),
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF047857),
                               ),
@@ -1903,21 +1807,21 @@ class AdminOrderCard extends ConsumerWidget {
 
                     // 6. CANCELLED
                     return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFECACA), width: 1.2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFECACA), width: 1.1),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.cancel_rounded, size: 18, color: Color(0xFFDC2626)),
-                          const SizedBox(width: 8),
+                          const Icon(Icons.cancel_rounded, size: 16, color: Color(0xFFDC2626)),
+                          const SizedBox(width: 6),
                           Text(
                             'Order Cancelled',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12.5),
+                              fontSize: Responsive.scaledFontSize(context, 12),
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFFB91C1C),
                             ),
@@ -1928,7 +1832,7 @@ class AdminOrderCard extends ConsumerWidget {
                   }(),
                 ),
 
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
 
                 // Manual Status Override / Reversal Menu
                 PopupMenuButton<OrderStatus>(
@@ -1999,26 +1903,26 @@ class AdminOrderCard extends ConsumerWidget {
                     ),
                   ],
                   child: Container(
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 1.2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 1.1),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1.5),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
                         ),
                       ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.tune_rounded, size: 16, color: statusColor),
-                        const SizedBox(width: 4),
-                        Icon(Icons.arrow_drop_down_rounded, size: 18, color: statusColor),
+                        Icon(Icons.tune_rounded, size: 15, color: statusColor),
+                        const SizedBox(width: 3),
+                        Icon(Icons.arrow_drop_down_rounded, size: 16, color: statusColor),
                       ],
                     ),
                   ),
@@ -2029,179 +1933,158 @@ class AdminOrderCard extends ConsumerWidget {
 
           const Divider(height: 1, color: AppDesignSystem.slate100),
 
-          // 3.5 Superpower Action: Edit Order / Add & Swap Items (⚡)
+          // ───── 4-BUTTON COMPACT UTILITY STRIP (Zoomed Out, Height ~32px) ─────
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: onOpenSuperOrderEdit != null ? () => onOpenSuperOrderEdit!(order) : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBEB),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.bolt_rounded, size: 16, color: Color(0xFFD97706)),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Edit Items & Swap (Superpower)',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12),
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFFB45309),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 3.6 Refund Action Button
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: onShowRecordRefund != null ? () => onShowRecordRefund!(order) : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF1F2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFDA4AF), width: 1.2),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.replay_rounded, size: 16, color: Color(0xFFE11D48)),
-                    const SizedBox(width: 6),
-                    Text(
-                      order.refundAmount > 0
-                          ? '↩️ Refunded ₹${order.refundAmount.toInt()} (Record More)'
-                          : '↩️ Record Refund (Deduct from Finance)',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12),
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFFBE123C),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 4. The 2 Main Order Actions: 🖨️ Send KOT (Remote) & 💬 WhatsApp KOT
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
             child: Row(
               children: [
-                // Option 1: 🖨️ Send KOT / ⏳ Printing... / 🖨️ KOT ✓
+                // 1. Edit Items & Swap
                 Expanded(
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: (isKOTSending || isKOTPrinted || onSendRemoteKOT == null) ? null : () => onSendRemoteKOT!(order),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: onOpenSuperOrderEdit != null ? () => onOpenSuperOrderEdit!(order) : null,
+                    child: Container(
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: isKOTSending
-                            ? AppDesignSystem.statusPending // Yellow amber loading
-                            : (isKOTPrinted ? AppDesignSystem.green100 : const Color(0xFFEFF6FF)),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isKOTSending
-                              ? AppDesignSystem.yellow200
-                              : (isKOTPrinted ? AppDesignSystem.emerald200 : const Color(0xFFBFDBFE)),
-                          width: 1.2,
-                        ),
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDE68A), width: 1),
                       ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (isKOTSending) ...[
-                              const SizedBox(
-                                width: 13,
-                                height: 13,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppDesignSystem.amber600),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Sending KOT...',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11.5),
-                                  fontWeight: FontWeight.w900,
-                                  color: AppDesignSystem.amber700,
-                                ),
-                              ),
-                            ] else ...[
-                              Icon(
-                                isKOTPrinted ? Icons.check_circle_rounded : Icons.print_rounded,
-                                size: 16,
-                                color: isKOTPrinted ? AppDesignSystem.green600 : const Color(0xFF2563EB),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                isKOTPrinted ? 'KOT Sent ✓' : 'Send KOT',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12),
-                                  fontWeight: FontWeight.w900,
-                                  color: isKOTPrinted ? AppDesignSystem.green700 : const Color(0xFF1D4ED8),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFFD97706)),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Edit',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFB45309),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                // Option 2: 📲 WhatsApp KOT (Vibrant Restaurant Kitchen Share)
+                const SizedBox(width: 5),
+
+                // 2. Record Refund
                 Expanded(
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: onSendWhatsAppKOT != null ? () => onSendWhatsAppKOT!(order) : null,
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: onShowRecordRefund != null ? () => onShowRecordRefund!(order) : null,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF25D366),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF25D366).withValues(alpha: 0.28),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                        color: const Color(0xFFFFF1F2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDA4AF), width: 1),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.replay_rounded, size: 13, color: Color(0xFFE11D48)),
+                          const SizedBox(width: 3),
+                          Text(
+                            order.refundAmount > 0 ? '₹${order.refundAmount.toInt()}' : 'Refund',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFBE123C),
+                            ),
                           ),
                         ],
                       ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.chat_rounded, size: 16, color: Colors.white),
-                            const SizedBox(width: 6),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
+
+                // 3. Send KOT
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: (isKOTSending || isKOTPrinted || onSendRemoteKOT == null) ? null : () => onSendRemoteKOT!(order),
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: isKOTSending
+                            ? AppDesignSystem.statusPending
+                            : (isKOTPrinted ? AppDesignSystem.green100 : const Color(0xFFEFF6FF)),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isKOTSending
+                              ? AppDesignSystem.yellow200
+                              : (isKOTPrinted ? AppDesignSystem.emerald200 : const Color(0xFFBFDBFE)),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (isKOTSending) ...[
+                            const SizedBox(
+                              width: 11,
+                              height: 11,
+                              child: CircularProgressIndicator(strokeWidth: 1.5, valueColor: AlwaysStoppedAnimation(AppDesignSystem.amber600)),
+                            ),
+                          ] else ...[
+                            Icon(
+                              isKOTPrinted ? Icons.check_circle_rounded : Icons.print_rounded,
+                              size: 13,
+                              color: isKOTPrinted ? AppDesignSystem.green600 : const Color(0xFF2563EB),
+                            ),
+                            const SizedBox(width: 3),
                             Text(
-                              order.isCombined ? 'Share Slips 📲' : (order.isRestaurantOrder ? 'WhatsApp KOT 📲' : 'WhatsApp Slip 📲'),
+                              isKOTPrinted ? 'Sent' : 'KOT',
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12),
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: 0.2,
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w800,
+                                color: isKOTPrinted ? AppDesignSystem.green700 : const Color(0xFF1D4ED8),
                               ),
                             ),
                           ],
-                        ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
+
+                // 4. WhatsApp KOT / Slip
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: onSendWhatsAppKOT != null ? () => onSendWhatsAppKOT!(order) : null,
+                    child: Container(
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF25D366),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF25D366).withValues(alpha: 0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1.5),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.chat_rounded, size: 13, color: Colors.white),
+                          const SizedBox(width: 3),
+                          Text(
+                            order.isCombined ? 'Slips' : (order.isRestaurantOrder ? 'WA KOT' : 'WA Slip'),
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

@@ -32,6 +32,10 @@ class AdminFilterHeader extends StatefulWidget {
   final DeliveryRouteKey selectedRoadCorridor;
   final ValueChanged<DeliveryRouteKey>? onRoadCorridorSelected;
   final Map<DeliveryRouteKey, int> roadCorridorCounts;
+  final String selectedRider;
+  final List<Map<String, String>> riders;
+  final ValueChanged<String>? onRiderSelected;
+  final Map<String, int> riderCounts;
 
   const AdminFilterHeader({
     super.key,
@@ -56,6 +60,10 @@ class AdminFilterHeader extends StatefulWidget {
     this.selectedRoadCorridor = DeliveryRouteKey.all,
     this.onRoadCorridorSelected,
     this.roadCorridorCounts = const {},
+    this.selectedRider = 'ALL',
+    this.riders = const [],
+    this.onRiderSelected,
+    this.riderCounts = const {},
   });
 
   @override
@@ -388,7 +396,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
   Widget _buildOutletDropdownPill(BuildContext context) {
     final selectedOutletData = widget.outlets.firstWhereOrNull((o) => o['id'] == widget.selectedOutlet);
     final isAll = widget.selectedOutlet == 'ALL';
-    final name = selectedOutletData != null ? selectedOutletData['name']?.toString() ?? 'All Outlets' : 'All Outlets';
+    final name = isAll ? 'Outlets' : (selectedOutletData != null ? selectedOutletData['name']?.toString() ?? 'Outlet' : 'Outlet');
     final icon = selectedOutletData != null ? selectedOutletData['icon']?.toString() ?? '🏢' : '🏢';
     final count = selectedOutletData != null ? selectedOutletData['count'] as int? ?? 0 : widget.displayLiveCount;
 
@@ -399,7 +407,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
         onTap: () => _showOutletSelectorSheet(context),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: isAll ? const Color(0xFF0F172A) : const Color(0xFF0F766E),
             borderRadius: BorderRadius.circular(10),
@@ -423,7 +431,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
               Text(
                 name,
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                 ),
@@ -431,7 +439,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
               if (count > 0) ...[
                 const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(8),
@@ -446,7 +454,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                   ),
                 ),
               ],
-              const SizedBox(width: 3),
+              const SizedBox(width: 2),
               const Icon(
                 Icons.arrow_drop_down_rounded,
                 size: 16,
@@ -464,7 +472,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
     final isAll = status == 'ALL';
     final total = widget.selectedTab == 0 ? widget.displayLiveCount : widget.displayHistoryCount;
     final count = isAll ? total : (widget.statusCounts[status] ?? 0);
-    final label = status == 'ALL' ? (widget.selectedTab == 0 ? 'All Live' : 'All History') : _formatStatusLabel(status).split('(').first.trim();
+    final label = status == 'ALL' ? (widget.selectedTab == 0 ? 'Live' : 'History') : _formatStatusLabel(status).split('(').first.trim();
 
     return Padding(
       padding: const EdgeInsets.only(right: 6),
@@ -473,7 +481,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
         onTap: () => _showStatusSelectorSheet(context),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: isAll ? const Color(0xFF0F172A) : const Color(0xFF2563EB),
             borderRadius: BorderRadius.circular(10),
@@ -493,11 +501,11 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.bolt_rounded, size: 13, color: Colors.white),
-              const SizedBox(width: 4),
+              const SizedBox(width: 3),
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                 ),
@@ -505,7 +513,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
               if (count > 0) ...[
                 const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(8),
@@ -520,7 +528,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                   ),
                 ),
               ],
-              const SizedBox(width: 3),
+              const SizedBox(width: 2),
               const Icon(
                 Icons.arrow_drop_down_rounded,
                 size: 16,
@@ -706,9 +714,9 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
               Text(rInfo.emoji, style: const TextStyle(fontSize: 12)),
               const SizedBox(width: 4),
               Text(
-                rInfo.shortLabel,
+                isAll ? 'Roads' : rInfo.shortLabel,
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
                   fontWeight: FontWeight.w900,
                   color: isAll ? Colors.white : rInfo.textColor,
                 ),
@@ -736,6 +744,392 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                 Icons.arrow_drop_down_rounded,
                 size: 16,
                 color: isAll ? Colors.white : rInfo.textColor,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRiderSelectorSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    final isLive = widget.selectedTab == 0;
+    final total = isLive ? widget.displayLiveCount : widget.displayHistoryCount;
+    final unassignedCount = widget.riderCounts['UNASSIGNED'] ?? 0;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🛵', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Filter by Rider & Assignment',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: AppDesignSystem.slate900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: AppDesignSystem.slate500),
+                      onPressed: () => Navigator.pop(ctx),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Select a delivery partner or view unassigned orders.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppDesignSystem.slate500,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      // 1. ALL ORDERS
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: widget.selectedRider == 'ALL' ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: widget.selectedRider == 'ALL' ? const Color(0xFF3B82F6) : AppDesignSystem.slate200,
+                              width: 1,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Text('👥', style: TextStyle(fontSize: 16)),
+                          ),
+                        ),
+                        title: Text(
+                          'All Orders (All Riders)',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: widget.selectedRider == 'ALL' ? FontWeight.w800 : FontWeight.w600,
+                            color: widget.selectedRider == 'ALL' ? AppDesignSystem.slate900 : AppDesignSystem.slate700,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: widget.selectedRider == 'ALL' ? const Color(0xFFDBEAFE) : AppDesignSystem.slate100,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$total orders',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: widget.selectedRider == 'ALL' ? const Color(0xFF1D4ED8) : AppDesignSystem.slate600,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              widget.selectedRider == 'ALL' ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                              size: 20,
+                              color: widget.selectedRider == 'ALL' ? const Color(0xFF2563EB) : AppDesignSystem.slate300,
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          widget.onRiderSelected?.call('ALL');
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                      const Divider(height: 1, color: AppDesignSystem.slate100),
+
+                      // 2. UNASSIGNED ORDERS (Highlighted High-Priority Filter)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: widget.selectedRider == 'UNASSIGNED' ? const Color(0xFFFFF7ED) : const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: widget.selectedRider == 'UNASSIGNED' ? const Color(0xFFEA580C) : const Color(0xFFFDE68A),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Text('⚠️', style: TextStyle(fontSize: 16)),
+                          ),
+                        ),
+                        title: Text(
+                          'Unassigned Orders',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: widget.selectedRider == 'UNASSIGNED' ? const Color(0xFFC2410C) : const Color(0xFFB45309),
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Needs delivery partner assignment',
+                          style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.slate500),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: unassignedCount > 0 ? const Color(0xFFFFEDD5) : AppDesignSystem.slate100,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$unassignedCount orders',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: unassignedCount > 0 ? const Color(0xFFC2410C) : AppDesignSystem.slate600,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              widget.selectedRider == 'UNASSIGNED' ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                              size: 20,
+                              color: widget.selectedRider == 'UNASSIGNED' ? const Color(0xFFEA580C) : AppDesignSystem.slate300,
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          widget.onRiderSelected?.call('UNASSIGNED');
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                      const Divider(height: 1, color: AppDesignSystem.slate100),
+
+                      // 3. AVAILABLE RIDERS LIST
+                      ...widget.riders.map((r) {
+                        final id = r['id'] ?? '';
+                        final name = r['name'] ?? 'Rider';
+                        final phone = r['phone'] ?? '';
+                        final isSelected = widget.selectedRider == id;
+                        final count = widget.riderCounts[id] ?? 0;
+                        final isStorePartner = name.toLowerCase().contains('store partner') || id == 'store_admin_self';
+
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          leading: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? (isStorePartner ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF))
+                                  : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected
+                                    ? (isStorePartner ? const Color(0xFF16A34A) : const Color(0xFF3B82F6))
+                                    : AppDesignSystem.slate200,
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(isStorePartner ? '🏪' : '🛵', style: const TextStyle(fontSize: 16)),
+                            ),
+                          ),
+                          title: Row(
+                            children: [
+                              Text(
+                                name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                  color: isSelected ? AppDesignSystem.slate900 : AppDesignSystem.slate700,
+                                ),
+                              ),
+                              if (isStorePartner) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'SELF',
+                                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFF166534)),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          subtitle: phone.isNotEmpty
+                              ? Text(phone, style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.slate500))
+                              : null,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (count > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? const Color(0xFFDBEAFE) : AppDesignSystem.slate100,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$count orders',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: isSelected ? const Color(0xFF1D4ED8) : AppDesignSystem.slate600,
+                                    ),
+                                  ),
+                                ),
+                              Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                size: 20,
+                                color: isSelected ? const Color(0xFF2563EB) : AppDesignSystem.slate300,
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            widget.onRiderSelected?.call(id);
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRiderDropdownPill(BuildContext context) {
+    final isAll = widget.selectedRider == 'ALL';
+    final isUnassigned = widget.selectedRider == 'UNASSIGNED';
+    final unassignedCount = widget.riderCounts['UNASSIGNED'] ?? 0;
+
+    String label;
+    int count = 0;
+    Color bgColor;
+    Color borderColor;
+    Color textColor;
+    String iconStr;
+
+    if (isUnassigned) {
+      label = 'Unassigned';
+      count = unassignedCount;
+      bgColor = const Color(0xFFC2410C);
+      borderColor = const Color(0xFFEA580C);
+      textColor = Colors.white;
+      iconStr = '⚠️';
+    } else if (isAll) {
+      label = 'Riders';
+      count = 0;
+      bgColor = const Color(0xFF1E293B);
+      borderColor = const Color(0xFF334155);
+      textColor = Colors.white;
+      iconStr = '🛵';
+    } else {
+      final rider = widget.riders.firstWhereOrNull((r) => r['id'] == widget.selectedRider);
+      final rName = rider?['name'] ?? 'Rider';
+      label = rName.split(' ').first;
+      count = widget.riderCounts[widget.selectedRider] ?? 0;
+      bgColor = const Color(0xFF0F766E);
+      borderColor = const Color(0xFF0D9488);
+      textColor = Colors.white;
+      iconStr = rName.toLowerCase().contains('store partner') ? '🏪' : '🛵';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _showRiderSelectorSheet(context),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: borderColor, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: bgColor.withValues(alpha: 0.25),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(iconStr, style: const TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                  fontWeight: FontWeight.w900,
+                  color: textColor,
+                ),
+              ),
+              if (count > 0 || (isAll && unassignedCount > 0)) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: isAll && unassignedCount > 0 ? const Color(0xFFEA580C) : Colors.white.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isAll ? '!$unassignedCount' : '$count',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 2),
+              Icon(
+                Icons.arrow_drop_down_rounded,
+                size: 16,
+                color: textColor,
               ),
             ],
           ),
@@ -791,6 +1185,13 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                   ),
                 ],
                 _buildRoadCorridorPill(context),
+                Container(
+                  height: 18,
+                  width: 1,
+                  margin: const EdgeInsets.only(right: 6, top: 7, bottom: 7),
+                  color: AppDesignSystem.slate300,
+                ),
+                _buildRiderDropdownPill(context),
                 Container(
                   height: 18,
                   width: 1,

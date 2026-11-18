@@ -94,6 +94,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   String _historySubFilter = 'ALL';
   String _selectedOutlet = 'ALL';
   DeliveryRouteKey _selectedRoadCorridor = DeliveryRouteKey.all;
+  String _selectedRiderFilter = 'ALL';
   String _searchQuery = '';
 
   static List<Order> _cachedOrders = [];
@@ -2336,6 +2337,80 @@ $formattedItems
     return counts;
   }
 
+  List<Map<String, String>> _buildAllAvailableRiders() {
+    final Map<String, Map<String, String>> riderMap = {};
+
+    // 1. Store Partner (Self Delivery)
+    riderMap['store_admin_self'] = {
+      'id': 'store_admin_self',
+      'name': 'Store Partner',
+      'phone': 'Store Self-Delivery',
+    };
+
+    // 2. Add fetched active riders
+    for (final r in _availableRiders) {
+      final id = r['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      riderMap[id] = {
+        'id': id,
+        'name': r['name']?.toString() ?? 'Rider',
+        'phone': r['phone']?.toString() ?? '',
+      };
+    }
+
+    // 3. Add any riders present in orders
+    for (final o in _allOrders) {
+      if (o.deliveryBoyName != null && o.deliveryBoyName!.trim().isNotEmpty && o.deliveryBoyName != 'UNASSIGNED') {
+        final norm = o.deliveryBoyName!.trim().toLowerCase();
+        if (norm == 'store partner' || norm == 'store_admin_self') continue;
+        final id = o.deliveryUserId ?? o.deliveryBoyName!;
+        if (!riderMap.containsKey(id)) {
+          riderMap[id] = {
+            'id': id,
+            'name': o.deliveryBoyName!,
+            'phone': o.deliveryBoyPhone ?? '',
+          };
+        }
+      }
+    }
+
+    return riderMap.values.toList();
+  }
+
+  Map<String, int> _buildRiderCounts() {
+    final relevantOrders = _selectedTab == 0
+        ? _allOrders.where(_isLiveOrder).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList()
+        : _allOrders.where((o) => !_isLiveOrder(o)).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList();
+
+    final Map<String, int> counts = {'ALL': relevantOrders.length};
+
+    // Unassigned orders count
+    counts['UNASSIGNED'] = relevantOrders.where((o) {
+      final isPickup = (o.deliveryMethod ?? '').toUpperCase().contains('PICKUP');
+      final hasRider = (o.deliveryBoyName != null && o.deliveryBoyName!.trim().isNotEmpty && o.deliveryBoyName != 'UNASSIGNED') || o.deliveryUserId != null;
+      return !isPickup && !hasRider;
+    }).length;
+
+    // Specific rider counts
+    for (final r in _buildAllAvailableRiders()) {
+      final id = r['id'] ?? '';
+      final name = (r['name'] ?? '').toLowerCase();
+      final isStorePartner = id == 'store_admin_self' || name.contains('store partner');
+
+      counts[id] = relevantOrders.where((o) {
+        if (o.deliveryUserId != null && o.deliveryUserId == id) return true;
+        if (o.deliveryBoyName != null) {
+          final oName = o.deliveryBoyName!.toLowerCase();
+          if (isStorePartner && (oName.contains('store partner') || oName == 'store_admin_self')) return true;
+          if (oName == name) return true;
+        }
+        return false;
+      }).length;
+    }
+
+    return counts;
+  }
+
   List<Order> _getFilteredOrders() {
     List<Order> list = [];
     if (_selectedTab == 0) {
@@ -2363,6 +2438,29 @@ $formattedItems
     // Filter by Road Corridor (Arterial Corridor Dispatch)
     if (_selectedRoadCorridor != DeliveryRouteKey.all) {
       list = list.where((o) => DeliveryRoutes.detect(o).key == _selectedRoadCorridor).toList();
+    }
+
+    // Filter by Rider / Unassigned Dispatch
+    if (_selectedRiderFilter == 'UNASSIGNED') {
+      list = list.where((o) {
+        final isPickup = (o.deliveryMethod ?? '').toUpperCase().contains('PICKUP');
+        final hasRider = (o.deliveryBoyName != null && o.deliveryBoyName!.trim().isNotEmpty && o.deliveryBoyName != 'UNASSIGNED') || o.deliveryUserId != null;
+        return !isPickup && !hasRider;
+      }).toList();
+    } else if (_selectedRiderFilter != 'ALL') {
+      final rider = _buildAllAvailableRiders().firstWhereOrNull((r) => r['id'] == _selectedRiderFilter);
+      final riderName = (rider?['name'] ?? '').toLowerCase();
+      final isStorePartner = _selectedRiderFilter == 'store_admin_self' || riderName.contains('store partner');
+
+      list = list.where((o) {
+        if (o.deliveryUserId != null && o.deliveryUserId == _selectedRiderFilter) return true;
+        if (o.deliveryBoyName != null) {
+          final oName = o.deliveryBoyName!.toLowerCase();
+          if (isStorePartner && (oName.contains('store partner') || oName == 'store_admin_self')) return true;
+          if (oName == riderName) return true;
+        }
+        return false;
+      }).toList();
     }
 
     if (_searchQuery.isNotEmpty) {
@@ -2577,6 +2675,12 @@ $formattedItems
                   roadCorridorCounts: _buildRoadCorridorCounts(),
                   onRoadCorridorSelected: (corridor) {
                     setState(() => _selectedRoadCorridor = corridor);
+                  },
+                  selectedRider: _selectedRiderFilter,
+                  riders: _buildAllAvailableRiders(),
+                  riderCounts: _buildRiderCounts(),
+                  onRiderSelected: (riderId) {
+                    setState(() => _selectedRiderFilter = riderId);
                   },
                   onTabChanged: (index) {
                     setState(() {
