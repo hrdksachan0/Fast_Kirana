@@ -223,7 +223,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF0F172A),
                   ),
-                  cursorColor: const Color(0xFFDB2777),
+                  cursorColor: AppDesignSystem.primary,
                   decoration: InputDecoration(
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -452,7 +452,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                     final hasMore = _visibleCount < list.length;
 
                     return RefreshIndicator(
-                      color: const Color(0xFFDB2777),
+                      color: AppDesignSystem.primary,
                       onRefresh: () async {
                         await ProductRepository.invalidateAllCache();
                         ref.invalidate(productsProvider(widget.category.slug));
@@ -502,7 +502,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                       'Show more products',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontWeight: FontWeight.w700,
-                                        color: const Color(0xFFDB2777),
+                                        color: AppDesignSystem.primary,
                                       ),
                                     ),
                                   ),
@@ -517,7 +517,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                     );
                   },
                   loading: () => const Center(
-                    child: CircularProgressIndicator(color: Color(0xFFDB2777)),
+                    child: CircularProgressIndicator(color: AppDesignSystem.primary),
                   ),
                   error: (_, __) => Center(
                     child: ElevatedButton(
@@ -525,7 +525,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                         ref.invalidate(productsProvider(widget.category.slug));
                         ref.invalidate(productsProvider(widget.category.id));
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDB2777)),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppDesignSystem.primary),
                       child: const Text('Retry', style: TextStyle(color: Colors.white)),
                     ),
                   ),
@@ -770,11 +770,11 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                                       height: 29,
                                       padding: const EdgeInsets.symmetric(horizontal: 5),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFDB2777), // Vibrant Pink/Rose
+                                        color: AppDesignSystem.primary, // FastKirana Brand Red #E20A22
                                         borderRadius: BorderRadius.circular(8),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFFDB2777).withValues(alpha: 0.30),
+                                            color: AppDesignSystem.primary.withValues(alpha: 0.28),
                                             blurRadius: 6,
                                             offset: const Offset(0, 2),
                                           ),
@@ -861,7 +861,7 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                                           color: Colors.white,
                                           borderRadius: BorderRadius.circular(8),
                                           border: Border.all(
-                                            color: const Color(0xFFDB2777), // Pink/Rose border
+                                            color: AppDesignSystem.primary, // FastKirana Brand Red #E20A22 border
                                             width: 1.5,
                                           ),
                                           boxShadow: [
@@ -882,7 +882,7 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                                                     style: GoogleFonts.plusJakartaSans(
                                                       fontSize: 10.5,
                                                       fontWeight: FontWeight.w900,
-                                                      color: const Color(0xFFDB2777),
+                                                      color: AppDesignSystem.primary,
                                                       height: 1.0,
                                                       letterSpacing: 0.3,
                                                     ),
@@ -893,7 +893,7 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                                                     style: GoogleFonts.plusJakartaSans(
                                                       fontSize: 8.5,
                                                       fontWeight: FontWeight.w700,
-                                                      color: const Color(0xFF94A3B8),
+                                                      color: const Color(0xFF64748B),
                                                       height: 1.0,
                                                     ),
                                                   ),
@@ -905,7 +905,7 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                                                   style: GoogleFonts.plusJakartaSans(
                                                     fontSize: 11.5,
                                                     fontWeight: FontWeight.w900,
-                                                    color: const Color(0xFFDB2777),
+                                                    color: AppDesignSystem.primary,
                                                     letterSpacing: 0.3,
                                                   ),
                                                 ),
@@ -948,22 +948,18 @@ class _ReferenceExactProductCard extends ConsumerWidget {
           ),
           const SizedBox(height: 2),
 
-          // 4. Price Row (NICHE!): Solid Green Badge + Strike-through MRP (No OFF pill)
+          // 4. Clean Modern Price Row (Slate 900 bold price + strikethrough MRP)
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16A34A), // Solid green badge from reference
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Text(
-                  '₹${product.price.toInt()}',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
+              Text(
+                '₹${product.price.toInt()}',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF0F172A),
+                  letterSpacing: -0.2,
                 ),
               ),
               if (product.mrp > product.price) ...[

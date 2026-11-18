@@ -219,9 +219,11 @@ class _CartUpsellCarouselState extends ConsumerState<CartUpsellCarousel> {
           ],
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: hasFoodItem ? 228.0 : Responsive.productShelfHeight(context),
-          child: ListView.separated(
+        Builder(builder: (context) {
+          final hasUpsellFood = products.any((p) => isRestaurantProduct(p));
+          return SizedBox(
+            height: Responsive.productShelfHeight(context, isFood: hasUpsellFood),
+            child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: products.length,
@@ -237,8 +239,9 @@ class _CartUpsellCarouselState extends ConsumerState<CartUpsellCarousel> {
               );
             },
           ),
-        ),
-        const SizedBox(height: 16),
+        );
+      }),
+      const SizedBox(height: 16),
       ],
     );
   }

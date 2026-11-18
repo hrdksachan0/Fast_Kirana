@@ -117,26 +117,22 @@ class TrackingStatusStepper extends StatelessWidget {
       badgeText = 'COMPLETED';
       badgeBg = const Color(0xFFDCFCE7);
       badgeFg = const Color(0xFF15803D);
-    } else if (statusStep == -2) {
+    } else if (statusStep == 0) {
       badgeText = 'VERIFYING';
       badgeBg = const Color(0xFFFFF7ED);
       badgeFg = const Color(0xFFC2410C);
-    } else if (statusStep == 0) {
+    } else if (statusStep == 1) {
       badgeText = 'CONFIRMED';
       badgeBg = const Color(0xFFEFF6FF);
       badgeFg = const Color(0xFF1D4ED8);
-    } else if (statusStep == 1) {
-      badgeText = 'PREPARING';
-      badgeBg = const Color(0xFFFEF3C7);
-      badgeFg = const Color(0xFFB45309);
     } else if (statusStep == 2) {
-      badgeText = 'READY FOR PICKUP';
+      badgeText = 'PACKED';
       badgeBg = const Color(0xFFF3E8FF);
       badgeFg = const Color(0xFF6B21A8);
     } else if (statusStep == 3) {
       badgeText = 'IN TRANSIT';
-      badgeBg = const Color(0xFFEFF6FF);
-      badgeFg = const Color(0xFF1D4ED8);
+      badgeBg = const Color(0xFFDCFCE7);
+      badgeFg = const Color(0xFF15803D);
     } else {
       badgeText = 'IN PROGRESS';
       badgeBg = const Color(0xFFEFF6FF);
@@ -144,11 +140,31 @@ class TrackingStatusStepper extends StatelessWidget {
     }
 
     final steps = [
-      {'title': 'Order Confirmed', 'subtitle': 'Store has accepted your order', 'icon': Icons.check_circle_outline_rounded},
-      {'title': 'Preparing Fresh', 'subtitle': 'Packing fresh items from warehouse', 'icon': Icons.inventory_2_outlined},
-      {'title': 'Ready for Pickup', 'subtitle': 'Rider assigned and picking up', 'icon': Icons.storefront_outlined},
-      {'title': 'Out for Delivery', 'subtitle': 'Rider on the way to your door', 'icon': Icons.two_wheeler_rounded},
-      {'title': 'Delivered', 'subtitle': 'Delivered safely at your location', 'icon': Icons.done_all_rounded},
+      {
+        'title': 'Admin & Store Verification',
+        'subtitle': 'Store checking inventory freshness & stock',
+        'icon': Icons.fact_check_outlined,
+      },
+      {
+        'title': 'Order Confirmed',
+        'subtitle': 'Store accepted your order & invoice generated',
+        'icon': Icons.check_circle_outline_rounded,
+      },
+      {
+        'title': 'Preparing & Packing',
+        'subtitle': 'Packed in tamper-proof bag & quality checked',
+        'icon': Icons.inventory_2_outlined,
+      },
+      {
+        'title': 'Out for Delivery',
+        'subtitle': 'Rider on the way to your doorstep',
+        'icon': Icons.two_wheeler_rounded,
+      },
+      {
+        'title': 'Delivered Safely',
+        'subtitle': 'Handed over safely at doorstep',
+        'icon': Icons.done_all_rounded,
+      },
     ];
 
     return Container(
@@ -223,33 +239,6 @@ class TrackingStatusStepper extends StatelessWidget {
               ),
             ],
           ),
-          if (statusStep == -2) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFED7AA)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.verified_user_outlined, size: 16, color: Color(0xFFEA580C)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Admin call confirmation in progress. Once confirmed, your order will proceed to preparation.',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF9A3412),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 14),
           if (order?.isCombined == true && order?.subOrders != null && order!.subOrders!.length > 1) ...[
             Container(
@@ -341,7 +330,7 @@ class TrackingStatusStepper extends StatelessWidget {
                       isCompleted: isCompleted,
                       isCurrent: isCurrent,
                       icon: item['icon'] as IconData,
-                      activeColor: const Color(0xFF00A344),
+                      activeColor: index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344),
                       completedColor: const Color(0xFF00A344),
                     ),
                     if (!isLast)
@@ -367,7 +356,7 @@ class TrackingStatusStepper extends StatelessWidget {
                                 fontSize: Responsive.scaledFontSize(context, 13),
                                 fontWeight: (isCurrent || isCompleted) ? FontWeight.w800 : FontWeight.w500,
                                 color: isCurrent
-                                    ? const Color(0xFF00A344)
+                                    ? (index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344))
                                     : (isCompleted ? slateDark : slateMuted),
                               ),
                             ),
@@ -376,15 +365,15 @@ class TrackingStatusStepper extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFDCFCE7),
+                                  color: index == 0 ? const Color(0xFFFFF7ED) : const Color(0xFFDCFCE7),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  'NOW',
+                                  index == 0 ? 'VERIFYING' : 'NOW',
                                   style: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 8.5),
                                     fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF15803D),
+                                    color: index == 0 ? const Color(0xFFC2410C) : const Color(0xFF15803D),
                                   ),
                                 ),
                               ),

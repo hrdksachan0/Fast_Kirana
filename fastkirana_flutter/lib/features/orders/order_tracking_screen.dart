@@ -1458,20 +1458,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   int _getStatusStep(OrderStatus? status) {
-    if (status == null) return 1;
+    if (status == null) return 0;
     switch (status) {
       case OrderStatus.adminPending:
-        return -2; // Admin verification stage (before pending)
       case OrderStatus.pending:
-        return 0; // Order Confirmed
+        return 0; // Stage 0: Admin & Store Verification
       case OrderStatus.confirmed:
-        return 1; // Preparing
+        return 1; // Stage 1: Order Confirmed & Accepted
       case OrderStatus.packed:
-        return 2; // Ready for Pickup / Rider Assigned
+        return 2; // Stage 2: Ready for Pickup / Packed in Bag
       case OrderStatus.shipped:
-        return 3; // Out for Delivery
+        return 3; // Stage 3: Out for Delivery (Rider in Transit)
       case OrderStatus.delivered:
-        return 4; // Delivered
+        return 4; // Stage 4: Delivered Safely
       case OrderStatus.cancelled:
         return -1;
     }
@@ -1731,17 +1730,17 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                 } else if (statusStep == 1) {
                                   // Confirmed & Preparing
                                   heroAccent = const Color(0xFF059669);
-                                  heroIcon = Icons.storefront_rounded;
+                                  heroIcon = Icons.check_circle_outline_rounded;
                                   statusBadgeText = 'CONFIRMED';
                                   heroTitle = 'Order Confirmed';
-                                  heroSubtitle = 'Store team is packing fresh items';
+                                  heroSubtitle = 'Store accepted your order & preparing dispatch';
                                 } else {
-                                  // Placed / Pending
+                                  // Admin & Store Verification (statusStep == 0)
                                   heroAccent = const Color(0xFFD97706);
-                                  heroIcon = Icons.schedule_rounded;
-                                  statusBadgeText = 'PLACED';
-                                  heroTitle = 'Order Placed';
-                                  heroSubtitle = 'Awaiting store confirmation';
+                                  heroIcon = Icons.fact_check_outlined;
+                                  statusBadgeText = 'VERIFYING';
+                                  heroTitle = 'Store Verification';
+                                  heroSubtitle = 'Ghatampur Hub is checking inventory & freshness';
                                 }
 
                                 return Container(

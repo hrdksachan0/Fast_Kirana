@@ -128,13 +128,22 @@ class Responsive {
   }
 
   /// Unified Responsive Product Shelf Height for horizontal tracks (Compact & proportionate)
-  static double productShelfHeight(BuildContext context) {
+  /// Calibrated to eliminate dead whitespace below Grocery product cards
+  static double productShelfHeight(BuildContext context, {bool isFood = false}) {
     final width = MediaQuery.of(context).size.width;
-    if (width < 360) return 196.0;
-    if (width < 400) return 204.0;
-    if (width < mobileBreakpoint) return 212.0;
-    if (width < tabletBreakpoint) return 222.0;
-    return 232.0;
+    if (isFood) {
+      if (width < 360) return 212.0;
+      if (width < 400) return 218.0;
+      if (width < mobileBreakpoint) return 224.0;
+      if (width < tabletBreakpoint) return 232.0;
+      return 238.0;
+    }
+    // Grocery cards (Zepto/Blinkit space-optimized compact ratio: ~176-184px)
+    if (width < 360) return 174.0;
+    if (width < 400) return 180.0;
+    if (width < mobileBreakpoint) return 184.0;
+    if (width < tabletBreakpoint) return 192.0;
+    return 198.0;
   }
 
   /// Responsive scaled font size with safety clamping

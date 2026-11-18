@@ -12,7 +12,7 @@ class TrackingPreparingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final rawShop = order?.shopName ?? 'FastMinute Store';
     final shopName = rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
-    final isPending = order?.status == OrderStatus.adminPending;
+    final isPending = order?.status == OrderStatus.adminPending || order?.status == OrderStatus.pending;
 
     const brandGreen = Color(0xFF00A344);
     const slateDark = Color(0xFF0F172A);
@@ -47,16 +47,16 @@ class TrackingPreparingCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: isPending ? const Color(0xFFF1F5F9) : const Color(0xFFF0FDF4),
+              color: isPending ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
               shape: BoxShape.circle,
               border: Border.all(
-                color: isPending ? const Color(0xFFCBD5E1) : const Color(0xFFBBF7D0),
+                color: isPending ? const Color(0xFFFED7AA) : const Color(0xFFBBF7D0),
                 width: 1,
               ),
             ),
             child: Icon(
-              isPending ? Icons.hourglass_top_rounded : Icons.storefront_rounded,
-              color: isPending ? slateMuted : brandGreen,
+              isPending ? Icons.fact_check_outlined : Icons.storefront_rounded,
+              color: isPending ? const Color(0xFFD97706) : brandGreen,
               size: 22,
             ),
           ),
@@ -77,7 +77,7 @@ class TrackingPreparingCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      isPending ? 'AWAITING STORE CONFIRMATION' : 'STORE PREPARING',
+                      isPending ? 'ADMIN & STORE VERIFICATION' : 'STORE PREPARING',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 9.5),
                         fontWeight: FontWeight.w900,
@@ -89,7 +89,7 @@ class TrackingPreparingCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isPending ? 'Sent to $shopName' : 'Packing Fresh at $shopName',
+                  isPending ? 'Verifying items at $shopName' : 'Packing Fresh at $shopName',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: FontWeight.w800,
@@ -99,7 +99,7 @@ class TrackingPreparingCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   isPending
-                      ? 'Waiting for the store to accept. You can cancel if needed.'
+                      ? 'Ghatampur Hub is checking stock & freshness. You can cancel if needed.'
                       : 'Live GPS map will open as soon as your rider picks up the order.',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 11),
