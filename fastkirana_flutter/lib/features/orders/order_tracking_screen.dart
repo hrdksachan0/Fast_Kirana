@@ -1822,8 +1822,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                             ),
                                             const SizedBox(height: 3),
                                             Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Container(
+                                                  margin: const EdgeInsets.only(top: 4.5),
                                                   width: 6,
                                                   height: 6,
                                                   decoration: BoxDecoration(
@@ -1847,8 +1849,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                                       fontWeight: FontWeight.w600,
                                                       color: const Color(0xFF475569),
                                                       letterSpacing: -0.1,
+                                                      height: 1.3,
                                                     ),
-                                                    maxLines: 1,
+                                                    maxLines: 2,
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
