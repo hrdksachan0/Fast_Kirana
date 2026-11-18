@@ -696,30 +696,62 @@ class AdminOrderCard extends ConsumerWidget {
                                 color: AppDesignSystem.slate900,
                               ),
                             ),
-                            if (order.isRestaurantOrder)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFEDD5),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFFB923C), width: 1.1),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Text('🍽️', style: TextStyle(fontSize: 10)),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      (order.shopName ?? RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant').toUpperCase(),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w900,
-                                        color: const Color(0xFFC2410C),
+                            // In History tab (live == false), render a single concise outlet badge since top SLA bar is not present
+                            if (!live) ...[
+                              if (order.isCombined)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF3E8FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFA855F7), width: 1.1),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text('✨', style: TextStyle(fontSize: 10)),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'COMBINED (${order.subOrders?.length ?? 2})',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w900,
+                                          color: const Color(0xFF6B21A8),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                )
+                              else if (order.isRestaurantOrder)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFEDD5),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFFB923C), width: 1.1),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text('🍽️', style: TextStyle(fontSize: 10)),
+                                      const SizedBox(width: 3),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(maxWidth: 120),
+                                        child: Text(
+                                          (RestaurantRegistry.getName(order.restaurantId) ?? order.shopName ?? 'Restaurant').toUpperCase(),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: const Color(0xFFC2410C),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
+                            ],
                                   Builder(builder: (context) {
                                     final rInfo = DeliveryRoutes.detect(order);
                                     return PopupMenuButton<DeliveryRouteKey>(
