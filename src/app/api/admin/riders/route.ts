@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       success: true,
       riders: riders.map((r) => ({
         id: r.id,
-        name: r.name || 'Delivery Partner',
+        name: (r.name && r.name.trim().length > 2) ? r.name.trim() : (r.phone ? `Rider • ${r.phone.slice(-4)}` : 'Delivery Partner'),
         phone: r.phone || '',
         role: r.role,
         assignedStoreId: r.assignedStoreId,

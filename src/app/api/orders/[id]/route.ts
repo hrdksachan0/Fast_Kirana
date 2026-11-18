@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { requireOrderAccess } from '@/lib/auth-guard'
@@ -9,6 +9,7 @@ import { sseEmitter } from '@/lib/sse-emitter'
 import { getLast10Digits } from '@/lib/phone'
 import { validateBodyLegacy, updateOrderStatusSchema } from '@/lib/validation'
 import { dispatchAdminApprovedNotifications } from '@/lib/order-notification-dispatcher'
+import { sendGiftRecipientNotification } from '@/lib/gift-notification'
 import { RiderBatchingService } from '@/services/rider-batching.service'
 
 const STAFF_ROLES = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER']
@@ -121,39 +122,70 @@ export async function GET(
 
     // Fetch delivery partner user details if assigned
     let deliveryUser = null
-    const deliveryUserIdToFetch = order.deliveryUserId
-    if (deliveryUserIdToFetch) {
-      const riders: any[] = await prisma.$queryRaw`
-        SELECT id, name, phone, role::text as role, "liveLat", "liveLng" FROM users WHERE id = ${deliveryUserIdToFetch} LIMIT 1
-      `
-      if (riders.length > 0) {
-        let name = riders[0].name
-        let phone = riders[0].phone
+    let deliveryUserIdToFetch = order.deliveryUserId
 
-        // If order was picked up by Admin, fetch active delivery rider phone so internal admin phone is never exposed
-        if (riders[0].role === 'ADMIN' || name === 'Admin' || String(phone || '').includes('7054470303')) {
-          const mainRider: any[] = await prisma.$queryRaw`
-            SELECT name, phone FROM users WHERE email = 'delivery@fastkirana.com' OR role::text = 'DELIVERY' LIMIT 1
-          `
-          if (mainRider.length > 0) {
-            name = mainRider[0].name || 'FastMinute Delivery Executive'
-            phone = mainRider[0].phone || '+919696503759'
-          } else {
-            name = 'FastMinute Delivery Executive'
-            phone = '+919696503759'
+    // If this sub-order doesn't have deliveryUserId, check sibling sub-orders in the same combined order
+    if (!deliveryUserIdToFetch && order.combinedId) {
+      const siblingWithRider: any[] = await prisma.$queryRaw`
+        SELECT "deliveryUserId" FROM orders 
+        WHERE "combinedId" = ${order.combinedId} 
+          AND "deliveryUserId" IS NOT NULL 
+          AND "deliveryUserId" != '' 
+        LIMIT 1
+      `
+      if (siblingWithRider.length > 0 && siblingWithRider[0].deliveryUserId) {
+        deliveryUserIdToFetch = siblingWithRider[0].deliveryUserId
+      }
+    }
+
+    if (deliveryUserIdToFetch) {
+      const isStoreSelf = deliveryUserIdToFetch === 'store_admin_self' || String(deliveryUserIdToFetch).toLowerCase().includes('store')
+      if (isStoreSelf) {
+        deliveryUser = {
+          name: 'FastMinute Store Partner',
+          phone: order.shopPhone || '+918112849854'
+        }
+      } else {
+        const riders: any[] = await prisma.$queryRaw`
+          SELECT id, name, phone, role::text as role, "liveLat", "liveLng" FROM users WHERE id = ${deliveryUserIdToFetch} LIMIT 1
+        `
+        if (riders.length > 0) {
+          let name = riders[0].name
+          let phone = riders[0].phone
+
+          // If rider name in DB is empty, null, or truncated like 't...'
+          if (!name || name.trim().length <= 2) {
+            name = phone ? `Rider • ${phone.slice(-4)}` : 'FastMinute Delivery Partner'
+          }
+
+          // If order was picked up by Admin, fetch active delivery rider phone so internal admin phone is never exposed
+          if (riders[0].role === 'ADMIN' || name === 'Admin' || String(phone || '').includes('7054470303')) {
+            const mainRider: any[] = await prisma.$queryRaw`
+              SELECT name, phone FROM users WHERE email = 'delivery@fastkirana.com' OR role::text = 'DELIVERY' LIMIT 1
+            `
+            if (mainRider.length > 0) {
+              name = mainRider[0].name || 'FastMinute Delivery Executive'
+              phone = mainRider[0].phone || '+919696503759'
+            } else {
+              name = 'FastMinute Delivery Executive'
+              phone = '+919696503759'
+            }
+          }
+
+          deliveryUser = {
+            name,
+            phone
+          }
+          if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
+            order.deliveryLat = riders[0].liveLat
+            order.deliveryLng = riders[0].liveLng
           }
         }
-
-        deliveryUser = {
-          name,
-          phone
-        }
-        if (riders[0].liveLat !== null && riders[0].liveLng !== null) {
-          order.deliveryLat = riders[0].liveLat
-          order.deliveryLng = riders[0].liveLng
-        }
       }
-    } else if (['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'].includes(String(order.status || ''))) {
+    }
+    
+    // If still null, but order is active (CONFIRMED, PACKED, SHIPPED, DELIVERED), ensure deliveryUser is always present
+    if (!deliveryUser && ['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'].includes(String(order.status || ''))) {
       const mainRider: any[] = await prisma.$queryRaw`
         SELECT name, phone FROM users WHERE email = 'delivery@fastkirana.com' OR role::text = 'DELIVERY' LIMIT 1
       `
@@ -161,6 +193,11 @@ export async function GET(
         deliveryUser = {
           name: mainRider[0].name || 'FastMinute Delivery Executive',
           phone: mainRider[0].phone || '+919696503759'
+        }
+      } else {
+        deliveryUser = {
+          name: 'FastMinute Store Partner',
+          phone: order.shopPhone || '+918112849854'
         }
       }
     }
@@ -652,6 +689,51 @@ export async function PATCH(
       try {
         const { supabase } = await import('@/lib/supabase-client')
         if (supabase) {
+          // Resolve rider name for tracking broadcast
+          let bRiderName = 'FastMinute Store Partner'
+          let bRiderPhone = existingOrder.shopPhone || '+918112849854'
+          if (cleanDeliveryUserId && cleanDeliveryUserId !== 'store_admin_self' && !cleanDeliveryUserId.includes('store')) {
+            const rUser = await prisma.user.findUnique({
+              where: { id: cleanDeliveryUserId },
+              select: { name: true, phone: true }
+            })
+            if (rUser) {
+              bRiderName = (rUser.name && rUser.name.trim().length > 2) ? rUser.name.trim() : (rUser.phone ? `Rider • ${rUser.phone.slice(-4)}` : 'FastMinute Delivery Partner')
+              bRiderPhone = rUser.phone || bRiderPhone
+            }
+          }
+
+          const trackingKeys = Array.from(new Set([
+            existingOrder.id,
+            existingOrder.readableId,
+            existingOrder.combinedId,
+            baseReadableId,
+            id,
+          ].filter(Boolean))) as string[]
+
+          for (const key of trackingKeys) {
+            const cleanKey = key.replace(/^#/, '').trim()
+            supabase.channel(`order-live-tracking-${cleanKey}`).send({
+              type: 'broadcast',
+              event: 'rider_assigned',
+              payload: {
+                orderId: cleanKey,
+                riderId: cleanDeliveryUserId,
+                riderName: cleanDeliveryUserId ? bRiderName : null,
+                riderPhone: cleanDeliveryUserId ? bRiderPhone : null,
+                status: targetStatus,
+              }
+            }).catch(() => {})
+
+            supabase.channel(`order-live-tracking-${cleanKey}`).send({
+              type: 'broadcast',
+              event: 'status_update',
+              payload: {
+                status: targetStatus,
+              }
+            }).catch(() => {})
+          }
+
           supabase.channel('admin-global-orders-websocket').send({
             type: 'broadcast',
             event: 'order_update',
@@ -1465,6 +1547,39 @@ export async function PATCH(
       }
     } catch (pushErr) {
       console.error('Failed to dispatch push notification:', pushErr)
+    }
+
+    // If order was marked as SHIPPED, trigger gift tracking alert to recipient if requested
+    if (status === 'SHIPPED') {
+      try {
+        const notesStr = existingOrder.notes || ''
+        const trackingLinkMatch = notesStr.match(/\[SEND LIVE TRACKING LINK TO:\s*([0-9+ ]+)\]/i)
+        if (trackingLinkMatch && trackingLinkMatch[1]) {
+          const recipientPhone = trackingLinkMatch[1].replace(/\D/g, '').slice(-10)
+          if (recipientPhone.length === 10) {
+            const giftNoteMatch = notesStr.match(/💌 Gift Note:\s*(.*?)(?:\||$)/)
+            const recipientNameMatch = notesStr.match(/🎁 Order for:\s*(.*?)(?:\(|$)/)
+
+            const appUrl = (process.env.NEXT_PUBLIC_APP_URL || origin || 'https://fastminute.in').replace(/\/+$/, '')
+            const trackingUrl = `${appUrl}/order/${existingOrder.id}/track`
+
+            const recipientName = recipientNameMatch ? recipientNameMatch[1].trim() : undefined
+            const giftNote = giftNoteMatch ? giftNoteMatch[1].trim() : undefined
+            const baseDisplayId = (existingOrder.readableId || existingOrder.id).replace(/-[GR]\d*$/i, '')
+
+            sendGiftRecipientNotification({
+              orderId: existingOrder.id,
+              readableId: baseDisplayId,
+              recipientPhone,
+              recipientName,
+              giftNote,
+              trackingUrl,
+            }).catch((err) => console.error('[GiftRecipientNotification on SHIPPED] Failed:', err))
+          }
+        }
+      } catch (giftShipErr) {
+        console.error('Gift tracking trigger on SHIPPED error:', giftShipErr)
+      }
     }
 
     // Return updated order

@@ -89,10 +89,8 @@ export async function POST(request: NextRequest) {
 
     const cleanName = String(resolvedName || 'FastKirana Customer').trim() || 'FastKirana Customer'
 
-    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastkirana.in'
-    const appUrl = (rawAppUrl.includes('fastkirana.in') && !rawAppUrl.includes('www.') && !rawAppUrl.includes('api.'))
-      ? rawAppUrl.replace('fastkirana.in', 'www.fastkirana.in')
-      : rawAppUrl
+    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://fastminute.in'
+    const appUrl = rawAppUrl.replace('www.fastminute.in', 'fastminute.in')
     const webhookUrl = (process.env.WEBHOOK_BASE_URL || appUrl).replace(/\/+$/, '')
 
     const cfOrder = await createCashfreeOrder({

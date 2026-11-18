@@ -71,6 +71,63 @@ export function OrderTracker({
         </div>
       )}
 
+      {/* 🎁 Personalized Gift Surprise Banner & Greeting Card */}
+      {(() => {
+        const notes = order.notes || ''
+        const isGift = notes.includes('🎁') || notes.includes('💌 Gift Note') || notes.includes('SECRET GIFT')
+        if (!isGift) return null
+
+        const giftNoteMatch = notes.match(/💌 Gift Note:\s*(.*?)(?:\||$)/)
+        const recipientNameMatch = notes.match(/🎁 Order for:\s*(.*?)(?:\(|$)/)
+        const giftNote = giftNoteMatch ? giftNoteMatch[1].trim() : ''
+        const recipientName = recipientNameMatch ? recipientNameMatch[1].trim() : ''
+        const isSecret = notes.includes('SECRET GIFT')
+
+        return (
+          <div className="relative overflow-hidden rounded-3xl border border-rose-200 dark:border-rose-900/50 bg-gradient-to-br from-rose-50/80 via-white to-pink-50/60 dark:from-rose-950/20 dark:via-zinc-900 dark:to-pink-950/10 p-5 shadow-sm space-y-3.5 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center text-lg shadow-sm">
+                  🎁
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-sm font-black text-rose-950 dark:text-rose-100">
+                      Surprise Gift Order
+                    </h3>
+                    {isSecret && (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+                        Price Hidden 🔒
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-semibold text-rose-700/80 dark:text-rose-300/80">
+                    {recipientName ? `Sent with love for ${recipientName} 💖` : 'Sent with love for someone special 💖'}
+                  </p>
+                </div>
+              </div>
+              <div className="text-xl">💌</div>
+            </div>
+
+            {giftNote && (
+              <div className="relative rounded-2xl bg-white/90 dark:bg-zinc-800/80 border border-rose-100 dark:border-rose-900/40 p-3.5 shadow-xs">
+                <div className="text-[10px] font-black tracking-wider uppercase text-rose-600 dark:text-rose-400 mb-1 flex items-center gap-1">
+                  <span>✨ Handwritten Message Card:</span>
+                </div>
+                <p className="text-xs font-semibold italic text-rose-950 dark:text-rose-100 leading-relaxed">
+                  “{giftNote}”
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 text-[11px] font-medium text-rose-800/90 dark:text-rose-300/90 bg-rose-100/50 dark:bg-rose-950/40 px-3 py-1.5 rounded-xl">
+              <span>🎀</span>
+              <span>Our delivery partner is delivering this gift with handwritten greeting card included!</span>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Cancelled Banner */}
       {order.status === 'CANCELLED' && (
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl flex items-start gap-3">

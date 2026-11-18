@@ -880,20 +880,20 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                                                   Text(
                                                     'ADD',
                                                     style: GoogleFonts.plusJakartaSans(
-                                                      fontSize: 10.5,
+                                                      fontSize: 11.0,
                                                       fontWeight: FontWeight.w900,
                                                       color: AppDesignSystem.primary,
                                                       height: 1.0,
-                                                      letterSpacing: 0.3,
+                                                      letterSpacing: 0.4,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 1.5),
                                                   Text(
                                                     '${variants.length} options',
                                                     style: GoogleFonts.plusJakartaSans(
-                                                      fontSize: 8.5,
-                                                      fontWeight: FontWeight.w700,
-                                                      color: const Color(0xFF64748B),
+                                                      fontSize: 9.0,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: const Color(0xFF475569),
                                                       height: 1.0,
                                                     ),
                                                   ),
@@ -903,10 +903,10 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                                                 child: Text(
                                                   'ADD',
                                                   style: GoogleFonts.plusJakartaSans(
-                                                    fontSize: 11.5,
+                                                    fontSize: 12.0,
                                                     fontWeight: FontWeight.w900,
                                                     color: AppDesignSystem.primary,
-                                                    letterSpacing: 0.3,
+                                                    letterSpacing: 0.4,
                                                   ),
                                                 ),
                                               ),
@@ -918,32 +918,33 @@ class _ReferenceExactProductCard extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // 2. Product Title (UPAR! 2-lines max, uniform height for locked grid rows)
+          // 2. Product Title (Bolder & Punchy, 2-lines max, uniform height for locked grid rows)
           SizedBox(
-            height: 30,
+            height: 32,
             child: Text(
               product.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 11.0,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1E293B),
+                fontSize: 11.8,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF0F172A),
                 height: 1.25,
+                letterSpacing: -0.1,
               ),
             ),
           ),
           const SizedBox(height: 2),
 
-          // 3. Unit / Weight
+          // 3. Unit / Weight (Crisp Semi-Bold Slate)
           Text(
             product.unit.isNotEmpty ? product.unit : '1 pc',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 9.8,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 10.2,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF475569),
             ),
           ),
           const SizedBox(height: 2),
@@ -956,10 +957,10 @@ class _ReferenceExactProductCard extends ConsumerWidget {
               Text(
                 '₹${product.price.toInt()}',
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13.5,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF0F172A),
-                  letterSpacing: -0.2,
+                  letterSpacing: -0.3,
                 ),
               ),
               if (product.mrp > product.price) ...[
@@ -967,8 +968,8 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                 Text(
                   '₹${product.mrp.toInt()}',
                   style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
                     color: const Color(0xFF94A3B8),
                     decoration: TextDecoration.lineThrough,
                   ),

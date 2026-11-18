@@ -14,22 +14,40 @@ class TrackingRiderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 1. Fully dynamic rider resolution — zero hardcoded names
-    final rawName = order?.deliveryBoyName?.trim().isNotEmpty == true
+    String? rawName = order?.deliveryBoyName?.trim().isNotEmpty == true
         ? order!.deliveryBoyName!.trim()
         : (order?.deliveryUser?.name?.trim().isNotEmpty == true
             ? order!.deliveryUser!.name!.trim()
             : null);
 
-    final rawPhone = order?.deliveryBoyPhone?.trim().isNotEmpty == true
+    String? rawPhone = order?.deliveryBoyPhone?.trim().isNotEmpty == true
         ? order!.deliveryBoyPhone!.trim()
         : (order?.deliveryUser?.phone?.trim().isNotEmpty == true
             ? order!.deliveryUser!.phone!.trim()
             : null);
 
-    final isAssigned = rawName != null &&
+    // If order was assigned to store partner self-delivery
+    final isStoreSelf = (order?.deliveryUserId == 'store_admin_self') ||
+        (order?.deliveryUserId?.toLowerCase().contains('store') == true) ||
+        (rawName != null && (rawName.toLowerCase().contains('store partner') || rawName.toLowerCase().contains('store_admin')));
+
+    if (isStoreSelf && (rawName == null || rawName.isEmpty)) {
+      rawName = 'Store Partner';
+      rawPhone = rawPhone ?? order?.shopPhone ?? AppConfig.supportPhone;
+    }
+
+    // 🛡️ RECOVERY: If order is Out for Delivery / In Transit (shipped) or delivered, rider IS active!
+    final bool isOutForDelivery = order?.status == OrderStatus.shipped || order?.status == OrderStatus.delivered;
+    if (isOutForDelivery && (rawName == null || rawName.isEmpty || rawName.toLowerCase() == 'unassigned' || rawName.toLowerCase() == 'null')) {
+      rawName = isStoreSelf ? 'FastMinute Store Partner' : 'FastMinute Delivery Partner';
+      rawPhone = rawPhone ?? order?.shopPhone ?? AppConfig.supportPhone;
+    }
+
+    final isAssigned = (rawName != null &&
         rawName.isNotEmpty &&
         rawName.toLowerCase() != 'unassigned' &&
-        rawName.toLowerCase() != 'null';
+        rawName.toLowerCase() != 'null') ||
+        isOutForDelivery;
 
     final effectivePhone = rawPhone?.isNotEmpty == true ? rawPhone! : AppConfig.supportPhone;
     final cleanPhone = effectivePhone.replaceAll(RegExp(r'[^0-9]'), '');
@@ -161,9 +179,10 @@ class TrackingRiderCard extends StatelessWidget {
     }
 
     // ─── STATE B: Rider Assigned (100% Dynamic) ───
-    final isStoreSelfDelivery = rawName.toLowerCase().contains('store partner') ||
-        rawName.toLowerCase().contains('store_admin');
-    final displayName = isStoreSelfDelivery ? 'FastMinute Store Partner' : rawName;
+    final safeName = (rawName?.trim().isNotEmpty == true) ? rawName!.trim() : 'FastMinute Delivery Partner';
+    final isStoreSelfDelivery = safeName.toLowerCase().contains('store partner') ||
+        safeName.toLowerCase().contains('store_admin');
+    final displayName = isStoreSelfDelivery ? 'FastMinute Store Partner' : safeName;
 
     return Container(
       decoration: BoxDecoration(

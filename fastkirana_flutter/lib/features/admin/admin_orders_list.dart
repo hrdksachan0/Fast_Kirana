@@ -1630,15 +1630,16 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   Future<void> _assignRider(Order order, String riderId, String riderName, String riderPhone) async {
     HapticFeedback.heavyImpact();
     final bool isUnassigning = riderId.isEmpty || riderId == 'UNASSIGNED';
-    final List<String> idsToAssign = (order.isCombined && order.subOrders != null && order.subOrders!.isNotEmpty)
-        ? order.subOrders!.map((s) => s.id).toList()
-        : [order.id];
+    final Set<String> targetIds = {
+      order.id,
+      if (order.subOrders != null) ...order.subOrders!.map((s) => s.id),
+    };
 
     final allTargetIds = <String>{
       order.id,
       if (order.readableId != null && order.readableId!.isNotEmpty) order.readableId!,
       if (order.combinedId != null && order.combinedId!.isNotEmpty) order.combinedId!,
-      ...idsToAssign,
+      ...targetIds,
       if (order.subOrders != null) ...order.subOrders!.map((s) => s.id),
       if (order.subOrders != null) ...order.subOrders!.where((s) => s.readableId != null).map((s) => s.readableId!),
     };
@@ -1697,7 +1698,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
     // 2. Concurrent Network Sync
     if (_isDeviceOffline) {
-      for (final id in idsToAssign) {
+      for (final id in targetIds) {
         var cleanId = id.trim();
         if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
         await OfflineSyncService.enqueueAction(
@@ -1716,7 +1717,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       final futures = <Future>[];
       final sb = SupabaseService.client;
       if (sb != null) {
-        for (final id in idsToAssign) {
+        for (final id in targetIds) {
           var cleanId = id.trim();
           if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
           futures.add(sb.from('orders').update({
@@ -1733,10 +1734,29 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
             'updatedAt': DateTime.now().toIso8601String(),
           }).eq('combinedId', order.combinedId!.trim()).catchError((_) {}));
         }
+
+        // 🌟 Direct Realtime Broadcast to customer tracking channels
+        for (final tId in allTargetIds) {
+          var cleanTId = tId.trim();
+          if (cleanTId.startsWith('#')) cleanTId = cleanTId.substring(1);
+          try {
+            final ch = sb.channel('order-live-tracking-$cleanTId');
+            ch.sendBroadcastMessage(
+              event: 'rider_assigned',
+              payload: {
+                'orderId': cleanTId,
+                'riderId': isUnassigning ? null : riderId,
+                'riderName': isUnassigning ? null : riderName,
+                'riderPhone': isUnassigning ? null : riderPhone,
+                'status': targetStatusStr,
+              },
+            );
+          } catch (_) {}
+        }
       }
 
       final authOptions = await AdminAuthorization.optionsAsync();
-      for (final id in idsToAssign) {
+      for (final id in targetIds) {
         var cleanId = id.trim();
         if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
         futures.add(ref.read(dioProvider).patch(

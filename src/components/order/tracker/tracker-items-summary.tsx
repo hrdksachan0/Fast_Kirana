@@ -25,6 +25,7 @@ export function TrackerItemsSummary({
   combinedTotal,
   combinedRefundAmount,
 }: TrackerItemsSummaryProps) {
+  const isSecretGift = (order.notes || '').includes('SECRET GIFT')
   return (
     <div className="bg-white dark:bg-zinc-900 border border-border/60 p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-4">
       <div className="flex items-center gap-2 border-b border-dashed border-border/60 pb-3">
@@ -116,60 +117,75 @@ export function TrackerItemsSummary({
           )}
         </div>
         
-        {/* Cost Breakdown */}
-        <div className="border-t border-dashed border-border/60 pt-3.5 space-y-2.5 text-xs">
-          <div className="flex justify-between text-text-secondary font-semibold">
-            <span>Subtotal</span>
-            <span className="font-bold text-text-primary">₹{combinedSubtotal}</span>
+        {/* Cost Breakdown & Grand Total */}
+        {isSecretGift ? (
+          <div className="border-t border-dashed border-border/60 pt-3.5 space-y-2 text-xs">
+            <div className="p-3 bg-rose-50/70 dark:bg-rose-950/20 rounded-xl border border-rose-200/60 dark:border-rose-900/40 text-center space-y-1">
+              <p className="font-bold text-rose-900 dark:text-rose-200 text-xs">
+                🔒 Price Hidden (Secret Gift Order)
+              </p>
+              <p className="text-[11px] text-rose-700/90 dark:text-rose-300/80">
+                This order was gifted with love. Payment &amp; invoice prices are fully covered!
+              </p>
+            </div>
           </div>
-          {combinedDiscount > 0 && (
-            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
-              <span>Discount Applied</span>
-              <span>-₹{combinedDiscount}</span>
+        ) : (
+          <>
+            <div className="border-t border-dashed border-border/60 pt-3.5 space-y-2.5 text-xs">
+              <div className="flex justify-between text-text-secondary font-semibold">
+                <span>Subtotal</span>
+                <span className="font-bold text-text-primary">₹{combinedSubtotal}</span>
+              </div>
+              {combinedDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span>Discount Applied</span>
+                  <span>-₹{combinedDiscount}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-text-secondary font-semibold">
+                <span>Delivery Charge</span>
+                <span className={cn(combinedDeliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400 font-black" : "font-bold text-text-primary")}>
+                  {combinedDeliveryFee > 0 ? `₹${combinedDeliveryFee}` : 'FREE 🎉'}
+                </span>
+              </div>
+              {combinedTaxes > 0 && (
+                <div className="flex justify-between text-text-secondary font-semibold">
+                  <span>Taxes & GST</span>
+                  <span className="font-bold text-text-primary">₹{combinedTaxes.toFixed(1)}</span>
+                </div>
+              )}
+              {combinedMiscFee > 0 && (
+                <div className="flex justify-between text-text-secondary font-semibold">
+                  <span>Packaging &amp; Handling Fee</span>
+                  <span className="font-bold text-text-primary">₹{combinedMiscFee}</span>
+                </div>
+              )}
+              {combinedRefundAmount > 0 && (
+                <div className="flex justify-between text-rose-600 dark:text-rose-400 font-black bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20">
+                  <span className="flex items-center gap-1">↩️ Refund Credited</span>
+                  <span>-₹{combinedRefundAmount}</span>
+                </div>
+              )}
             </div>
-          )}
-          <div className="flex justify-between text-text-secondary font-semibold">
-            <span>Delivery Charge</span>
-            <span className={cn(combinedDeliveryFee === 0 ? "text-emerald-600 dark:text-emerald-400 font-black" : "font-bold text-text-primary")}>
-              {combinedDeliveryFee > 0 ? `₹${combinedDeliveryFee}` : 'FREE 🎉'}
-            </span>
-          </div>
-          {combinedTaxes > 0 && (
-            <div className="flex justify-between text-text-secondary font-semibold">
-              <span>Taxes & GST</span>
-              <span className="font-bold text-text-primary">₹{combinedTaxes.toFixed(1)}</span>
-            </div>
-          )}
-          {combinedMiscFee > 0 && (
-            <div className="flex justify-between text-text-secondary font-semibold">
-              <span>Packaging &amp; Handling Fee</span>
-              <span className="font-bold text-text-primary">₹{combinedMiscFee}</span>
-            </div>
-          )}
-          {combinedRefundAmount > 0 && (
-            <div className="flex justify-between text-rose-600 dark:text-rose-400 font-black bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20">
-              <span className="flex items-center gap-1">↩️ Refund Credited</span>
-              <span>-₹{combinedRefundAmount}</span>
-            </div>
-          )}
-        </div>
 
-        {/* Grand Total */}
-        <div className="flex justify-between items-center text-text-primary font-black border-t-2 border-dashed border-border/80 pt-4 mt-1">
-          <div>
-            <span className="text-xs uppercase tracking-wider text-text-secondary block">
-              {combinedRefundAmount > 0 ? 'Net Paid Total' : 'Grand Total'}
-            </span>
-            {combinedRefundAmount > 0 && (
-              <span className="text-[10px] text-text-muted font-medium">
-                Original: ₹{combinedTotal.toFixed(0)}
+            {/* Grand Total */}
+            <div className="flex justify-between items-center text-text-primary font-black border-t-2 border-dashed border-border/80 pt-4 mt-1">
+              <div>
+                <span className="text-xs uppercase tracking-wider text-text-secondary block">
+                  {combinedRefundAmount > 0 ? 'Net Paid Total' : 'Grand Total'}
+                </span>
+                {combinedRefundAmount > 0 && (
+                  <span className="text-[10px] text-text-muted font-medium">
+                    Original: ₹{combinedTotal.toFixed(0)}
+                  </span>
+                )}
+              </div>
+              <span className="text-primary text-lg font-black tracking-tight">
+                ₹{(combinedTotal - combinedRefundAmount).toFixed(0)}
               </span>
-            )}
-          </div>
-          <span className="text-primary text-lg font-black tracking-tight">
-            ₹{(combinedTotal - combinedRefundAmount).toFixed(0)}
-          </span>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

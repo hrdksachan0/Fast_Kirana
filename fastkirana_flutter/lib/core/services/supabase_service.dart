@@ -44,6 +44,7 @@ class SupabaseService {
     required String orderId,
     required void Function(Map<String, dynamic> locationData) onLocationUpdate,
     void Function(String newStatus)? onStatusUpdate,
+    void Function(String? riderName, String? riderPhone)? onRiderAssigned,
   }) {
     final sb = client;
     if (sb == null) return null;
@@ -82,6 +83,18 @@ class SupabaseService {
             if (statusStr != null && onStatusUpdate != null) {
               onStatusUpdate(statusStr);
             }
+          }
+        },
+      );
+
+      // Listen for direct broadcast rider assignment
+      channel.onBroadcast(
+        event: 'rider_assigned',
+        callback: (payload) {
+          if (payload.isNotEmpty && onRiderAssigned != null) {
+            final name = payload['riderName']?.toString();
+            final phone = payload['riderPhone']?.toString();
+            onRiderAssigned(name, phone);
           }
         },
       );

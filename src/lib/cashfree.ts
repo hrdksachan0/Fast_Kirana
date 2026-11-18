@@ -10,12 +10,10 @@ const BASE_URL = CASHFREE_ENV === 'PRODUCTION'
   : 'https://sandbox.cashfree.com/pg'
 
 function getAppUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_APP_URL || 'https://www.fastminute.in'
-  if (raw.includes('fastminute.in') && !raw.includes('www.') && !raw.includes('api.')) {
-    return raw.replace('fastminute.in', 'www.fastminute.in')
-  }
-  if (raw.includes('fastkirana.in') && !raw.includes('www.') && !raw.includes('api.')) {
-    return raw.replace('fastkirana.in', 'www.fastkirana.in')
+  const raw = process.env.NEXT_PUBLIC_APP_URL || 'https://fastminute.in'
+  // Whitelisted on Cashfree as fastminute.in (apex domain)
+  if (raw.includes('www.fastminute.in')) {
+    return raw.replace('www.fastminute.in', 'fastminute.in')
   }
   return raw
 }

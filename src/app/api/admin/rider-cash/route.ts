@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
         return {
           id: r.id,
-          name: r.name || 'Unnamed Rider',
+          name: (r.name && r.name.trim().length > 2) ? r.name.trim() : (r.phone ? `Rider • ${r.phone.slice(-4)}` : 'Delivery Partner'),
           email: r.email,
           phone: r.phone || 'N/A',
           image: r.image,

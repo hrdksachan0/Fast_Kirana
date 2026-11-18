@@ -150,7 +150,7 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Settle Cash with ${rider['name'] ?? 'Rider'}',
+                              'Settle Cash with ${(rider['name']?.toString().trim().isNotEmpty == true && rider['name'] != 'null' && rider['name'].toString().trim().length > 2) ? rider['name'] : (rider['phone'] != null && rider['phone'].toString().trim().isNotEmpty ? 'Rider • ${rider['phone'].toString().replaceAll(RegExp(r'\\D'), '').substring(rider['phone'].toString().replaceAll(RegExp(r'\\D'), '').length >= 4 ? rider['phone'].toString().replaceAll(RegExp(r'\\D'), '').length - 4 : 0)}' : 'Delivery Partner')}',
                               style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppDesignSystem.slate900),
                             ),
                             Text(
@@ -445,8 +445,20 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
   }
 
   Widget _buildRiderCard(Map<String, dynamic> rider) {
-    final name = (rider['name'] ?? 'Delivery Partner').toString();
-    final phone = (rider['phone'] ?? '').toString();
+    final rawName = (rider['name'] ?? '').toString().trim();
+    final phone = (rider['phone'] ?? '').toString().trim();
+
+    // 🛡️ Zero Truncation & Non-Empty Rider Name Resolution
+    String displayName = rawName;
+    if (displayName.isEmpty || displayName.toLowerCase() == 'null' || displayName.length <= 2) {
+      if (phone.isNotEmpty) {
+        final lastDigits = phone.replaceAll(RegExp(r'\D'), '');
+        displayName = 'Rider • ${lastDigits.length >= 4 ? lastDigits.substring(lastDigits.length - 4) : lastDigits}';
+      } else {
+        displayName = 'Delivery Partner';
+      }
+    }
+
     final cashInHand = (rider['cashInHand'] as num? ?? 0.0).toDouble();
     final cashLimit = (rider['cashLimit'] as num? ?? 10000.0).toDouble();
     final isLocked = cashInHand >= cashLimit;
@@ -483,26 +495,37 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                   radius: 20,
                   backgroundColor: AppDesignSystem.cyan600.withValues(alpha: 0.15),
                   child: Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : 'R',
+                    displayName.isNotEmpty ? displayName[0].toUpperCase() : 'R',
                     style: GoogleFonts.inter(fontWeight: FontWeight.w900, color: AppDesignSystem.cyan700, fontSize: 16),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Text(
+                        displayName,
+                        style: GoogleFonts.inter(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppDesignSystem.slate900,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
-                          Flexible(
-                            child: Text(
-                              name,
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppDesignSystem.slate900),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          if (phone.isNotEmpty)
+                            Text(
+                              phone.startsWith('+91') ? phone : '+91$phone',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppDesignSystem.slate500),
                             ),
-                          ),
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
@@ -516,11 +539,6 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                           ),
                         ],
                       ),
-                      if (phone.isNotEmpty)
-                        Text(
-                          '📞 $phone',
-                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppDesignSystem.slate500),
-                        ),
                     ],
                   ),
                 ),
@@ -528,7 +546,7 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                 if (phone.isNotEmpty) ...[
                   IconButton(
                     icon: const Icon(Icons.chat_rounded, color: AppDesignSystem.green600, size: 18),
-                    onPressed: () => _openWhatsApp(phone, name),
+                    onPressed: () => _openWhatsApp(phone, displayName),
                     tooltip: 'WhatsApp Rider',
                   ),
                   IconButton(

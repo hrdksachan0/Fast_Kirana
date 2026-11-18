@@ -3,6 +3,7 @@ import { sendPushNotification, sendPushNotificationToRoles, sendPushNotification
 import { sendTopicWithRetry, buildOrderFcmPayload } from '@/lib/fcm-utils'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { getLast10Digits } from '@/lib/phone'
+import { sendGiftRecipientNotification } from '@/lib/gift-notification'
 import { Role, OrderStatus } from '@prisma/client'
 
 export interface OrderNotificationContext {
@@ -401,6 +402,40 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     }
   } catch (custNotifErr) {
     console.error('Unified customer order FCM notification error:', custNotifErr)
+  }
+
+  // 6. Gift Order Recipient Alert with Live Tracking Link
+  try {
+    const primaryOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
+    const notesStr = primaryOrder?.notes || ''
+    const trackingLinkMatch = notesStr.match(/\[SEND LIVE TRACKING LINK TO:\s*([0-9+ ]+)\]/i)
+    if (trackingLinkMatch && trackingLinkMatch[1]) {
+      const recipientPhone = trackingLinkMatch[1].replace(/\D/g, '').slice(-10)
+      if (recipientPhone.length === 10) {
+        const giftNoteMatch = notesStr.match(/💌 Gift Note:\s*(.*?)(?:\||$)/)
+        const recipientNameMatch = notesStr.match(/🎁 Order for:\s*(.*?)(?:\(|$)/)
+
+        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || origin || 'https://fastminute.in').replace(/\/+$/, '')
+        const trackingUrl = `${appUrl}/order/${primaryOrder.id}/track`
+
+        const recipientName = recipientNameMatch ? recipientNameMatch[1].trim() : undefined
+        const senderName = primaryOrder.user?.name || undefined
+        const giftNote = giftNoteMatch ? giftNoteMatch[1].trim() : undefined
+        const baseDisplayId = (primaryOrder.readableId || primaryOrder.id).replace(/-[GR]\d*$/i, '')
+
+        sendGiftRecipientNotification({
+          orderId: primaryOrder.id,
+          readableId: baseDisplayId,
+          recipientPhone,
+          recipientName,
+          senderName,
+          giftNote,
+          trackingUrl,
+        }).catch((err) => console.error('[GiftRecipientNotification] Failed:', err))
+      }
+    }
+  } catch (giftAlertErr) {
+    console.error('Gift recipient tracking alert error:', giftAlertErr)
   }
 }
 

@@ -436,6 +436,17 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           }
           _fetchLiveOrder();
         },
+        onRiderAssigned: (riderName, riderPhone) {
+          if (!mounted || _order == null) return;
+          debugPrint('[OrderTracking] Realtime rider assigned via key=$key: $riderName ($riderPhone)');
+          setState(() {
+            _order = _order!.copyWith(
+              deliveryBoyName: riderName,
+              deliveryBoyPhone: riderPhone,
+            );
+          });
+          _fetchLiveOrder();
+        },
       );
 
       if (ch != null) {
