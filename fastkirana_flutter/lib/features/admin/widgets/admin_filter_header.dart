@@ -4,11 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:collection/collection.dart';
 import '../../../../core/theme/design_system.dart';
+import '../../../../core/utils/route_detector.dart';
 
 /// Pinned Sticky Header for Admin Orders:
 /// - Segmented Tab Switcher (Live Orders vs History)
 /// - On-Demand Search (Icon tap expands sleek full-width search input)
-/// - Sub-filter status chips
+/// - Sub-filter status chips & Arterial Road corridor selector
 class AdminFilterHeader extends StatefulWidget {
   final int selectedTab;
   final int displayLiveCount;
@@ -28,6 +29,9 @@ class AdminFilterHeader extends StatefulWidget {
   final List<Map<String, dynamic>> outlets;
   final ValueChanged<String> onOutletSelected;
   final Map<String, int> statusCounts;
+  final DeliveryRouteKey selectedRoadCorridor;
+  final ValueChanged<DeliveryRouteKey>? onRoadCorridorSelected;
+  final Map<DeliveryRouteKey, int> roadCorridorCounts;
 
   const AdminFilterHeader({
     super.key,
@@ -49,6 +53,9 @@ class AdminFilterHeader extends StatefulWidget {
     this.outlets = const [],
     required this.onOutletSelected,
     this.statusCounts = const {},
+    this.selectedRoadCorridor = DeliveryRouteKey.all,
+    this.onRoadCorridorSelected,
+    this.roadCorridorCounts = const {},
   });
 
   @override
@@ -526,6 +533,217 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
     );
   }
 
+  void _showRoadCorridorSelectorSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    final routes = [
+      DeliveryRouteKey.all,
+      DeliveryRouteKey.hamirpur,
+      DeliveryRouteKey.moosanagar,
+      DeliveryRouteKey.kanpur,
+      DeliveryRouteKey.jahanabad,
+      DeliveryRouteKey.townCenter,
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🛣️', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Filter by Road Corridor',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: AppDesignSystem.slate900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: AppDesignSystem.slate500),
+                      onPressed: () => Navigator.pop(ctx),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Select an arterial corridor to filter orders and bulk-assign nearby riders.',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.slate500),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: routes.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppDesignSystem.slate100),
+                    itemBuilder: (context, index) {
+                      final routeKey = routes[index];
+                      final rInfo = DeliveryRoutes.getByKey(routeKey);
+                      final isSelected = widget.selectedRoadCorridor == routeKey;
+                      final count = widget.roadCorridorCounts[routeKey] ?? 0;
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: rInfo.backgroundColor,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: rInfo.primaryColor.withValues(alpha: 0.4), width: 1.2),
+                          ),
+                          child: Center(
+                            child: Text(rInfo.emoji, style: const TextStyle(fontSize: 16)),
+                          ),
+                        ),
+                        title: Text(
+                          rInfo.label,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected ? rInfo.textColor : AppDesignSystem.slate800,
+                          ),
+                        ),
+                        subtitle: Text(
+                          rInfo.description,
+                          style: GoogleFonts.inter(fontSize: 11, color: AppDesignSystem.slate500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (count > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: rInfo.backgroundColor,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: rInfo.primaryColor.withValues(alpha: 0.3)),
+                                ),
+                                child: Text(
+                                  '$count orders',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: rInfo.textColor,
+                                  ),
+                                ),
+                              ),
+                            Icon(
+                              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                              size: 20,
+                              color: isSelected ? rInfo.primaryColor : AppDesignSystem.slate300,
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          widget.onRoadCorridorSelected?.call(routeKey);
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRoadCorridorPill(BuildContext context) {
+    final rInfo = DeliveryRoutes.getByKey(widget.selectedRoadCorridor);
+    final isAll = widget.selectedRoadCorridor == DeliveryRouteKey.all;
+    final count = widget.roadCorridorCounts[widget.selectedRoadCorridor] ?? 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _showRoadCorridorSelectorSheet(context),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            color: isAll ? const Color(0xFF1E293B) : rInfo.backgroundColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isAll ? const Color(0xFF334155) : rInfo.primaryColor,
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: (isAll ? Colors.black : rInfo.primaryColor).withValues(alpha: 0.15),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(rInfo.emoji, style: const TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              Text(
+                rInfo.shortLabel,
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontWeight: FontWeight.w900,
+                  color: isAll ? Colors.white : rInfo.textColor,
+                ),
+              ),
+              if (count > 0 && !isAll) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: rInfo.primaryColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: GoogleFonts.inter(
+                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                      fontWeight: FontWeight.w900,
+                      color: rInfo.textColor,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 3),
+              Icon(
+                Icons.arrow_drop_down_rounded,
+                size: 16,
+                color: isAll ? Colors.white : rInfo.textColor,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeFilters = widget.selectedTab == 0 ? widget.liveStatusFilters : widget.historyStatusFilters;
@@ -572,6 +790,13 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
                     color: AppDesignSystem.slate300,
                   ),
                 ],
+                _buildRoadCorridorPill(context),
+                Container(
+                  height: 18,
+                  width: 1,
+                  margin: const EdgeInsets.only(right: 6, top: 7, bottom: 7),
+                  color: AppDesignSystem.slate300,
+                ),
                 _buildStatusDropdownPill(context),
                 Container(
                   height: 18,

@@ -55,6 +55,26 @@ class _OptimisticStatusLock {
   bool get isExpired => DateTime.now().difference(lockedAt).inSeconds >= durationSeconds;
 }
 
+class _OptimisticRiderLock {
+  final String? riderId;
+  final String? riderName;
+  final String? riderPhone;
+  final bool isUnassigned;
+  final DateTime lockedAt;
+  final int durationSeconds;
+
+  _OptimisticRiderLock({
+    this.riderId,
+    this.riderName,
+    this.riderPhone,
+    this.isUnassigned = false,
+    required this.lockedAt,
+    this.durationSeconds = 12,
+  });
+
+  bool get isExpired => DateTime.now().difference(lockedAt).inSeconds >= durationSeconds;
+}
+
 class AdminOrdersScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
   const AdminOrdersScreen({super.key, this.showAppBar = true});
@@ -73,6 +93,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   String _liveSubFilter = 'ALL';
   String _historySubFilter = 'ALL';
   String _selectedOutlet = 'ALL';
+  DeliveryRouteKey _selectedRoadCorridor = DeliveryRouteKey.all;
   String _searchQuery = '';
 
   static List<Order> _cachedOrders = [];
@@ -80,6 +101,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   bool _isLoading = _cachedOrders.isEmpty;
   static final Map<String, DateTime> _recentlyDeliveredOrderIds = {};
   static final Map<String, _OptimisticStatusLock> _optimisticStatusLocks = {};
+  static final Map<String, _OptimisticRiderLock> _optimisticRiderLocks = {};
   final Set<String> _inProgressOrderIds = {};
 
   static void _lockOrderStatus(String orderId, OrderStatus status, {int durationSeconds = 8}) {
@@ -102,6 +124,41 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       return null;
     }
     return lock.status;
+  }
+
+  static void _lockRiderAssignment({
+    required List<String> orderIds,
+    String? riderId,
+    String? riderName,
+    String? riderPhone,
+    bool isUnassigned = false,
+    int durationSeconds = 12,
+  }) {
+    final now = DateTime.now();
+    for (final id in orderIds) {
+      final cleanId = id.trim();
+      if (cleanId.isEmpty) continue;
+      _optimisticRiderLocks[cleanId] = _OptimisticRiderLock(
+        riderId: riderId,
+        riderName: riderName,
+        riderPhone: riderPhone,
+        isUnassigned: isUnassigned,
+        lockedAt: now,
+        durationSeconds: durationSeconds,
+      );
+    }
+  }
+
+  static _OptimisticRiderLock? _getLockedRider(String? orderId) {
+    if (orderId == null || orderId.trim().isEmpty) return null;
+    final cleanId = orderId.trim();
+    final lock = _optimisticRiderLocks[cleanId];
+    if (lock == null) return null;
+    if (lock.isExpired) {
+      _optimisticRiderLocks.remove(cleanId);
+      return null;
+    }
+    return lock;
   }
 
   static int _orderStatusRank(OrderStatus s) {
@@ -433,9 +490,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           final orderId = (record['orderId'] ?? record['id'])?.toString();
           final readableId = record['readableId']?.toString();
 
-          // Suppress echo if this order is actively locked by our own optimistic action
-          if ((orderId != null && _getLockedStatus(orderId) != null) ||
-              (readableId != null && _getLockedStatus(readableId) != null)) {
+          // Suppress echo if this order is actively locked by our own optimistic action (status or rider)
+          if ((orderId != null && (_getLockedStatus(orderId) != null || _getLockedRider(orderId) != null)) ||
+              (readableId != null && (_getLockedStatus(readableId) != null || _getLockedRider(readableId) != null))) {
             debugPrint('[Admin WebSocket] Skipping echo for actively locked order: $orderId / $readableId');
             return;
           }
@@ -685,12 +742,51 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           );
         }
 
-        final existing = orderMap[o.id];
-        if (existing == null) {
+        // Respect active optimistic rider locks from admin actions
+        final lockedRider = _getLockedRider(o.id) ??
+            (o.combinedId != null ? _getLockedRider(o.combinedId!) : null) ??
+            (o.readableId != null ? _getLockedRider(o.readableId!) : null);
+        if (lockedRider != null) {
+          if (lockedRider.isUnassigned) {
+            o = o.copyWith(clearDeliveryUser: true);
+          } else {
+            o = o.copyWith(
+              deliveryUserId: lockedRider.riderId,
+              deliveryBoyName: lockedRider.riderName,
+              deliveryBoyPhone: lockedRider.riderPhone,
+            );
+          }
+        } else if ((o.deliveryBoyName == null || o.deliveryBoyName!.isEmpty) &&
+                   o.deliveryUserId != null && o.deliveryUserId!.isNotEmpty) {
+          // Resolve rider from _availableRiders list if Supabase returned deliveryUserId without joins
+          final matchedRider = _availableRiders.firstWhereOrNull((r) => r['id'] == o.deliveryUserId);
+          if (matchedRider != null) {
+            o = o.copyWith(
+              deliveryBoyName: matchedRider['name'],
+              deliveryBoyPhone: matchedRider['phone'],
+            );
+          }
+        }
+
+        // If rider is still empty, check existing order in memory to preserve assigned rider
+        final existing = orderMap[o.id] ?? _allOrders.firstWhereOrNull((curr) => curr.id == o.id);
+        if ((o.deliveryBoyName == null || o.deliveryBoyName!.isEmpty) &&
+            existing != null && existing.deliveryBoyName != null && existing.deliveryBoyName!.isNotEmpty) {
+          if (lockedRider == null || !lockedRider.isUnassigned) {
+            o = o.copyWith(
+              deliveryUserId: existing.deliveryUserId,
+              deliveryBoyName: existing.deliveryBoyName,
+              deliveryBoyPhone: existing.deliveryBoyPhone,
+            );
+          }
+        }
+
+        if (orderMap[o.id] == null) {
           orderMap[o.id] = o;
         } else {
+          final existingInMap = orderMap[o.id]!;
           // If admin explicitly locked/reversed status, allow it!
-          final existingLocked = _getLockedStatus(existing.id) ?? (existing.combinedId != null ? _getLockedStatus(existing.combinedId!) : null);
+          final existingLocked = _getLockedStatus(existingInMap.id) ?? (existingInMap.combinedId != null ? _getLockedStatus(existingInMap.combinedId!) : null);
           if (existingLocked != null) {
             if (o.status == existingLocked) {
               orderMap[o.id] = o;
@@ -699,18 +795,18 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           }
 
           // Never downgrade a DELIVERED or CANCELLED order without an explicit admin lock!
-          if (existing.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
+          if (existingInMap.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
             return;
           }
-          if (existing.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
+          if (existingInMap.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
             return;
           }
 
-          final existingItemCount = existing.items?.length ?? 0;
+          final existingItemCount = existingInMap.items?.length ?? 0;
           final newItemCount = o.items?.length ?? 0;
           final isMoreItems = newItemCount > existingItemCount;
-          final isNewerStatus = _orderStatusRank(o.status) > _orderStatusRank(existing.status);
-          final isSameStatusNewerData = o.status == existing.status && (isMoreItems || o.createdAt.isAfter(existing.createdAt));
+          final isNewerStatus = _orderStatusRank(o.status) > _orderStatusRank(existingInMap.status);
+          final isSameStatusNewerData = o.status == existingInMap.status && (isMoreItems || o.createdAt.isAfter(existingInMap.createdAt));
 
           if (isNewerStatus || isSameStatusNewerData) {
             orderMap[o.id] = o;
@@ -1003,12 +1099,51 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           );
         }
 
-        final existing = orderMap[o.id];
-        if (existing == null) {
+        // Respect active optimistic rider locks from admin actions
+        final lockedRider = _getLockedRider(o.id) ??
+            (o.combinedId != null ? _getLockedRider(o.combinedId!) : null) ??
+            (o.readableId != null ? _getLockedRider(o.readableId!) : null);
+        if (lockedRider != null) {
+          if (lockedRider.isUnassigned) {
+            o = o.copyWith(clearDeliveryUser: true);
+          } else {
+            o = o.copyWith(
+              deliveryUserId: lockedRider.riderId,
+              deliveryBoyName: lockedRider.riderName,
+              deliveryBoyPhone: lockedRider.riderPhone,
+            );
+          }
+        } else if ((o.deliveryBoyName == null || o.deliveryBoyName!.isEmpty) &&
+                   o.deliveryUserId != null && o.deliveryUserId!.isNotEmpty) {
+          // Resolve rider from _availableRiders list if Supabase returned deliveryUserId without joins
+          final matchedRider = _availableRiders.firstWhereOrNull((r) => r['id'] == o.deliveryUserId);
+          if (matchedRider != null) {
+            o = o.copyWith(
+              deliveryBoyName: matchedRider['name'],
+              deliveryBoyPhone: matchedRider['phone'],
+            );
+          }
+        }
+
+        // If rider is still empty, check existing order in memory to preserve assigned rider
+        final existing = orderMap[o.id] ?? _allOrders.firstWhereOrNull((curr) => curr.id == o.id);
+        if ((o.deliveryBoyName == null || o.deliveryBoyName!.isEmpty) &&
+            existing != null && existing.deliveryBoyName != null && existing.deliveryBoyName!.isNotEmpty) {
+          if (lockedRider == null || !lockedRider.isUnassigned) {
+            o = o.copyWith(
+              deliveryUserId: existing.deliveryUserId,
+              deliveryBoyName: existing.deliveryBoyName,
+              deliveryBoyPhone: existing.deliveryBoyPhone,
+            );
+          }
+        }
+
+        if (orderMap[o.id] == null) {
           orderMap[o.id] = o;
         } else {
+          final existingInMap = orderMap[o.id]!;
           // If admin explicitly locked/reversed status, allow it!
-          final existingLocked = _getLockedStatus(existing.id) ?? (existing.combinedId != null ? _getLockedStatus(existing.combinedId!) : null);
+          final existingLocked = _getLockedStatus(existingInMap.id) ?? (existingInMap.combinedId != null ? _getLockedStatus(existingInMap.combinedId!) : null);
           if (existingLocked != null) {
             if (o.status == existingLocked) {
               orderMap[o.id] = o;
@@ -1017,18 +1152,18 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           }
 
           // Never downgrade a DELIVERED or CANCELLED order without an explicit admin lock!
-          if (existing.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
+          if (existingInMap.status == OrderStatus.delivered && o.status != OrderStatus.delivered) {
             return;
           }
-          if (existing.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
+          if (existingInMap.status == OrderStatus.cancelled && o.status != OrderStatus.cancelled) {
             return;
           }
 
-          final existingItemCount = existing.items?.length ?? 0;
+          final existingItemCount = existingInMap.items?.length ?? 0;
           final newItemCount = o.items?.length ?? 0;
           final isMoreItems = newItemCount > existingItemCount;
-          final isNewerStatus = _orderStatusRank(o.status) > _orderStatusRank(existing.status);
-          final isSameStatusNewerData = o.status == existing.status && (isMoreItems || o.createdAt.isAfter(existing.createdAt));
+          final isNewerStatus = _orderStatusRank(o.status) > _orderStatusRank(existingInMap.status);
+          final isSameStatusNewerData = o.status == existingInMap.status && (isMoreItems || o.createdAt.isAfter(existingInMap.createdAt));
 
           if (isNewerStatus || isSameStatusNewerData) {
             orderMap[o.id] = o;
@@ -1498,20 +1633,50 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         ? order.subOrders!.map((s) => s.id).toList()
         : [order.id];
 
+    final allTargetIds = <String>{
+      order.id,
+      if (order.readableId != null && order.readableId!.isNotEmpty) order.readableId!,
+      if (order.combinedId != null && order.combinedId!.isNotEmpty) order.combinedId!,
+      ...idsToAssign,
+      if (order.subOrders != null) ...order.subOrders!.map((s) => s.id),
+      if (order.subOrders != null) ...order.subOrders!.where((s) => s.readableId != null).map((s) => s.readableId!),
+    };
+
+    // 0. Active 12-second Optimistic Rider Lock across all linked IDs
+    _lockRiderAssignment(
+      orderIds: allTargetIds.toList(),
+      riderId: isUnassigning ? null : riderId,
+      riderName: isUnassigning ? null : riderName,
+      riderPhone: isUnassigning ? null : riderPhone,
+      isUnassigned: isUnassigning,
+      durationSeconds: 12,
+    );
+
     // Status preservation:
     // When assigning a rider, preserve the order's existing status (CONFIRMED, PENDING, PACKED, SHIPPED).
-    // Do NOT force status to PACKED!
     final targetStatus = order.status;
     final targetStatusStr = order.status.name.toUpperCase();
 
     // 1. Instant Optimistic UI Update (0ms)
     setState(() {
       _allOrders = _allOrders.map((o) {
-        if (o.id == order.id || idsToAssign.contains(o.id) || (order.combinedId != null && o.combinedId == order.combinedId)) {
-          return o.copyWith(
+        if (allTargetIds.contains(o.id) ||
+            (o.readableId != null && allTargetIds.contains(o.readableId!)) ||
+            (order.combinedId != null && o.combinedId == order.combinedId)) {
+          final updatedSubs = o.subOrders?.map((s) => s.copyWith(
             status: targetStatus,
+            deliveryUserId: isUnassigning ? null : riderId,
             deliveryBoyName: isUnassigning ? '' : riderName,
             deliveryBoyPhone: isUnassigning ? '' : riderPhone,
+            clearDeliveryUser: isUnassigning,
+          )).toList();
+          return o.copyWith(
+            status: targetStatus,
+            deliveryUserId: isUnassigning ? null : riderId,
+            deliveryBoyName: isUnassigning ? '' : riderName,
+            deliveryBoyPhone: isUnassigning ? '' : riderPhone,
+            clearDeliveryUser: isUnassigning,
+            subOrders: updatedSubs,
           );
         }
         return o;
@@ -2150,6 +2315,27 @@ $formattedItems
     return counts;
   }
 
+  Map<DeliveryRouteKey, int> _buildRoadCorridorCounts() {
+    final relevantOrders = _selectedTab == 0
+        ? _allOrders.where(_isLiveOrder).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList()
+        : _allOrders.where((o) => !_isLiveOrder(o)).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList();
+
+    final Map<DeliveryRouteKey, int> counts = {
+      DeliveryRouteKey.all: relevantOrders.length,
+      DeliveryRouteKey.hamirpur: 0,
+      DeliveryRouteKey.moosanagar: 0,
+      DeliveryRouteKey.kanpur: 0,
+      DeliveryRouteKey.jahanabad: 0,
+      DeliveryRouteKey.townCenter: 0,
+    };
+
+    for (final o in relevantOrders) {
+      final key = DeliveryRoutes.detect(o).key;
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }
+
   List<Order> _getFilteredOrders() {
     List<Order> list = [];
     if (_selectedTab == 0) {
@@ -2172,6 +2358,11 @@ $formattedItems
       }
       // LIFO for History: Most recently completed orders on TOP!
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+
+    // Filter by Road Corridor (Arterial Corridor Dispatch)
+    if (_selectedRoadCorridor != DeliveryRouteKey.all) {
+      list = list.where((o) => DeliveryRoutes.detect(o).key == _selectedRoadCorridor).toList();
     }
 
     if (_searchQuery.isNotEmpty) {
@@ -2382,6 +2573,11 @@ $formattedItems
                     setState(() => _selectedOutlet = outletId);
                   },
                   statusCounts: _buildStatusCounts(),
+                  selectedRoadCorridor: _selectedRoadCorridor,
+                  roadCorridorCounts: _buildRoadCorridorCounts(),
+                  onRoadCorridorSelected: (corridor) {
+                    setState(() => _selectedRoadCorridor = corridor);
+                  },
                   onTabChanged: (index) {
                     setState(() {
                       _selectedTab = index;

@@ -96,6 +96,7 @@ class Order {
   final String? deliveryMethod;
   final String? shopName;
   final String? shopPhone;
+  final String? deliveryUserId;
   final String? deliveryBoyName;
   final String? deliveryBoyPhone;
   final double? deliveryLat;
@@ -140,6 +141,7 @@ class Order {
     this.deliveryMethod,
     this.shopName,
     this.shopPhone,
+    this.deliveryUserId,
     this.deliveryBoyName,
     this.deliveryBoyPhone,
     this.deliveryLat,
@@ -456,6 +458,11 @@ class Order {
       deliveryMethod: json['deliveryMethod']?.toString(),
       shopName: parseShopName(),
       shopPhone: json['shopPhone']?.toString(),
+      deliveryUserId: json['deliveryUserId']?.toString() ??
+          json['delivery_user_id']?.toString() ??
+          (json['deliveryUser'] is Map ? json['deliveryUser']['id']?.toString() : null) ??
+          (json['deliveryBoy'] is Map ? json['deliveryBoy']['id']?.toString() : null) ??
+          (json['rider'] is Map ? json['rider']['id']?.toString() : null),
       deliveryBoyName: parseDeliveryBoyName(),
       deliveryBoyPhone: parseDeliveryBoyPhone(),
       deliveryLat: (json['deliveryLat'] as num?)?.toDouble() ??
@@ -550,8 +557,10 @@ class Order {
     String? deliveryMethod,
     String? shopName,
     String? shopPhone,
+    String? deliveryUserId,
     String? deliveryBoyName,
     String? deliveryBoyPhone,
+    bool clearDeliveryUser = false,
     String? notes,
     String? couponCode,
     String? customerName,
@@ -591,8 +600,9 @@ class Order {
       deliveryMethod: deliveryMethod ?? this.deliveryMethod,
       shopName: shopName ?? this.shopName,
       shopPhone: shopPhone ?? this.shopPhone,
-      deliveryBoyName: deliveryBoyName ?? this.deliveryBoyName,
-      deliveryBoyPhone: deliveryBoyPhone ?? this.deliveryBoyPhone,
+      deliveryUserId: clearDeliveryUser ? null : (deliveryUserId ?? this.deliveryUserId),
+      deliveryBoyName: clearDeliveryUser ? null : (deliveryBoyName ?? this.deliveryBoyName),
+      deliveryBoyPhone: clearDeliveryUser ? null : (deliveryBoyPhone ?? this.deliveryBoyPhone),
       notes: notes ?? this.notes,
       couponCode: couponCode ?? this.couponCode,
       customerName: customerName ?? this.customerName,
@@ -634,6 +644,9 @@ class Order {
     'deliveryMethod': deliveryMethod,
     'shopName': shopName,
     'shopPhone': shopPhone,
+    'deliveryUserId': deliveryUserId,
+    'deliveryBoyName': deliveryBoyName,
+    'deliveryBoyPhone': deliveryBoyPhone,
     'notes': notes,
     'couponCode': couponCode,
     'customerName': customerName,

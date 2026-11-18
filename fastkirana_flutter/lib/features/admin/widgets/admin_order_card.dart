@@ -2,7 +2,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:collection/collection.dart';
 import '../../../core/utils/app_url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
@@ -10,7 +9,6 @@ import '../../../core/routes/page_transitions.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/app_toast.dart';
 import '../../../core/utils/restaurant_utils.dart';
-import '../../../core/utils/order_item_helper.dart';
 import '../../../core/utils/route_detector.dart';
 import '../../../data/models/order.dart';
 import '../../../providers/store_settings_provider.dart';
@@ -113,6 +111,324 @@ class AdminOrderCard extends ConsumerWidget {
     return '$hour:$min $period';
   }
 
+  void _showRiderSelectionSheet(BuildContext context, WidgetRef ref) {
+    HapticFeedback.lightImpact();
+    final isAssigned = (order.deliveryBoyName != null && order.deliveryBoyName!.trim().isNotEmpty);
+    final currentRiderNorm = (order.deliveryBoyName ?? '').trim().toLowerCase();
+    final rInfo = DeliveryRoutes.detect(order);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppDesignSystem.slate300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.two_wheeler_rounded, size: 20, color: Color(0xFF2563EB)),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Assign Delivery Partner',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: AppDesignSystem.slate900,
+                              ),
+                            ),
+                            Text(
+                              'Order #${order.displayId} · ${rInfo.emoji} ${rInfo.shortLabel}',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppDesignSystem.slate500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: AppDesignSystem.slate500),
+                      onPressed: () => Navigator.pop(ctx),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Option 1: Store Partner (Self Delivery)
+                InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () {
+                    HapticFeedback.heavyImpact();
+                    final settings = ref.read(storeSettingsProvider).valueOrNull;
+                    final storePhone = settings?.contactPhone.isNotEmpty == true
+                        ? settings!.contactPhone
+                        : AppConfig.supportPhone;
+                    onAssignRider?.call(order, 'store_admin_self', 'Store Partner', storePhone);
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: (currentRiderNorm == 'store partner' || currentRiderNorm == 'store_admin_self')
+                          ? const Color(0xFFDCFCE7)
+                          : const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: (currentRiderNorm == 'store partner' || currentRiderNorm == 'store_admin_self')
+                            ? const Color(0xFF16A34A)
+                            : const Color(0xFF86EFAC),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFBBF7D0),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.storefront_rounded, size: 20, color: Color(0xFF15803D)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Store Partner (Self Delivery)',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF15803D),
+                                ),
+                              ),
+                              Text(
+                                'Store staff delivers directly without external rider',
+                                style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF166534)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (currentRiderNorm == 'store partner' || currentRiderNorm == 'store_admin_self')
+                          const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 22)
+                        else
+                          const Icon(Icons.chevron_right_rounded, color: Color(0xFF16A34A), size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Expanded(child: Divider(color: AppDesignSystem.slate200)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        'AVAILABLE RIDERS (${availableRiders.length})',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppDesignSystem.slate400,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: Divider(color: AppDesignSystem.slate200)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                if (availableRiders.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Text(
+                        'No registered delivery partners online.\nUse Store Partner (Self Delivery) or register riders in admin.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 12, color: AppDesignSystem.slate500),
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: availableRiders.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final rider = availableRiders[index];
+                        final riderId = rider['id'] ?? '';
+                        final riderName = rider['name'] ?? 'Rider';
+                        final riderPhone = rider['phone'] ?? '';
+                        final isThisSelected = isAssigned &&
+                            (order.deliveryUserId == riderId ||
+                             order.deliveryBoyName?.trim().toLowerCase() == riderName.trim().toLowerCase() ||
+                             order.deliveryBoyPhone == riderPhone);
+
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            HapticFeedback.heavyImpact();
+                            onAssignRider?.call(order, riderId, riderName, riderPhone);
+                            Navigator.pop(ctx);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isThisSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isThisSelected ? const Color(0xFF3B82F6) : AppDesignSystem.slate200,
+                                width: isThisSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: isThisSelected ? const Color(0xFF2563EB) : const Color(0xFF0F172A),
+                                  child: Text(
+                                    riderName.isNotEmpty ? riderName.substring(0, 1).toUpperCase() : 'R',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        riderName,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13.5,
+                                          fontWeight: isThisSelected ? FontWeight.w900 : FontWeight.w700,
+                                          color: isThisSelected ? const Color(0xFF1D4ED8) : AppDesignSystem.slate900,
+                                        ),
+                                      ),
+                                      if (riderPhone.isNotEmpty)
+                                        Text(
+                                          riderPhone,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppDesignSystem.slate500,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                if (isThisSelected)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDBEAFE),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.check_rounded, size: 14, color: Color(0xFF1D4ED8)),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Assigned',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF1D4ED8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else
+                                  const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF2563EB), size: 20),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                // Option 3: Unassign (if already assigned)
+                if (isAssigned) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        onAssignRider?.call(order, 'UNASSIGNED', '', '');
+                        Navigator.pop(ctx);
+                      },
+                      icon: const Icon(Icons.person_off_rounded, size: 16, color: Color(0xFFDC2626)),
+                      label: Text(
+                        'Unassign Delivery Partner',
+                        style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFDC2626),
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFFCA5A5), width: 1.2),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: const Color(0xFFFEF2F2),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statusColor = getStatusColor(order.status);
@@ -187,7 +503,7 @@ class AdminOrderCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 0. Top SLA Alert & Amount Header Bar (FastMinute Hybrid Blinkit/Zepto Style)
-          if (live && (isSlaUrgent || isSlaWarning || order.status == OrderStatus.pending || order.status == OrderStatus.confirmed || order.status == OrderStatus.adminPending)) ...[
+          if (live) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4.5),
               decoration: BoxDecoration(
@@ -243,30 +559,101 @@ class AdminOrderCard extends ConsumerWidget {
                         : (isRest ? (RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant') : 'Dark Store');
                     final isCombined = order.isCombined;
 
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isCombined ? const Color(0xFFEDE9FE) : (isRest ? AppDesignSystem.violet50 : AppDesignSystem.green50),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: isCombined ? const Color(0xFFDDD6FE) : (isRest ? AppDesignSystem.violet200 : AppDesignSystem.green200),
-                          width: 0.8,
+                    if (isCombined) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3E8FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFA855F7), width: 1.3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF9333EA).withValues(alpha: 0.15),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1.5),
+                            ),
+                          ],
                         ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('✨', style: TextStyle(fontSize: 12)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'COMBINED (${order.subOrders?.length ?? 2})',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF581C87),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (isRest) {
+                      // Ultra-highlighted, vibrant, high-contrast Restaurant Badge
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFEA580C), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFEA580C).withValues(alpha: 0.22),
+                              blurRadius: 5,
+                              offset: const Offset(0, 1.5),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('🍽️', style: TextStyle(fontSize: 12.5)),
+                            const SizedBox(width: 4.5),
+                            Text(
+                              outletName.toUpperCase(),
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF9A3412),
+                                letterSpacing: 0.4,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(color: const Color(0xFF34D399), width: 1.1),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(isCombined ? '✨' : (isRest ? '🍽️' : '🛒'), style: TextStyle(fontSize: Responsive.scaledFontSize(context, 9.5))),
-                          const SizedBox(width: 3),
+                          const Text('🛒', style: TextStyle(fontSize: 11)),
+                          const SizedBox(width: 3.5),
                           Text(
-                            isCombined ? 'Combined (${order.subOrders?.length ?? 2})' : outletName,
+                            'DARK STORE',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                              fontSize: Responsive.scaledFontSize(context, 10),
                               fontWeight: FontWeight.w800,
-                              color: isCombined ? const Color(0xFF6B21A8) : (isRest ? AppDesignSystem.statusShippedText : AppDesignSystem.green800),
+                              color: const Color(0xFF065F46),
+                              letterSpacing: 0.3,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -309,6 +696,30 @@ class AdminOrderCard extends ConsumerWidget {
                                 color: AppDesignSystem.slate900,
                               ),
                             ),
+                            if (order.isRestaurantOrder)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFEDD5),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFFB923C), width: 1.1),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('🍽️', style: TextStyle(fontSize: 10)),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      (order.shopName ?? RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant').toUpperCase(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFC2410C),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                                   Builder(builder: (context) {
                                     final rInfo = DeliveryRoutes.detect(order);
                                     return PopupMenuButton<DeliveryRouteKey>(
@@ -969,120 +1380,187 @@ class AdminOrderCard extends ConsumerWidget {
               ),
             )
           else
-            // 3.4 Rider Assignment Dropdown / Selector
-            Container(
+            // 3.4 Modern Tactile Rider Assignment Section
+            Padding(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-              color: AppDesignSystem.background,
-              child: Row(
-                children: [
-                  Text(
-                    'RIDER:',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10.5),
-                      fontWeight: FontWeight.w800,
-                      color: AppDesignSystem.slate500,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
+              child: () {
+                final isAssigned = (order.deliveryBoyName != null && order.deliveryBoyName!.trim().isNotEmpty);
+                final norm = (order.deliveryBoyName ?? '').trim().toLowerCase();
+                final isStorePartner = norm == 'store partner' || norm == 'store_admin_self' || norm.contains('store partner');
+
+                if (!isAssigned) {
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _showRiderSelectionSheet(context, ref),
                     child: Container(
-                      height: 38,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppDesignSystem.slate300),
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF86EFAC), width: 1.2),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: () {
-                            if (order.deliveryBoyName == null || order.deliveryBoyName!.trim().isEmpty) {
-                              return 'UNASSIGNED';
-                            }
-                            final norm = order.deliveryBoyName!.trim().toLowerCase();
-                            if (norm == 'store partner' || norm == 'store partner (self delivery)' || order.deliveryBoyName == 'store_admin_self') {
-                              return 'STORE_PARTNER';
-                            }
-                            final matched = availableRiders.firstWhereOrNull(
-                              (r) => r['name']?.trim().toLowerCase() == norm ||
-                                     r['id'] == order.deliveryBoyName ||
-                                     r['phone'] == order.deliveryBoyPhone,
-                            );
-                            if (matched != null) return matched['id'];
-                            return 'UNASSIGNED';
-                          }(),
-                          isExpanded: true,
-                          icon: const Icon(Icons.arrow_drop_down_rounded, color: AppDesignSystem.slate600, size: 20),
-                          borderRadius: BorderRadius.circular(12),
-                          dropdownColor: Colors.white,
-                          items: [
-                            DropdownMenuItem(
-                              value: 'UNASSIGNED',
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.person_outline_rounded, size: 15, color: AppDesignSystem.slate400),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Unassigned · Tap to assign',
-                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w600, color: AppDesignSystem.slate500),
-                                  ),
-                                ],
-                              ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFDCFCE7),
+                              shape: BoxShape.circle,
                             ),
-                            ...availableRiders.map((rider) => DropdownMenuItem(
-                              value: rider['id'],
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.two_wheeler_rounded, size: 16, color: AppDesignSystem.cyan600),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '${rider['name']} (${rider['phone']})',
-                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: AppDesignSystem.cyan600),
+                            child: const Icon(Icons.two_wheeler_rounded, size: 16, color: Color(0xFF16A34A)),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Assign Delivery Partner',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF15803D),
                                   ),
-                                ],
-                              ),
-                            )),
-                            DropdownMenuItem(
-                              value: 'STORE_PARTNER',
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.storefront_rounded, size: 15, color: AppDesignSystem.green600),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Store Partner (Self Delivery)',
-                                    style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11.5), fontWeight: FontWeight.w800, color: AppDesignSystem.green700),
+                                ),
+                                Text(
+                                  'Tap to choose rider or self-delivery',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    color: const Color(0xFF166534),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              if (val == 'UNASSIGNED') {
-                                onAssignRider?.call(order, 'UNASSIGNED', '', '');
-                              } else if (val == 'STORE_PARTNER') {
-                                final settings = ref.read(storeSettingsProvider).valueOrNull;
-                                final storePhone = settings?.contactPhone.isNotEmpty == true
-                                    ? settings!.contactPhone
-                                    : AppConfig.supportPhone;
-                                onAssignRider?.call(order, 'store_admin_self', 'Store Partner', storePhone);
-                              } else {
-                                final rider = availableRiders.firstWhereOrNull(
-                                  (r) => r['id'] == val,
-                                );
-                                if (rider != null) {
-                                  onAssignRider?.call(order, rider['id']!, rider['name']!, rider['phone']!);
-                                }
-                              }
-                            }
-                          },
+                          ),
+                          const Icon(Icons.chevron_right_rounded, size: 20, color: Color(0xFF16A34A)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isStorePartner ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isStorePartner ? Icons.storefront_rounded : Icons.two_wheeler_rounded,
+                          size: 16,
+                          color: isStorePartner ? const Color(0xFF15803D) : const Color(0xFF2563EB),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    order.deliveryBoyName!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 12),
+                                      fontWeight: FontWeight.w900,
+                                      color: AppDesignSystem.slate900,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    isStorePartner ? 'SELF' : 'RIDER',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFF166534),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (order.deliveryBoyPhone != null && order.deliveryBoyPhone!.isNotEmpty)
+                              Text(
+                                order.deliveryBoyPhone!,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: FontWeight.w600,
+                                  color: AppDesignSystem.slate500,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (order.deliveryBoyPhone != null && order.deliveryBoyPhone!.isNotEmpty) ...[
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => onCallCustomer?.call(order.deliveryBoyPhone!),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.call_rounded, size: 16, color: Color(0xFF2563EB)),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () => onWhatsappCustomer?.call(order.deliveryBoyPhone!, order.readableId ?? order.id),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.chat_bubble_rounded, size: 16, color: Color(0xFF15803D)),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _showRiderSelectionSheet(context, ref),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppDesignSystem.slate100,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppDesignSystem.slate300, width: 1),
+                          ),
+                          child: Text(
+                            'Change',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w800,
+                              color: AppDesignSystem.slate700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              }(),
             ),
 
           // ───── UNPAID ONLINE PAYMENT ACTIONS (Payment Pending Queue) ─────
@@ -1197,215 +1675,351 @@ class AdminOrderCard extends ConsumerWidget {
             ),
           ],
 
-          // ───── ADMIN APPROVAL GATE (only for ADMIN_PENDING orders) ─────
-          if (order.status == OrderStatus.adminPending) ...[
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                border: Border(
-                  top: BorderSide(color: AppDesignSystem.orange600.withValues(alpha: 0.3), width: 1),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.admin_panel_settings_rounded, size: 16, color: Color(0xFFEA580C)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'ADMIN APPROVAL REQUIRED — Call customer to verify before approving',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFFC2410C),
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      // ✅ APPROVE → moves to CONFIRMED
-                      Expanded(
-                        flex: 3,
-                        child: ElevatedButton.icon(
-                          onPressed: (onUpdateStatus != null && !isProcessing)
-                              ? () => onUpdateStatus!(order, OrderStatus.confirmed)
-                              : null,
-                          icon: isProcessing
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
-                          label: Text(
-                            isProcessing ? 'CONFIRMING...' : 'APPROVE & CONFIRM',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12.5),
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isProcessing
-                                ? AppDesignSystem.green600.withValues(alpha: 0.6)
-                                : AppDesignSystem.green600,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      // ❌ REJECT → cancel order
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton.icon(
-                          onPressed: (onUpdateStatus != null && !isProcessing)
-                              ? () => onUpdateStatus!(order, OrderStatus.cancelled)
-                              : null,
-                          icon: isProcessing
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.cancel_rounded, size: 18, color: Colors.white),
-                          label: Text(
-                            isProcessing ? 'CANCELLING...' : 'REJECT',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 12.5),
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isProcessing
-                                ? AppDesignSystem.red600.withValues(alpha: 0.6)
-                                : AppDesignSystem.red600,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 0,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                ],
-              ),
-            ),
-          ],
-
-          // 3.5 Order Status Dropdown Selector
+          // ───── 3.5 UNIFIED DYNAMIC STAGE PROGRESSION ACTION BAR ─────
           Container(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             color: AppDesignSystem.background,
             child: Row(
               children: [
-                Text(
-                  'STATUS:',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w800,
-                    color: AppDesignSystem.slate500,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(width: 10),
+                // Dynamic Primary Stage Action Button
                 Expanded(
-                  child: Container(
-                    height: 42,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 1.4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: statusColor.withValues(alpha: 0.06),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<OrderStatus>(
-                        value: order.status,
-                        isExpanded: true,
-                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: statusColor, size: 22),
-                        borderRadius: BorderRadius.circular(14),
-                        dropdownColor: Colors.white,
-                        items: const [
-                          DropdownMenuItem(
-                            value: OrderStatus.adminPending,
-                            child: _StatusDropdownItem(
-                              icon: Icons.admin_panel_settings_rounded,
-                              label: '🔒 Needs Admin Approval',
-                              color: AppDesignSystem.orange600,
+                  child: () {
+                    // 1. ADMIN PENDING / PENDING → APPROVE & CONFIRM + REJECT
+                    if (order.status == OrderStatus.adminPending || order.status == OrderStatus.pending) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: ElevatedButton.icon(
+                              onPressed: (onUpdateStatus != null && !isProcessing)
+                                  ? () {
+                                      HapticFeedback.heavyImpact();
+                                      onUpdateStatus!(order, OrderStatus.confirmed);
+                                    }
+                                  : null,
+                              icon: isProcessing
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.check_circle_rounded, size: 17, color: Colors.white),
+                              label: Text(
+                                isProcessing ? 'CONFIRMING...' : 'APPROVE & CONFIRM',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 12),
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isProcessing
+                                    ? AppDesignSystem.green600.withValues(alpha: 0.6)
+                                    : AppDesignSystem.green600,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 0,
+                              ),
                             ),
                           ),
-                          DropdownMenuItem(
-                            value: OrderStatus.pending,
-                            child: _StatusDropdownItem(
-                              icon: Icons.schedule_rounded,
-                              label: 'Placed (Pending)',
-                              color: AppDesignSystem.amber600,
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: OrderStatus.confirmed,
-                            child: _StatusDropdownItem(
-                              icon: Icons.check_circle_outline_rounded,
-                              label: 'Confirmed',
-                              color: AppDesignSystem.cyan600,
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: OrderStatus.packed,
-                            child: _StatusDropdownItem(
-                              icon: Icons.inventory_2_outlined,
-                              label: 'Packed / Ready',
-                              color: AppDesignSystem.violet600,
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: OrderStatus.shipped,
-                            child: _StatusDropdownItem(
-                              icon: Icons.delivery_dining_rounded,
-                              label: 'On the Way (Out for Delivery)',
-                              color: AppDesignSystem.orange600,
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: OrderStatus.delivered,
-                            child: _StatusDropdownItem(
-                              icon: Icons.task_alt_rounded,
-                              label: 'Delivered',
-                              color: AppDesignSystem.green600,
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: OrderStatus.cancelled,
-                            child: _StatusDropdownItem(
-                              icon: Icons.cancel_outlined,
-                              label: 'Cancelled',
-                              color: AppDesignSystem.red600,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 2,
+                            child: OutlinedButton.icon(
+                              onPressed: (onUpdateStatus != null && !isProcessing)
+                                  ? () {
+                                      HapticFeedback.mediumImpact();
+                                      onUpdateStatus!(order, OrderStatus.cancelled);
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.cancel_rounded, size: 16, color: AppDesignSystem.red600),
+                              label: Text(
+                                'REJECT',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 12),
+                                  fontWeight: FontWeight.w800,
+                                  color: AppDesignSystem.red600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFFFCA5A5), width: 1.2),
+                                backgroundColor: const Color(0xFFFEF2F2),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
                             ),
                           ),
                         ],
-                        onChanged: (newStatus) {
-                          if (newStatus != null && newStatus != order.status) {
-                            HapticFeedback.mediumImpact();
-                            onUpdateStatus?.call(order, newStatus);
-                          }
-                        },
+                      );
+                    }
+
+                    // 2. CONFIRMED → MARK ALL ITEMS PACKED
+                    if (order.status == OrderStatus.confirmed) {
+                      return ElevatedButton.icon(
+                        onPressed: (onUpdateStatus != null && !isProcessing)
+                            ? () {
+                                HapticFeedback.heavyImpact();
+                                onUpdateStatus!(order, OrderStatus.packed);
+                              }
+                            : null,
+                        icon: isProcessing
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.inventory_2_rounded, size: 18, color: Colors.white),
+                        label: Text(
+                          isProcessing ? 'PACKING ORDER...' : '📦 MARK PACKED / READY ➔',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4F46E5), // Indigo
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      );
+                    }
+
+                    // 3. PACKED → DISPATCH TO RIDER (or ASSIGN RIDER if not yet assigned)
+                    if (order.status == OrderStatus.packed) {
+                      final hasRider = (order.deliveryBoyName != null && order.deliveryBoyName!.trim().isNotEmpty);
+                      if (!hasRider && !isPickup) {
+                        return ElevatedButton.icon(
+                          onPressed: () => _showRiderSelectionSheet(context, ref),
+                          icon: const Icon(Icons.two_wheeler_rounded, size: 18, color: Colors.white),
+                          label: Text(
+                            '🛵 ASSIGN RIDER TO DISPATCH ➔',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 12),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7), // Sky/Cyan
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                        );
+                      }
+
+                      return ElevatedButton.icon(
+                        onPressed: (onUpdateStatus != null && !isProcessing)
+                            ? () {
+                                HapticFeedback.heavyImpact();
+                                onUpdateStatus!(order, OrderStatus.shipped);
+                              }
+                            : null,
+                        icon: isProcessing
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.delivery_dining_rounded, size: 20, color: Colors.white),
+                        label: Text(
+                          isProcessing ? 'DISPATCHING...' : '🚀 DISPATCH / HANDOVER ➔',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEA580C), // Sunset Orange
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      );
+                    }
+
+                    // 4. SHIPPED → MARK DELIVERED
+                    if (order.status == OrderStatus.shipped) {
+                      return ElevatedButton.icon(
+                        onPressed: (onUpdateStatus != null && !isProcessing)
+                            ? () {
+                                HapticFeedback.heavyImpact();
+                                onUpdateStatus!(order, OrderStatus.delivered);
+                              }
+                            : null,
+                        icon: isProcessing
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.task_alt_rounded, size: 18, color: Colors.white),
+                        label: Text(
+                          isProcessing ? 'COMPLETING...' : '✓ MARK ORDER DELIVERED',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 12.5),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppDesignSystem.green600,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      );
+                    }
+
+                    // 5. DELIVERED → Complete banner
+                    if (order.status == OrderStatus.delivered) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF059669)),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Delivered · Order Completed',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 12.5),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF047857),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // 6. CANCELLED
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFECACA), width: 1.2),
                       ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.cancel_rounded, size: 18, color: Color(0xFFDC2626)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Order Cancelled',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFFB91C1C),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }(),
+                ),
+
+                const SizedBox(width: 8),
+
+                // Manual Status Override / Reversal Menu
+                PopupMenuButton<OrderStatus>(
+                  tooltip: 'Change / Override Status',
+                  initialValue: order.status,
+                  onSelected: (newStatus) {
+                    if (newStatus != order.status) {
+                      HapticFeedback.mediumImpact();
+                      onUpdateStatus?.call(order, newStatus);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: OrderStatus.adminPending,
+                      child: _StatusDropdownItem(
+                        icon: Icons.admin_panel_settings_rounded,
+                        label: '🔒 Needs Approval',
+                        color: AppDesignSystem.orange600,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: OrderStatus.pending,
+                      child: _StatusDropdownItem(
+                        icon: Icons.schedule_rounded,
+                        label: 'Placed (Pending)',
+                        color: AppDesignSystem.amber600,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: OrderStatus.confirmed,
+                      child: _StatusDropdownItem(
+                        icon: Icons.check_circle_outline_rounded,
+                        label: 'Confirmed',
+                        color: AppDesignSystem.cyan600,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: OrderStatus.packed,
+                      child: _StatusDropdownItem(
+                        icon: Icons.inventory_2_outlined,
+                        label: 'Packed / Ready',
+                        color: AppDesignSystem.violet600,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: OrderStatus.shipped,
+                      child: _StatusDropdownItem(
+                        icon: Icons.delivery_dining_rounded,
+                        label: 'On the Way (Out for Delivery)',
+                        color: AppDesignSystem.orange600,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: OrderStatus.delivered,
+                      child: _StatusDropdownItem(
+                        icon: Icons.task_alt_rounded,
+                        label: 'Delivered',
+                        color: AppDesignSystem.green600,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: OrderStatus.cancelled,
+                      child: _StatusDropdownItem(
+                        icon: Icons.cancel_outlined,
+                        label: 'Cancelled',
+                        color: AppDesignSystem.red600,
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1.5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.tune_rounded, size: 16, color: statusColor),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_drop_down_rounded, size: 18, color: statusColor),
+                      ],
                     ),
                   ),
                 ),
