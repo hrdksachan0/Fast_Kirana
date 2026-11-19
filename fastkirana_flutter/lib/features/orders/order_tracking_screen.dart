@@ -1375,7 +1375,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           radius: 65,
           fillColor: const Color(0xFF10B981).withValues(alpha: 0.12),
           strokeColor: const Color(0xFF10B981).withValues(alpha: 0.45),
-          strokeWidth: 1.5,
+          strokeWidth: 2,
         ),
       );
     }
@@ -1444,7 +1444,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (points.isEmpty) return;
 
       if (points.length == 1) {
-        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(points.first, 14.5));
+        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(points.first, 13.8));
         return;
       }
 
@@ -1462,15 +1462,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
       final latSpan = (maxLat - minLat).abs();
       final lngSpan = (maxLng - minLng).abs();
-      final latMargin = math.max(0.005, latSpan * 0.35);
-      final lngMargin = math.max(0.005, lngSpan * 0.35);
+      final latMargin = math.max(0.008, latSpan * 0.45);
+      final lngMargin = math.max(0.008, lngSpan * 0.45);
 
       final bounds = LatLngBounds(
         southwest: LatLng(minLat - latMargin, minLng - lngMargin),
         northeast: LatLng(maxLat + latMargin, maxLng + lngMargin),
       );
 
-      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 30));
+      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 45));
     } catch (e) {
       debugPrint('[OrderTracking] _fitMapBounds error: $e');
     }
@@ -1482,9 +1482,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       CameraUpdate.newCameraPosition(
         CameraPosition(
           target: _riderPosition!,
-          zoom: 16.5,
+          zoom: 14.8,
           bearing: _riderHeading,
-          tilt: 25.0,
+          tilt: 15.0,
         ),
       ),
     );
@@ -1798,10 +1798,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                 }
 
                                 return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(18),
+                                    borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                       color: heroAccent.withValues(alpha: 0.28),
                                       width: 1.2,
@@ -1809,12 +1809,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                     boxShadow: [
                                       BoxShadow(
                                         color: heroAccent.withValues(alpha: 0.08),
-                                        blurRadius: 18,
-                                        offset: const Offset(0, 4),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 3),
                                       ),
                                       BoxShadow(
                                         color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                        blurRadius: 8,
+                                        blurRadius: 6,
                                         offset: const Offset(0, 1),
                                       ),
                                     ],
@@ -1822,8 +1822,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                   child: Row(
                                     children: [
                                       Container(
-                                        width: 44,
-                                        height: 44,
+                                        width: 38,
+                                        height: 38,
                                         decoration: BoxDecoration(
                                           color: heroAccent.withValues(alpha: 0.10),
                                           shape: BoxShape.circle,
@@ -1833,10 +1833,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                           ),
                                         ),
                                         child: Center(
-                                          child: Icon(heroIcon, color: heroAccent, size: 22),
+                                          child: Icon(heroIcon, color: heroAccent, size: 20),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
+                                      const SizedBox(width: 10),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1844,20 +1844,20 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                           children: [
                                             Wrap(
                                               crossAxisAlignment: WrapCrossAlignment.center,
-                                              spacing: 8,
-                                              runSpacing: 4,
+                                              spacing: 6,
+                                              runSpacing: 3,
                                               children: [
                                                 Text(
                                                   heroTitle,
                                                   style: GoogleFonts.inter(
-                                                    fontSize: Responsive.scaledFontSize(context, 15.5),
+                                                    fontSize: Responsive.scaledFontSize(context, 14.5),
                                                     fontWeight: FontWeight.w900,
                                                     color: const Color(0xFF0F172A),
                                                     letterSpacing: -0.3,
                                                   ),
                                                 ),
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                   decoration: BoxDecoration(
                                                     color: heroAccent.withValues(alpha: 0.12),
                                                     borderRadius: BorderRadius.circular(6),
@@ -1865,7 +1865,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                                   child: Text(
                                                     statusBadgeText,
                                                     style: GoogleFonts.inter(
-                                                      fontSize: Responsive.scaledFontSize(context, 9.5),
+                                                      fontSize: Responsive.scaledFontSize(context, 9.0),
                                                       fontWeight: FontWeight.w800,
                                                       color: heroAccent,
                                                       letterSpacing: 0.4,
@@ -1874,36 +1874,36 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 3),
+                                            const SizedBox(height: 2),
                                             Row(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Container(
-                                                  margin: const EdgeInsets.only(top: 4.5),
-                                                  width: 6,
-                                                  height: 6,
+                                                  margin: const EdgeInsets.only(top: 4),
+                                                  width: 5,
+                                                  height: 5,
                                                   decoration: BoxDecoration(
                                                     color: heroAccent,
                                                     shape: BoxShape.circle,
                                                     boxShadow: [
                                                       BoxShadow(
                                                         color: heroAccent.withValues(alpha: 0.5),
-                                                        blurRadius: 4,
+                                                        blurRadius: 3,
                                                         spreadRadius: 1,
                                                       ),
                                                     ],
                                                   ),
                                                 ),
-                                                const SizedBox(width: 6),
+                                                const SizedBox(width: 5),
                                                 Expanded(
                                                   child: Text(
                                                     heroSubtitle,
                                                     style: GoogleFonts.inter(
-                                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                                      fontSize: Responsive.scaledFontSize(context, 11.0),
                                                       fontWeight: FontWeight.w600,
                                                       color: const Color(0xFF475569),
                                                       letterSpacing: -0.1,
-                                                      height: 1.3,
+                                                      height: 1.25,
                                                     ),
                                                     maxLines: 2,
                                                     overflow: TextOverflow.ellipsis,
@@ -1952,29 +1952,29 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                 _fitMapBounds();
                               },
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 11),
                           ] else if (!isDelivered) ...[
                             TrackingPreparingCard(order: _order),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 11),
                           ],
                         ],
 
                         // Refund Notice Card (If applicable)
                         if ((_order?.refundAmount ?? 0) > 0 || ((_order?.notes ?? '').toLowerCase().contains('refund'))) ...[
                           TrackingRefundNoticeCard(order: _order),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 11),
                         ],
 
                         // Gift Card Share & Live Tracking Card (When order is a gift or has gift card)
                         if (_isGiftOrder(_order)) ...[
                           _buildTrackingGiftShareCard(_order!),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 11),
                         ],
 
                         // 2. Rider Profile & Contact Card (When Assigned/Out for Delivery)
                         if (statusStep >= 2 && !isDelivered && !isCancelled) ...[
                           TrackingRiderCard(order: _order),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 11),
                         ],
 
                         // 3. Multi-Stage Order Stepper (Live status, ETA & milestones)
@@ -1987,7 +1987,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           etaText: _etaText,
                           distanceText: _distanceText,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 11),
 
                         // Pre-Confirmation Cancel Option Banner (5-min window)
                         if (canCancel) ...[
@@ -1996,7 +1996,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                             onCancel: _confirmAndCancelOrder,
                             createdAt: _order?.createdAt,
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 11),
                         ],
 
                         // 4. Delivery Address Card

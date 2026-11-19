@@ -114,8 +114,8 @@ class TrackingMapView extends StatelessWidget {
           // ── Map Container with Clean Modern Card Border & Adaptive Height ──
           Container(
             height: Responsive.isTablet(context)
-                ? 380.0
-                : (MediaQuery.sizeOf(context).height * 0.33).clamp(230.0, 310.0),
+                ? 360.0
+                : (MediaQuery.sizeOf(context).height * 0.30).clamp(210.0, 280.0),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
@@ -138,7 +138,7 @@ class TrackingMapView extends StatelessWidget {
                 GoogleMap(
                   initialCameraPosition: CameraPosition(
                     target: initialTarget,
-                    zoom: 14.5,
+                    zoom: 13.8,
                   ),
                   markers: markers,
                   polylines: polylines,

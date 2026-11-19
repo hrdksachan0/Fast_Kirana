@@ -19,7 +19,7 @@ class TrackingPreparingCard extends StatelessWidget {
     const slateMuted = Color(0xFF64748B);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
