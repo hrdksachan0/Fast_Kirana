@@ -293,15 +293,10 @@ export async function POST(request: Request) {
           tag: `restaurant-order-${newOrder.id}`,
           data: { orderId: newOrder.id, restaurantId: newOrder.restaurantId }
         }).catch(() => {})
-
-        sendPushNotificationToRoles([Role.DELIVERY], {
-          title: `New Food Order #${newOrder.readableId} 🛵`,
-          body: `Order for ${finalShopName} of ₹${newOrder.total} placed.`,
-          tag: `order-${newOrder.id}`,
-          data: { orderId: newOrder.id, storeId: newOrder.storeId || '' }
-        }).catch(() => {})
+        // Note: Delivery riders are not notified on placement. They are notified when PACKED or assigned.
       } else {
-        sendPushNotificationToRoles([Role.DELIVERY, Role.PICKER], {
+        // Grocery order: Notify store pickers ONLY to prepare/pack the order
+        sendPushNotificationToRoles([Role.PICKER], {
           title: `New Store Order #${newOrder.readableId} 🛍️`,
           body: `Order for ${customer.name || 'Customer'} of ₹${newOrder.total} placed successfully.`,
           tag: `order-${newOrder.id}`,

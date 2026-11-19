@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyCashfreeWebhookSignature } from '@/lib/cashfree'
 import { sseEmitter } from '@/lib/sse-emitter'
-import { sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
+import { sendPushNotification, sendPushNotificationToRoles, sendPushNotificationToRestaurant } from '@/lib/push-notification'
 import { sendWhatsAppOrderAlert } from '@/lib/whatsapp'
 import { Role } from '@prisma/client'
 import { cache } from '@/lib/redis-client'
@@ -207,12 +207,35 @@ export async function POST(req: NextRequest) {
               // Special Late Payment / Webhook Reconciliation Alert:
               // If order was previously converted or placed as COD, notify Delivery partner not to collect cash
               if (wasCod) {
-                sendPushNotificationToRoles([Role.DELIVERY, Role.ADMIN], {
-                  title: '⚠️ CASH MAT LENA! Order Paid Online',
-                  body: `Order #${displayId} (₹${notifyTotal}) customer ne online pay kar diya hai. Delivery ke waqt CASH NA LEIN!`,
+                const latePayTitle = '⚠️ CASH MAT LENA! Order Paid Online'
+                const latePayBody = `Order #${displayId} (₹${notifyTotal}) customer ne online pay kar diya hai. Delivery ke waqt CASH NA LEIN!`
+                const latePayData = { orderId: order.id, paidOnline: 'true' }
+
+                // Always notify admins
+                sendPushNotificationToRoles([Role.ADMIN], {
+                  title: latePayTitle,
+                  body: latePayBody,
                   tag: `cod-reconciled-${order.id}`,
-                  data: { orderId: order.id, paidOnline: 'true' }
-                }).catch((err: any) => console.error('Push delivery late payment error:', err))
+                  data: latePayData
+                }).catch((err: any) => console.error('Push admin late payment error:', err))
+
+                // Notify Rider: targeted if assigned, broadcast only if unassigned
+                const assignedRiderId = order.deliveryUserId
+                if (assignedRiderId && assignedRiderId !== 'store_admin_self' && assignedRiderId !== 'UNASSIGNED') {
+                  sendPushNotification(assignedRiderId, {
+                    title: latePayTitle,
+                    body: latePayBody,
+                    tag: `cod-reconciled-${order.id}`,
+                    data: latePayData
+                  }).catch((err: any) => console.error('Push assigned rider late payment error:', err))
+                } else {
+                  sendPushNotificationToRoles([Role.DELIVERY], {
+                    title: latePayTitle,
+                    body: latePayBody,
+                    tag: `cod-reconciled-${order.id}`,
+                    data: latePayData
+                  }).catch((err: any) => console.error('Push delivery late payment error:', err))
+                }
               }
 
               // 3. WhatsApp Alert to Admin: Strictly route ONLY to Admin selected numbers

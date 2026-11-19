@@ -1,3 +1,9 @@
+/**
+ * @deprecated THIS SERVICE IS OBSOLETE AND DEPRECATED.
+ * DO NOT USE OR IMPORT THIS FILE.
+ * Active notification dispatcher is located at: `@/lib/order-notification-dispatcher`
+ * which supports combined order deduplication, admin approval isolation, and role safety.
+ */
 import { prisma } from '@/lib/prisma'
 import { Role, OrderStatus } from '@prisma/client'
 import { sseEmitter } from '@/lib/sse-emitter'

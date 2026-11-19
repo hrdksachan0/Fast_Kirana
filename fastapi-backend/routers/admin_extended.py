@@ -1199,7 +1199,8 @@ async def admin_update_order_status(
             order.restaurantId,
             order.shopName,
             order.status.value,
-            order.storeId
+            order.storeId,
+            getattr(order, "deliveryUserId", None)
         )
 
     # Trigger push notifications for customer status updates in the background

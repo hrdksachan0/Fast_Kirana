@@ -563,21 +563,24 @@ async def dispatch_isolated_status_update_notifications(
 
         else:
             # GROCERY DARK STORE ISOLATED STATUS UPDATE
-            store_label = f" [{store_id.replace('hub-', '').upper()}]" if store_id else ""
-            grocery_title = f"📦 Grocery Order #{base_order_no} -> {status_val}{store_label}"
-            grocery_body = f"Order #{base_order_no} status changed to {status_val}."
-            grocery_data = {
-                "orderId": order_id,
-                "readableId": str(readable_id),
-                "storeId": str(store_id or ""),
-                "status": status_val,
-                "screen": "picker",
-                "type": "ORDER_STATUS_UPDATE",
-                "role": "PICKER",
-                "timestamp": now_ts,
-            }
-            picker_topic = f"picker_orders_{store_id}" if store_id else "picker_orders"
-            await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
+            # Only push notifications for statuses pickers care about (CONFIRMED/PENDING for packing, CANCELLED to stop).
+            # SHIPPED and DELIVERED are rider/customer delivery states that store pickers do not need chimes for.
+            if str(status_val or "").upper() in ["CONFIRMED", "PENDING", "CANCELLED"]:
+                store_label = f" [{store_id.replace('hub-', '').upper()}]" if store_id else ""
+                grocery_title = f"📦 Grocery Order #{base_order_no} -> {status_val}{store_label}"
+                grocery_body = f"Order #{base_order_no} status changed to {status_val}."
+                grocery_data = {
+                    "orderId": order_id,
+                    "readableId": str(readable_id),
+                    "storeId": str(store_id or ""),
+                    "status": status_val,
+                    "screen": "picker",
+                    "type": "ORDER_STATUS_UPDATE",
+                    "role": "PICKER",
+                    "timestamp": now_ts,
+                }
+                picker_topic = f"picker_orders_{store_id}" if store_id else "picker_orders"
+                await send_fcm_topic_notification(picker_topic, grocery_title, grocery_body, grocery_data)
     except Exception as e:
         logger.error(f"Failed to dispatch isolated status FCM push notification: {str(e)}")
 

@@ -777,6 +777,23 @@ export async function PATCH(
         }
       } catch (e) {}
 
+      // If reassigned from another rider, notify the previous rider that the order has been unassigned
+      const previousRiderId = existingOrder.deliveryUserId
+      if (
+        previousRiderId &&
+        previousRiderId !== cleanDeliveryUserId &&
+        previousRiderId !== 'store_admin_self' &&
+        previousRiderId !== 'UNASSIGNED'
+      ) {
+        const readableNo = (existingOrder.readableId || existingOrder.id).slice(-8)
+        sendPushNotification(previousRiderId, {
+          title: 'Order Reassigned ↩️',
+          body: `Order #${readableNo} has been reassigned to another partner.`,
+          tag: `order-${existingOrder.id}-reassigned`,
+          data: { orderId: existingOrder.id, type: 'DELIVERY_UNASSIGNED' }
+        }).catch(() => {})
+      }
+
       // Notify the assigned rider via High-Priority Push Notification & FCM buzzer
       if (cleanDeliveryUserId) {
         const readableNo = (existingOrder.readableId || existingOrder.id).slice(-8)
@@ -1482,15 +1499,33 @@ export async function PATCH(
       }
 
       if (status === 'PACKED') {
-        sendPushNotificationToRoles([Role.DELIVERY], {
-          title: `Order #${baseOrderNo} Ready for Pickup 🛵`,
-          body: `Order #${baseOrderNo} is packed and ready for delivery.`,
-          icon: `${origin}/icons/icon-192.png`,
-          badge: `${origin}/icons/icon-192.png`,
-          tag: `${orderTag}-rider-ready`,
-          renotify: true,
-          data: { orderId: existingOrder.id, storeId: existingOrder.storeId || '' },
-        }).catch(err => console.error('Background rider push error:', err))
+        const assignedRider = existingOrder.deliveryUserId || deliveryUserId
+        const isSelfPickup = assignedRider === 'store_admin_self'
+        const isAssigned = assignedRider && assignedRider !== 'UNASSIGNED' && !isSelfPickup
+
+        if (isAssigned) {
+          // If rider is already assigned, send alert specifically to that assigned rider (avoid citywide broadcast)
+          sendPushNotification(assignedRider, {
+            title: `Order #${baseOrderNo} Ready for Pickup 🛵`,
+            body: `Order #${baseOrderNo} is packed and ready for delivery.`,
+            icon: `${origin}/icons/icon-192.png`,
+            badge: `${origin}/icons/icon-192.png`,
+            tag: `${orderTag}-rider-ready`,
+            renotify: true,
+            data: { orderId: existingOrder.id, storeId: existingOrder.storeId || '' },
+          }).catch(err => console.error('Background assigned rider push error:', err))
+        } else if (!isSelfPickup) {
+          // Unassigned: broadcast to available riders for pickup
+          sendPushNotificationToRoles([Role.DELIVERY], {
+            title: `Order #${baseOrderNo} Ready for Pickup 🛵`,
+            body: `Order #${baseOrderNo} is packed and ready for delivery.`,
+            icon: `${origin}/icons/icon-192.png`,
+            badge: `${origin}/icons/icon-192.png`,
+            tag: `${orderTag}-rider-ready`,
+            renotify: true,
+            data: { orderId: existingOrder.id, storeId: existingOrder.storeId || '' },
+          }).catch(err => console.error('Background rider broadcast push error:', err))
+        }
       }
 
       // If order was approved by Admin from ADMIN_PENDING to PENDING / CONFIRMED / etc, alert Restaurant or Dark Store specifically
