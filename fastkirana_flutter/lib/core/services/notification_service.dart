@@ -238,6 +238,18 @@ title.toString().contains('🛵') ||
       (body ?? '').toString().toLowerCase().contains('on the way') ||
       (body ?? '').toString().toLowerCase().contains('arriving'));
 
+  // Automatically clear ongoing lock-screen tracker when order reaches terminal state (DELIVERED/CANCELLED)
+  final rawStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
+  final rawOrderIdForClean = data['orderId'] ?? data['readableId'] ?? data['id'];
+  if (rawStatus == 'DELIVERED' || rawStatus == 'CANCELLED' || title.toString().toLowerCase().contains('delivered') || title.toString().toLowerCase().contains('cancel')) {
+    if (rawOrderIdForClean != null && rawOrderIdForClean.toString().trim().isNotEmpty) {
+      await NotificationService.clearOrderNotificationsById(
+        rawOrderIdForClean.toString().trim(),
+        readableId: data['readableId']?.toString(),
+      );
+    }
+  }
+
   if (notification != null) {
     // Android OS FCM client displays notification directly in system tray.
     // Suppress localNotifications.show here to avoid showing 2 duplicate notifications for the same message.
@@ -326,7 +338,7 @@ title.toString().contains('🛵') ||
         cleanTitle,
         cleanBody,
         NotificationDetails(android: androidDetails),
-        payload: (data['url'] ?? data['linkUrl'] ?? data['link'] ?? (cleanOrderId != null ? '/orders/track' : '')).toString(),
+        payload: (data['url'] ?? data['linkUrl'] ?? data['link'] ?? (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders')).toString(),
       );
     } catch (e) {
       debugPrint("Background notification show error: $e");
@@ -377,7 +389,22 @@ class NotificationService {
     try {
       final targetPlugin = plugin ?? FlutterLocalNotificationsPlugin();
       final ids = getCandidateOrderNotifIds(orderId, readableId: readableId);
-      await Future.wait(ids.map((id) => targetPlugin.cancel(id).catchError((_) {})));
+      final rawClean = (readableId ?? orderId)?.replaceAll('#', '').trim() ?? '';
+      final baseNo = rawClean.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      final tags = <String?>[
+        null,
+        if (rawClean.isNotEmpty) 'order_$rawClean',
+        if (baseNo.isNotEmpty && baseNo != rawClean) 'order_$baseNo',
+      ];
+      for (final id in ids) {
+        for (final tag in tags) {
+          if (tag == null) {
+            await targetPlugin.cancel(id).catchError((_) {});
+          } else {
+            await targetPlugin.cancel(id, tag: tag).catchError((_) {});
+          }
+        }
+      }
     } catch (_) {}
   }
 
@@ -629,8 +656,16 @@ class NotificationService {
       await _localNotifications?.initialize(
         initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse details) {
-          logger.d("Notification tapped: ${details.payload}");
+          logger.d("Notification tapped: ${details.payload}, actionId: ${details.actionId}");
           final payload = details.payload;
+          if (details.actionId == 'call_rider' && payload != null) {
+            final uri = Uri.tryParse(payload);
+            final phone = uri?.queryParameters['phone'];
+            if (phone != null && phone.isNotEmpty) {
+              launchUrl(Uri.parse('tel:$phone'), mode: LaunchMode.externalApplication);
+              return;
+            }
+          }
           if (payload != null && payload.trim().isNotEmpty) {
             NotificationService.navigateToLink(payload.trim());
           }
@@ -1008,7 +1043,7 @@ title.toString().contains('🛵') ||
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
-      payload: (_resolveNotificationRoute(Map<String, dynamic>.from(message.data)) ?? (cleanOrderId != null ? '/orders/track' : '')).toString(),
+      payload: (_resolveNotificationRoute(Map<String, dynamic>.from(message.data)) ?? (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders')).toString(),
     );
   }
 
@@ -1026,7 +1061,7 @@ title.toString().contains('🛵') ||
   }
 
   /// ─── LIVE ACTIVITY & LOCK SCREEN WIDGET (Android Ongoing Notification & iOS Time-Sensitive) ───
-  /// Displays live lock screen status: "Rider 4 mins away • Reaching your gate"
+  /// Displays live lock screen status: "Arriving in 6 mins 🛵 • #4220"
   /// Updates silently without playing a chime or vibrating continuously.
   Future<void> updateLiveOrderActivity({
     required Order order,
@@ -1038,31 +1073,49 @@ title.toString().contains('🛵') ||
 
     final isTerminal = order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled;
     final int notifId = NotificationService.getOrderNotifId(order.id, readableId: order.readableId);
+    final rawDisplay = (order.readableId != null && order.readableId!.trim().isNotEmpty)
+        ? order.readableId!.trim()
+        : (order.displayId.isNotEmpty ? order.displayId : order.id);
+    final cleanDisplayId = rawDisplay.replaceAll('#', '').trim();
+    final displayTag = cleanDisplayId.isNotEmpty
+        ? (cleanDisplayId.startsWith('FK-') ? '#$cleanDisplayId' : '#FK-$cleanDisplayId')
+        : '#ORDER';
+    final notifTag = cleanDisplayId.isNotEmpty ? 'order_$cleanDisplayId' : 'order_${order.id}';
 
     if (isTerminal) {
       await clearLiveOrderActivity(order.id, readableId: order.readableId);
       if (order.status == OrderStatus.delivered) {
-        // Show one-time celebration delivery notification
+        // Show one-time celebration delivery notification with pleasant chime
         try {
-          const androidDelivered = AndroidNotificationDetails(
+          final androidDelivered = AndroidNotificationDetails(
             'fastkirana_order_status',
             'Live Order Tracking & Delivery',
+            channelDescription: 'Real-time alerts for delivered orders.',
             importance: Importance.max,
             priority: Priority.high,
             playSound: true,
-            sound: RawResourceAndroidNotificationSound('order_chime'),
+            sound: const RawResourceAndroidNotificationSound('order_chime'),
             icon: '@mipmap/ic_launcher',
+            color: const Color(0xFF00A344),
+            colorized: true,
+            tag: notifTag,
+            styleInformation: BigTextStyleInformation(
+              'Your FastMinute order was delivered. Thank you for shopping fresh with us! 🎉',
+              contentTitle: '🎉 Order Delivered! • $displayTag',
+              summaryText: 'Delivered',
+            ),
           );
           const iosDelivered = DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
+            subtitle: 'Delivered Successfully 🎉',
           );
           await _localNotifications?.show(
             notifId,
-            '🎉 Order Delivered!',
+            '🎉 Order Delivered! • $displayTag',
             'Your FastMinute order was delivered. Enjoy!',
-            const NotificationDetails(android: androidDelivered, iOS: iosDelivered),
+            NotificationDetails(android: androidDelivered, iOS: iosDelivered),
             payload: '/orders/${order.readableId ?? order.id}/track',
           );
         } catch (_) {}
@@ -1072,34 +1125,101 @@ title.toString().contains('🛵') ||
 
     String title;
     String body;
+    String subText;
     int progress;
+    List<AndroidNotificationAction> actions = [];
 
-    final riderName = (order.deliveryBoyName != null && order.deliveryBoyName!.trim().isNotEmpty)
+    final rawRiderName = (order.deliveryBoyName != null && order.deliveryBoyName!.trim().isNotEmpty)
         ? order.deliveryBoyName!.trim()
-        : 'Rider';
+        : (order.deliveryUser?.name != null && order.deliveryUser!.name!.trim().isNotEmpty
+            ? order.deliveryUser!.name!.trim()
+            : '');
+    final riderName = rawRiderName.isNotEmpty ? rawRiderName : 'Delivery Partner';
+    final rawRiderPhone = (order.deliveryBoyPhone != null && order.deliveryBoyPhone!.trim().isNotEmpty)
+        ? order.deliveryBoyPhone!.trim()
+        : (order.deliveryUser?.phone ?? '');
+    final cleanPhone = rawRiderPhone.replaceAll(RegExp(r'[^0-9]'), '');
 
     switch (order.status) {
       case OrderStatus.shipped:
-        title = 'Rider on the Way';
-        body = '🛵 $riderName is on the way';
-        progress = customProgress ?? 80;
+        if (customEtaText != null && customEtaText.isNotEmpty && customEtaText != 'Delivered 🎉') {
+          if (customEtaText.toLowerCase().contains('now') || customEtaText.toLowerCase().contains('arriving')) {
+            title = 'Arriving Now! 🛵 • $displayTag';
+            body = '$riderName has reached your doorstep!\n📍 FastMinute Live Doorstep Delivery';
+            subText = 'At Doorstep • 95%';
+            progress = customProgress ?? 95;
+          } else {
+            title = 'Arriving in $customEtaText 🛵 • $displayTag';
+            body = '$riderName is on the way to your doorstep\n📍 FastMinute Live GPS Tracking';
+            subText = 'On the way • 80%';
+            progress = customProgress ?? 80;
+          }
+        } else {
+          title = 'Out for Delivery 🛵 • $displayTag';
+          body = '$riderName is heading to your doorstep\n📍 FastMinute Live GPS Tracking';
+          subText = 'In Transit • 75%';
+          progress = customProgress ?? 75;
+        }
+
+        actions = [
+          const AndroidNotificationAction(
+            'open_live_track',
+            '📍 Live Map',
+            showsUserInterface: true,
+          ),
+          if (cleanPhone.isNotEmpty)
+            AndroidNotificationAction(
+              'call_rider',
+              '📞 Call Rider',
+              showsUserInterface: true,
+            ),
+        ];
         break;
+
       case OrderStatus.packed:
-        title = 'Order Packed';
-        body = '🛍️ Packed & ready for delivery partner';
-        progress = customProgress ?? 55;
+        title = 'Order Packed 🛍️ • $displayTag';
+        body = rawRiderName.isNotEmpty
+            ? '$riderName is assigned & picking up package\n🏪 Ghatampur Central Hub'
+            : 'Store packed your fresh items • Awaiting rider pickup\n🏪 Ghatampur Central Hub';
+        subText = 'Packed • 60%';
+        progress = customProgress ?? 60;
+        actions = [
+          const AndroidNotificationAction(
+            'open_live_track',
+            '📍 Track Status',
+            showsUserInterface: true,
+          ),
+        ];
         break;
+
       case OrderStatus.confirmed:
-        title = 'Order Confirmed';
-        body = '👨‍🍳 Store is packing your order';
-        progress = customProgress ?? 30;
+        title = 'Order Confirmed 👨‍🍳 • $displayTag';
+        body = 'Store accepted your order & preparing fresh items\n🏪 Ghatampur Central Hub';
+        subText = 'Preparing • 35%';
+        progress = customProgress ?? 35;
+        actions = [
+          const AndroidNotificationAction(
+            'open_live_track',
+            '📍 Live Status',
+            showsUserInterface: true,
+          ),
+        ];
         break;
+
       case OrderStatus.adminPending:
       case OrderStatus.pending:
       default:
-        title = 'Order Placed';
-        body = '⏳ Order received • Preparing fresh';
+        title = 'Store Verifying ⏳ • $displayTag';
+        body = 'Ghatampur Central Hub is checking freshness & stock\n⏳ FastMinute Express';
+        subText = 'Verifying • 15%';
         progress = customProgress ?? 15;
+        actions = [
+          const AndroidNotificationAction(
+            'open_live_track',
+            '📍 View Order',
+            showsUserInterface: true,
+          ),
+        ];
         break;
     }
 
@@ -1113,38 +1233,34 @@ title.toString().contains('🛵') ||
       channelDescription: 'Persistent lock-screen live activity with real-time delivery progress.',
       importance: Importance.high,
       priority: Priority.max,
-      ongoing: true, // Lock screen persistent widget
+      ongoing: true, // Lock screen persistent dynamic activity
       autoCancel: false,
-      onlyAlertOnce: true, // Updates silently without chime on every tick
+      onlyAlertOnce: true, // Updates silently without chime on every GPS tick
       showProgress: true,
       maxProgress: 100,
       progress: progress,
-      subText: 'Live Tracker ($progress%)',
+      subText: subText,
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
-        summaryText: 'Live Tracker ($progress%)',
+        summaryText: subText,
       ),
       category: AndroidNotificationCategory.status,
       visibility: NotificationVisibility.public,
-      color: const Color(0xFF00B140),
+      color: const Color(0xFF00A344),
       colorized: true,
       icon: '@mipmap/ic_launcher',
-      actions: const [
-        AndroidNotificationAction(
-          'open_live_track',
-          '📍 Track Order',
-          showsUserInterface: true,
-        ),
-      ],
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      tag: notifTag,
+      actions: actions,
     );
 
-    const iosDetails = DarwinNotificationDetails(
+    final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: false,
       interruptionLevel: InterruptionLevel.timeSensitive,
-      subtitle: 'Live Order Tracker',
+      subtitle: subText,
       categoryIdentifier: 'order_tracking',
     );
 
@@ -1154,7 +1270,7 @@ title.toString().contains('🛵') ||
         title,
         body,
         NotificationDetails(android: androidDetails, iOS: iosDetails),
-        payload: '/orders/${order.readableId ?? order.id}/track',
+        payload: '/orders/${order.readableId ?? order.id}/track?phone=$cleanPhone',
       );
     } catch (e, st) {
       LoggerService.error('NotificationService: updateLiveOrderActivity error', e, st);

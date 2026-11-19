@@ -50,6 +50,11 @@ class AppRouter {
       }
     }
 
+    // Handle fallback /orders/track or /order/track (navigate to orders list)
+    if (cleanPath == '/orders/track' || cleanPath == '/order/track') {
+      return FadeSlideRoute(page: const OrdersScreen());
+    }
+
     // Handle deep links like /order/<id>/track or /orders/<id>/track
     final orderTrackMatch = RegExp(r'^/(?:orders?)/([^/]+)/track/?$').firstMatch(cleanPath);
     if (orderTrackMatch != null) {

@@ -1,5 +1,6 @@
 import '../core/theme/design_system.dart';
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
@@ -155,29 +156,33 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                   FadeSlideRoute(page: OrderTrackingScreen(orderId: latestOrder.readableId ?? latestOrder.id)),
                 );
               },
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppDesignSystem.slate300,
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 18,
-                      offset: const Offset(0, 5),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFF00A344).withValues(alpha: 0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    BoxShadow(
-                      color: AppDesignSystem.accent.withValues(alpha: 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
+                    child: Row(
                   children: [
                     // 1. Left Animated Status Icon Badge
                     Container(
@@ -340,7 +345,9 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }
 
