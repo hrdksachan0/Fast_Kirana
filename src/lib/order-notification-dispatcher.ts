@@ -143,94 +143,90 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     data: { orderId: primaryCustOrder.id, readableId: baseDisplayId },
   }).catch((err: any) => console.error('Error sending customer web push:', err))
 
-  // ─── 3. PER-OUTLET STAFF & KITCHEN NOTIFICATIONS (Strictly Separate per outlet) ──────
-  for (const order of createdOrders) {
-    const isRestaurant = Boolean(order.orderType === 'RESTAURANT' || order.restaurantId)
-    const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
+  // ─── 3. PER-OUTLET STAFF & KITCHEN NOTIFICATIONS (Strictly Separate per outlet, ONLY after Admin Approval) ──────
+  // If ANY order in this checkout requires admin approval, DO NOT notify pickers, riders, or restaurants yet!
+  // Outlets are notified strictly AFTER Admin Approval via dispatchAdminApprovedNotifications.
+  if (!isAnyAdminPending) {
+    for (const order of createdOrders) {
+      const isRestaurant = Boolean(order.orderType === 'RESTAURANT' || order.restaurantId)
+      const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
+      const safeShopName = (order.shopName || '').replace(/FastKirana/g, 'FastMinute')
 
-    const isAdminPending = order.status === OrderStatus.ADMIN_PENDING
-    const safeShopName = (order.shopName || '').replace(/FastKirana/g, 'FastMinute')
-
-    // If order requires admin approval, DO NOT notify pickers, riders, or restaurants yet!
-    // They will be notified ONLY upon admin approval.
-    if (isAdminPending) {
-      continue
-    }
-
-    // Auto-approved Restaurant order: Notify Restaurant Owner / Kitchen ONLY
-    if (isRestaurant && order.restaurantId) {
-      if (order.status !== OrderStatus.CANCELLED) {
-        sendPushNotificationToRestaurant(order.restaurantId, {
-          title: `👨‍🍳 New Food Order #${displayId}!`,
-          body: `New order #${displayId} received for ${safeShopName || 'Kitchen'}. Tap to prepare dishes.`,
-          tag: `restaurant-order-${order.id}`,
-          data: { orderId: order.id, restaurantId: order.restaurantId },
-        }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
-      }
-    } else {
-      // Auto-approved Grocery order: Notify Dark Store Pickers ONLY
-      const rolesToNotify = [Role.PICKER].filter((r) => !notifiedWebRoles.has(r))
-      if (rolesToNotify.length > 0) {
-        rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
-        sendPushNotificationToRoles(rolesToNotify, {
-          title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
-          body: isOnlinePaid
-            ? `Order #${displayId} of ₹${order.total} — PAID Online ✅`
-            : `Order #${displayId} of ₹${order.total} has been placed. Tap to pack.`,
-          tag: `order-${order.id}`,
-          data: { orderId: order.id, storeId: order.storeId || '' },
-        }).catch((err: any) => console.error('Error sending push notification to grocery pickers:', err))
-      }
-    }
-
-    // FCM Push Notification to Staff & Kitchens (Auto-approved only)
-    try {
-      const { fcmMessaging } = await import('@/lib/firebase-admin')
-      if (fcmMessaging) {
-        // Direct FCM push to Picker staff for grocery orders
-        if (!isRestaurant) {
-          const pickerPayload = buildOrderFcmPayload(
-            isOnlinePaid ? '💳 New PAID Order to Pick!' : '📦 New Grocery Order to Pick!',
-            `New order #${displayId} of ₹${order.total} (${order.items?.length || 1} items). Tap to pack.`,
-            {
-              title: isOnlinePaid ? '💳 New PAID Order to Pick!' : '📦 New Grocery Order to Pick!',
-              body: `New order #${displayId} of ₹${order.total} (${order.items?.length || 1} items). Tap to pack.`,
-              orderId: order.id,
-              readableId: displayId,
-              status: order.status,
-              screen: 'picker',
-              type: 'NEW_ORDER',
-              role: 'PICKER',
-              timestamp: Date.now().toString(),
-            }
-          )
-
-          const pickerTopic = order.storeId ? `picker_orders_${order.storeId}` : 'picker_orders'
-          sendTopicWithRetry(fcmMessaging, { topic: pickerTopic, ...pickerPayload }).catch(() => {})
+      // Auto-approved Restaurant order: Notify Restaurant Owner / Kitchen ONLY
+      if (isRestaurant && order.restaurantId) {
+        if (order.status !== OrderStatus.CANCELLED) {
+          sendPushNotificationToRestaurant(order.restaurantId, {
+            title: `👨‍🍳 New Food Order #${displayId}!`,
+            body: `New order #${displayId} received for ${safeShopName || 'Kitchen'}. Tap to prepare dishes.`,
+            tag: `restaurant-order-${order.id}`,
+            data: { orderId: order.id, restaurantId: order.restaurantId },
+          }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
         }
-
-        // Restaurant kitchen FCM notification (Isolated to this restaurant)
-        if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED) {
-          const restaurantPayload = buildOrderFcmPayload(
-            `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
-            `Order #${displayId} received! Open kitchen console to prepare dishes.`,
-            {
-              title: `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
-              body: `Order #${displayId} received! Open kitchen console to prepare dishes.`,
-              orderId: order.id,
-              readableId: displayId,
-              restaurantId: order.restaurantId,
-              status: order.status,
-              screen: 'restaurant-console',
-              timestamp: Date.now().toString(),
-            }
-          )
-
-          sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+      } else {
+        // Auto-approved Grocery order: Notify Dark Store Pickers ONLY
+        const rolesToNotify = [Role.PICKER].filter((r) => !notifiedWebRoles.has(r))
+        if (rolesToNotify.length > 0) {
+          rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
+          sendPushNotificationToRoles(rolesToNotify, {
+            title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
+            body: isOnlinePaid
+              ? `Order #${displayId} of ₹${order.total} — PAID Online ✅`
+              : `Order #${displayId} of ₹${order.total} has been placed. Tap to pack.`,
+            tag: `order-${order.id}`,
+            data: { orderId: order.id, storeId: order.storeId || '' },
+          }).catch((err: any) => console.error('Error sending push notification to grocery pickers:', err))
         }
       }
-    } catch (fcmErr) {
-      console.error('Customer order placement FCM error:', fcmErr)
+
+      // FCM Push Notification to Staff & Kitchens (Auto-approved only)
+      try {
+        const { fcmMessaging } = await import('@/lib/firebase-admin')
+        if (fcmMessaging) {
+          // Direct FCM push to Picker staff for grocery orders ONLY
+          if (!isRestaurant) {
+            const pickerPayload = buildOrderFcmPayload(
+              isOnlinePaid ? '💳 New PAID Order to Pick!' : '📦 New Grocery Order to Pick!',
+              `New order #${displayId} of ₹${order.total} (${order.items?.length || 1} items). Tap to pack.`,
+              {
+                title: isOnlinePaid ? '💳 New PAID Order to Pick!' : '📦 New Grocery Order to Pick!',
+                body: `New order #${displayId} of ₹${order.total} (${order.items?.length || 1} items). Tap to pack.`,
+                orderId: order.id,
+                readableId: displayId,
+                status: order.status,
+                screen: 'picker',
+                type: 'NEW_ORDER',
+                role: 'PICKER',
+                timestamp: Date.now().toString(),
+              }
+            )
+
+            const pickerTopic = order.storeId ? `picker_orders_${order.storeId}` : 'picker_orders'
+            sendTopicWithRetry(fcmMessaging, { topic: pickerTopic, ...pickerPayload }).catch(() => {})
+          }
+
+          // Restaurant kitchen FCM notification ONLY (Isolated to this restaurant)
+          if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED) {
+            const restaurantPayload = buildOrderFcmPayload(
+              `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
+              `Order #${displayId} received! Open kitchen console to prepare dishes.`,
+              {
+                title: `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
+                body: `Order #${displayId} received! Open kitchen console to prepare dishes.`,
+                orderId: order.id,
+                readableId: displayId,
+                restaurantId: order.restaurantId,
+                status: order.status,
+                screen: 'restaurant-console',
+                timestamp: Date.now().toString(),
+              }
+            )
+
+            sendTopicWithRetry(fcmMessaging, { topic: `restaurant_${order.restaurantId}`, ...restaurantPayload }).catch(() => {})
+          }
+        }
+      } catch (fcmErr) {
+        console.error('Customer order placement FCM error:', fcmErr)
+      }
     }
   }
 
