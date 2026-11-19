@@ -45,7 +45,13 @@ export async function GET(
          OR o.id = ${strippedFkId} 
          OR o."readableId" = ${id} 
          OR o."readableId" = ${cleanId} 
-         OR o."readableId" = ${strippedFkId} 
+         OR o."readableId" = ${strippedFkId}
+         OR o."readableId" LIKE ${strippedFkId} || '-%'
+         OR o."readableId" LIKE ${cleanId} || '-%'
+         OR o."combinedId" = ${id}
+         OR o."combinedId" = ${cleanId}
+         OR o."combinedId" = ${strippedFkId}
+      ORDER BY o."createdAt" DESC
       LIMIT 1
     `
 

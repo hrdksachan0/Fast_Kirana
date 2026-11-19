@@ -74,7 +74,7 @@ const cardVisibilityFields = {
 export const campaignBentoConfigSchema = z
   .object({
     version: z.literal(1).default(1),
-    enabled: z.boolean().default(true),
+    enabled: z.boolean().default(false),
     seasonalSwitchUp: z
       .object({
         ...cardVisibilityFields,
@@ -192,7 +192,7 @@ export type BentoCardKey =
 
 export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   version: 1,
-  enabled: true,
+  enabled: false,
   seasonalSwitchUp: {
     enabled: true,
     sortOrder: 1,

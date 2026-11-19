@@ -2226,14 +2226,16 @@ export async function GET(request: NextRequest) {
     }
 
     function getCombinedStatus(statuses: string[]): string {
-      const active = statuses.filter(s => s !== 'CANCELLED')
+      const upper = statuses.map(s => String(s || '').toUpperCase().trim())
+      const active = upper.filter(s => s !== 'CANCELLED')
       if (active.length === 0) return 'CANCELLED'
       if (active.includes('ADMIN_PENDING')) return 'ADMIN_PENDING'
       if (active.includes('PENDING')) return 'PENDING'
-      if (active.includes('CONFIRMED')) return 'CONFIRMED'
+      if (active.includes('CONFIRMED') || active.includes('PREPARING') || active.includes('COOKING')) return 'CONFIRMED'
       if (active.includes('PACKED')) return 'PACKED'
       if (active.includes('SHIPPED')) return 'SHIPPED'
-      return 'DELIVERED'
+      if (active.every(s => s === 'DELIVERED')) return 'DELIVERED'
+      return active[0] || 'PENDING'
     }
 
     // Customer grouping (Group by combinedId or creation timestamp within 10 seconds)
