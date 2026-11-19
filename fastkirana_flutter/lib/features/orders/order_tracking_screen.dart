@@ -1922,8 +1922,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                             const SizedBox(height: 12),
                           ],
 
-                          // 1. Google Maps Viewport (ONLY WHEN ON THE WAY / RIDER ASSIGNED)
-                          if (statusStep >= 2 && !isDelivered) ...[
+                          // 1. Google Maps Viewport (ONLY WHEN DISPATCHED / OUT FOR DELIVERY)
+                          if (statusStep >= 3 && !isDelivered) ...[
                             TrackingMapView(
                               initialTarget: initialTarget,
                               isDelivered: isDelivered,

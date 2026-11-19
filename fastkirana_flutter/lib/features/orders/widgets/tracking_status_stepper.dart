@@ -290,7 +290,6 @@ class TrackingStatusStepper extends StatelessWidget {
                       return sub.status;
                     }();
 
-                    final subIsDelivered = effectiveSubStatus == OrderStatus.delivered;
                     final Color badgeTextColor;
                     final Color badgeBgColor;
 
@@ -317,7 +316,6 @@ class TrackingStatusStepper extends StatelessWidget {
                         break;
                       case OrderStatus.adminPending:
                       case OrderStatus.pending:
-                      default:
                         badgeTextColor = const Color(0xFFC2410C);
                         badgeBgColor = const Color(0xFFFFF7ED);
                         break;

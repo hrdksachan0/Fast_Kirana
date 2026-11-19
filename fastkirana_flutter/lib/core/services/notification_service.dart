@@ -240,12 +240,12 @@ title.toString().contains('🛵') ||
 
   // Automatically clear ongoing lock-screen tracker when order reaches terminal state (DELIVERED/CANCELLED)
   final rawStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
-  final rawOrderIdForClean = data['orderId'] ?? data['readableId'] ?? data['id'];
+  final rawOrderIdForClean = data['readableId'] ?? data['orderId'] ?? data['id'];
   if (rawStatus == 'DELIVERED' || rawStatus == 'CANCELLED' || title.toString().toLowerCase().contains('delivered') || title.toString().toLowerCase().contains('cancel')) {
     if (rawOrderIdForClean != null && rawOrderIdForClean.toString().trim().isNotEmpty) {
       await NotificationService.clearOrderNotificationsById(
-        rawOrderIdForClean.toString().trim(),
-        readableId: data['readableId']?.toString(),
+        (data['orderId'] ?? rawOrderIdForClean).toString().trim(),
+        readableId: data['readableId']?.toString() ?? rawOrderIdForClean.toString().trim(),
       );
     }
   }
@@ -260,7 +260,7 @@ title.toString().contains('🛵') ||
   // Trigger system notification for data-only messages
   if (body != null && body.toString().trim().isNotEmpty) {
     try {
-      final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
+      final rawOrderId = data['readableId'] ?? data['orderId'] ?? data['id'];
       final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
           ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
           : null;
@@ -389,12 +389,17 @@ class NotificationService {
     try {
       final targetPlugin = plugin ?? FlutterLocalNotificationsPlugin();
       final ids = getCandidateOrderNotifIds(orderId, readableId: readableId);
-      final rawClean = (readableId ?? orderId)?.replaceAll('#', '').trim() ?? '';
-      final baseNo = rawClean.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      final cleanRid = readableId?.replaceAll('#', '').trim() ?? '';
+      final baseRid = cleanRid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      final cleanOid = orderId?.replaceAll('#', '').trim() ?? '';
+      final baseOid = cleanOid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+
       final tags = <String?>[
         null,
-        if (rawClean.isNotEmpty) 'order_$rawClean',
-        if (baseNo.isNotEmpty && baseNo != rawClean) 'order_$baseNo',
+        if (cleanRid.isNotEmpty) 'order_$cleanRid',
+        if (baseRid.isNotEmpty && baseRid != cleanRid) 'order_$baseRid',
+        if (cleanOid.isNotEmpty && cleanOid != cleanRid) 'order_$cleanOid',
+        if (baseOid.isNotEmpty && baseOid != cleanOid && baseOid != baseRid) 'order_$baseOid',
       ];
       for (final id in ids) {
         for (final tag in tags) {
@@ -686,7 +691,7 @@ class NotificationService {
         }
       });
 
-      // 6.1 Check Cold Launch from Notification (when app was terminated)
+      // 6.1 Check Cold Launch from FCM Notification (when app was terminated)
       try {
         final initialMsg = await _fcm?.getInitialMessage();
         if (initialMsg != null) {
@@ -700,6 +705,29 @@ class NotificationService {
         }
       } catch (e) {
         debugPrint('[NotificationService] getInitialMessage error: $e');
+      }
+
+      // 6.2 Check Cold Launch from Local Notification (Live Activity / Ongoing notification tap)
+      try {
+        final launchDetails = await _localNotifications?.getNotificationAppLaunchDetails();
+        if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
+          final payload = launchDetails.notificationResponse?.payload;
+          final actionId = launchDetails.notificationResponse?.actionId;
+          if (actionId == 'call_rider' && payload != null) {
+            final uri = Uri.tryParse(payload);
+            final phone = uri?.queryParameters['phone'];
+            if (phone != null && phone.isNotEmpty) {
+              launchUrl(Uri.parse('tel:$phone'), mode: LaunchMode.externalApplication);
+            }
+          } else if (payload != null && payload.trim().isNotEmpty) {
+            final cleanTarget = payload.trim();
+            pendingDeepLinkUrl = cleanTarget;
+            debugPrint('[NotificationService] Stored local notification launch link: $pendingDeepLinkUrl');
+            NotificationService.navigateToLink(cleanTarget);
+          }
+        }
+      } catch (e) {
+        debugPrint('[NotificationService] getNotificationAppLaunchDetails error: $e');
       }
 
       // 7. Auto-save refreshed tokens and re-register cleanly when authenticated
@@ -890,7 +918,7 @@ title.toString().contains('🛵') ||
       }
     } catch (_) {}
 
-    final rawOrderId = data['orderId'] ?? data['readableId'] ?? data['id'];
+    final rawOrderId = data['readableId'] ?? data['orderId'] ?? data['id'];
     final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
         ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
         : null;
@@ -1060,6 +1088,12 @@ title.toString().contains('🛵') ||
     }
   }
 
+  static String? _lastLiveActivityOrderId;
+  static String? _lastLiveActivityTitle;
+  static String? _lastLiveActivityBody;
+  static int? _lastLiveActivityProgress;
+  static int _lastLiveActivityTimestamp = 0;
+
   /// ─── LIVE ACTIVITY & LOCK SCREEN WIDGET (Android Ongoing Notification & iOS Time-Sensitive) ───
   /// Displays live lock screen status: "Arriving in 6 mins 🛵 • #4220"
   /// Updates silently without playing a chime or vibrating continuously.
@@ -1083,6 +1117,11 @@ title.toString().contains('🛵') ||
     final notifTag = cleanDisplayId.isNotEmpty ? 'order_$cleanDisplayId' : 'order_${order.id}';
 
     if (isTerminal) {
+      _lastLiveActivityOrderId = null;
+      _lastLiveActivityTitle = null;
+      _lastLiveActivityBody = null;
+      _lastLiveActivityProgress = null;
+      _lastLiveActivityTimestamp = 0;
       await clearLiveOrderActivity(order.id, readableId: order.readableId);
       if (order.status == OrderStatus.delivered) {
         // Show one-time celebration delivery notification with pleasant chime
@@ -1168,7 +1207,7 @@ title.toString().contains('🛵') ||
             showsUserInterface: true,
           ),
           if (cleanPhone.isNotEmpty)
-            AndroidNotificationAction(
+            const AndroidNotificationAction(
               'call_rider',
               '📞 Call Rider',
               showsUserInterface: true,
@@ -1263,6 +1302,20 @@ title.toString().contains('🛵') ||
       subtitle: subText,
       categoryIdentifier: 'order_tracking',
     );
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (order.id == _lastLiveActivityOrderId &&
+        title == _lastLiveActivityTitle &&
+        body == _lastLiveActivityBody &&
+        progress == _lastLiveActivityProgress &&
+        (nowMs - _lastLiveActivityTimestamp < 8000)) {
+      return;
+    }
+    _lastLiveActivityOrderId = order.id;
+    _lastLiveActivityTitle = title;
+    _lastLiveActivityBody = body;
+    _lastLiveActivityProgress = progress;
+    _lastLiveActivityTimestamp = nowMs;
 
     try {
       await _localNotifications?.show(
