@@ -515,12 +515,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  void _playStatusChime() {
+  void _playStatusChime([String soundAsset = 'sounds/status_step_tick.wav']) {
     try {
       _audioPlayer.stop();
       _audioPlayer.play(
-        AssetSource('sounds/order_chime.mp3'),
-        volume: 0.9,
+        AssetSource(soundAsset),
+        volume: 0.85,
+        mode: PlayerMode.lowLatency,
       );
     } catch (_) {
       SystemSound.play(SystemSoundType.alert);
@@ -532,19 +533,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     switch (newStatus) {
       case OrderStatus.confirmed:
         HapticFeedback.lightImpact();
-        _playStatusChime();
+        _playStatusChime('sounds/status_step_tick.wav');
         break;
       case OrderStatus.packed:
         HapticFeedback.mediumImpact();
-        _playStatusChime();
+        _playStatusChime('sounds/status_step_tick.wav');
         break;
       case OrderStatus.shipped:
         HapticFeedback.heavyImpact();
-        _playStatusChime();
+        _playStatusChime('sounds/out_for_delivery_bell.wav');
         break;
       case OrderStatus.delivered:
         HapticFeedback.heavyImpact();
-        _playStatusChime();
+        _playStatusChime('sounds/order_delivered_joy.wav');
         _confettiController.play();
         break;
       case OrderStatus.cancelled:

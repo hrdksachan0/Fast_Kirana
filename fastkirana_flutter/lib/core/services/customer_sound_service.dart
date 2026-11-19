@@ -61,15 +61,12 @@ class CustomerSoundService {
         });
       }
 
-      // 2. Audio Chime Playback with dedicated soundscapes (Online vs COD)
+      // 2. Audio Chime Playback: Swiggy/Zomato Eb-Major signature sparkle chime
       await _initPlayer();
       if (_player != null) {
         await _player!.stop();
-        final soundAsset = isOnline
-            ? 'sounds/order_success_online.wav'
-            : 'sounds/order_success_cod.wav';
         await _player!.play(
-          AssetSource(soundAsset),
+          AssetSource('sounds/order_placed_celebrate.wav'),
           volume: isOnline ? 0.95 : 0.90,
           mode: PlayerMode.lowLatency,
         );

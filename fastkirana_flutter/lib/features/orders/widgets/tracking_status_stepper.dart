@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/responsive.dart';
 import '../../../data/models/order.dart';
@@ -372,79 +373,83 @@ class TrackingStatusStepper extends StatelessWidget {
             final isCurrent = statusStep == index;
             final isLast = index == steps.length - 1;
 
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  children: [
-                    AnimatedStepNode(
-                      isCompleted: isCompleted,
-                      isCurrent: isCurrent,
-                      icon: item['icon'] as IconData,
-                      activeColor: index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344),
-                      completedColor: const Color(0xFF00A344),
-                    ),
-                    if (!isLast)
-                      Container(
-                        width: 2,
-                        height: 28,
-                        color: isCompleted ? const Color(0xFF00A344) : const Color(0xFFE2E8F0),
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => HapticFeedback.selectionClick(),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    children: [
+                      AnimatedStepNode(
+                        isCompleted: isCompleted,
+                        isCurrent: isCurrent,
+                        icon: item['icon'] as IconData,
+                        activeColor: index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344),
+                        completedColor: const Color(0xFF00A344),
                       ),
-                  ],
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              item['title'] as String,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 13),
-                                fontWeight: (isCurrent || isCompleted) ? FontWeight.w800 : FontWeight.w500,
-                                color: isCurrent
-                                    ? (index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344))
-                                    : (isCompleted ? slateDark : slateMuted),
-                              ),
-                            ),
-                            if (isCurrent) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                  color: index == 0 ? const Color(0xFFFFF7ED) : const Color(0xFFDCFCE7),
-                                  borderRadius: BorderRadius.circular(4),
+                      if (!isLast)
+                        Container(
+                          width: 2,
+                          height: 28,
+                          color: isCompleted ? const Color(0xFF00A344) : const Color(0xFFE2E8F0),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                item['title'] as String,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 13),
+                                  fontWeight: (isCurrent || isCompleted) ? FontWeight.w800 : FontWeight.w500,
+                                  color: isCurrent
+                                      ? (index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344))
+                                      : (isCompleted ? slateDark : slateMuted),
                                 ),
-                                child: Text(
-                                  index == 0 ? 'VERIFYING' : 'NOW',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 8.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: index == 0 ? const Color(0xFFC2410C) : const Color(0xFF15803D),
+                              ),
+                              if (isCurrent) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: index == 0 ? const Color(0xFFFFF7ED) : const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    index == 0 ? 'VERIFYING' : 'NOW',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 8.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: index == 0 ? const Color(0xFFC2410C) : const Color(0xFF15803D),
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ],
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          item['subtitle'] as String,
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11),
-                            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                            color: isCurrent ? const Color(0xFF475569) : slateMuted,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            item['subtitle'] as String,
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                              color: isCurrent ? const Color(0xFF475569) : slateMuted,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           }),
         ],
@@ -497,6 +502,9 @@ class _AnimatedStepNodeState extends State<AnimatedStepNode>
   @override
   void didUpdateWidget(covariant AnimatedStepNode oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if ((widget.isCurrent && !oldWidget.isCurrent) || (widget.isCompleted && !oldWidget.isCompleted)) {
+      HapticFeedback.lightImpact();
+    }
     if (widget.isCurrent && !_pulseController.isAnimating) {
       _pulseController.repeat(reverse: true);
     } else if (!widget.isCurrent && _pulseController.isAnimating) {
