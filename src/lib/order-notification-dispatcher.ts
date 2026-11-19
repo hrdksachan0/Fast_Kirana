@@ -263,9 +263,6 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     }
   }
 
-
-  }
-
   // 4. Exactly 1 Consolidated WhatsApp Alert to Hub Admin (Single alert even for multi-outlet combined orders)
   try {
     const primaryOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
