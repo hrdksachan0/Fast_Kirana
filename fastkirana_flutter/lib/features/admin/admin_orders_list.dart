@@ -310,6 +310,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   static const Color primaryRed = AppDesignSystem.primary;
 
   bool _isAutoApprove = false;
+  final Set<String> _dismissedOrAcknowledgedAlarmOrders = {};
 
   Future<void> _loadAutoApproveSetting() async {
     try {
@@ -510,7 +511,17 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                 break;
               }
             }
-            if (parsedStatus == OrderStatus.confirmed || parsedStatus == OrderStatus.delivered) {
+            if (parsedStatus == OrderStatus.confirmed ||
+                parsedStatus == OrderStatus.delivered ||
+                parsedStatus == OrderStatus.packed ||
+                parsedStatus == OrderStatus.shipped ||
+                parsedStatus == OrderStatus.cancelled) {
+              _dismissedOrAcknowledgedAlarmOrders.add(orderId);
+              if (readableId != null) {
+                _dismissedOrAcknowledgedAlarmOrders.add(readableId);
+                final base = readableId.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim();
+                if (base.isNotEmpty) _dismissedOrAcknowledgedAlarmOrders.add(base);
+              }
               _stopPendingAlarm();
             }
             if (mounted) setState(() {});
@@ -518,16 +529,21 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
           _silentFetchAdminOrders();
           final status = (record['status'] ?? '').toString().toUpperCase();
-          final paymentStatus = (record['paymentStatus'] ?? '').toString().toUpperCase();
-          if (status == 'CANCELLED') {
+          if (status == 'CANCELLED' || status == 'CONFIRMED' || status == 'DELIVERED') {
             final recordId = record['id']?.toString();
             final readableId = record['readableId']?.toString();
+            if (recordId != null) _dismissedOrAcknowledgedAlarmOrders.add(recordId);
+            if (readableId != null) {
+              _dismissedOrAcknowledgedAlarmOrders.add(readableId);
+              final base = readableId.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim();
+              if (base.isNotEmpty) _dismissedOrAcknowledgedAlarmOrders.add(base);
+            }
             if (OrderAlarmService.instance.isPlaying &&
                 (OrderAlarmService.instance.activeOrderId == recordId ||
                  OrderAlarmService.instance.activeOrderId == readableId)) {
               _stopPendingAlarm();
             }
-          } else if (status == 'PENDING' || status == 'ADMIN_PENDING' || paymentStatus == 'PAID') {
+          } else if (status == 'PENDING' || status == 'ADMIN_PENDING') {
             _playChime();
           }
         }
@@ -666,17 +682,69 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       order: order,
       context: context,
       onAccept: () {
+        _markAlarmAcknowledged(order);
+        _stopPendingAlarm();
         _updateOrderStatus(order, OrderStatus.confirmed);
+      },
+      onDismiss: () {
+        _markAlarmAcknowledged(order);
+        _stopPendingAlarm();
       },
     );
   }
 
+  void _markAlarmAcknowledged(Order order) {
+    void addNormalized(String? raw) {
+      if (raw == null || raw.trim().isEmpty) return;
+      final clean = raw.replaceAll('#', '').trim();
+      if (clean.isEmpty) return;
+      _dismissedOrAcknowledgedAlarmOrders.add(clean);
+      _dismissedOrAcknowledgedAlarmOrders.add('#$clean');
+      final base = clean.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim();
+      if (base.isNotEmpty) {
+        _dismissedOrAcknowledgedAlarmOrders.add(base);
+        _dismissedOrAcknowledgedAlarmOrders.add('#$base');
+      }
+    }
+
+    addNormalized(order.id);
+    addNormalized(order.readableId);
+    addNormalized(order.combinedId);
+    if (order.subOrders != null) {
+      for (final s in order.subOrders!) {
+        addNormalized(s.id);
+        addNormalized(s.readableId);
+        addNormalized(s.combinedId);
+      }
+    }
+  }
+
   void _stopPendingAlarm() {
-    OrderAlarmService.instance.stopAlarm();
+    OrderAlarmService.instance.stopAlarm(closeModal: false);
   }
 
   void _syncAlarmStateWithOrders(List<Order> orders) {
-    final pendingOrders = orders.where((o) => o.status == OrderStatus.pending || o.status == OrderStatus.adminPending).toList();
+    // Alarm must ONLY ring for pending or adminPending orders that have not been acknowledged!
+    // Confirmed orders NEVER trigger alarms!
+    final pendingOrders = orders.where((o) {
+      if (o.status != OrderStatus.pending && o.status != OrderStatus.adminPending) {
+        return false;
+      }
+      final cleanOid = o.id.replaceAll('#', '').trim();
+      final cleanRid = (o.readableId ?? '').replaceAll('#', '').trim();
+      final cleanCid = (o.combinedId ?? '').replaceAll('#', '').trim();
+      final cleanBase = cleanRid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim();
+
+      if (_dismissedOrAcknowledgedAlarmOrders.contains(cleanOid) ||
+          _dismissedOrAcknowledgedAlarmOrders.contains('#$cleanOid') ||
+          (cleanRid.isNotEmpty && (_dismissedOrAcknowledgedAlarmOrders.contains(cleanRid) || _dismissedOrAcknowledgedAlarmOrders.contains('#$cleanRid'))) ||
+          (cleanCid.isNotEmpty && (_dismissedOrAcknowledgedAlarmOrders.contains(cleanCid) || _dismissedOrAcknowledgedAlarmOrders.contains('#$cleanCid'))) ||
+          (cleanBase.isNotEmpty && (_dismissedOrAcknowledgedAlarmOrders.contains(cleanBase) || _dismissedOrAcknowledgedAlarmOrders.contains('#$cleanBase')))) {
+        return false;
+      }
+      return true;
+    }).toList();
+
     if (pendingOrders.isNotEmpty) {
       final latestPending = pendingOrders.first;
       if (!OrderAlarmService.instance.isPlaying) {
@@ -1391,6 +1459,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       });
 
       if (newStatus != OrderStatus.adminPending && newStatus != OrderStatus.pending) {
+        _markAlarmAcknowledged(order);
+        for (final id in idsToUpdate) {
+          _dismissedOrAcknowledgedAlarmOrders.add(id);
+        }
         _stopPendingAlarm();
       }
 
@@ -1499,8 +1571,15 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           } catch (_) {}
         }
 
+        final isApproval = order.status == OrderStatus.adminPending &&
+            (newStatus == OrderStatus.confirmed || newStatus == OrderStatus.pending);
         for (final id in idsToUpdate) {
-          futures.add(OrderRepository(ref.read(dioProvider)).updateOrderStatus(id, newStatus).catchError((_) => false));
+          futures.add(OrderRepository(ref.read(dioProvider)).updateOrderStatus(
+            id,
+            newStatus,
+            isApproval: isApproval,
+            previousStatus: order.status == OrderStatus.adminPending ? 'ADMIN_PENDING' : null,
+          ).catchError((_) => false));
         }
 
         await Future.wait(futures);
@@ -1536,6 +1615,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       });
 
       if (newStatus != OrderStatus.adminPending && newStatus != OrderStatus.pending) {
+        _markAlarmAcknowledged(subOrder);
+        _dismissedOrAcknowledgedAlarmOrders.add(subOrder.id);
+        if (subOrder.readableId != null) {
+          _dismissedOrAcknowledgedAlarmOrders.add(subOrder.readableId!);
+        }
         _stopPendingAlarm();
       }
 
@@ -1586,7 +1670,14 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           }
         }
 
-        futures.add(OrderRepository(ref.read(dioProvider)).updateOrderStatus(subOrder.id, newStatus).catchError((_) => false));
+        final isApproval = subOrder.status == OrderStatus.adminPending &&
+            (newStatus == OrderStatus.confirmed || newStatus == OrderStatus.pending);
+        futures.add(OrderRepository(ref.read(dioProvider)).updateOrderStatus(
+          subOrder.id,
+          newStatus,
+          isApproval: isApproval,
+          previousStatus: subOrder.status == OrderStatus.adminPending ? 'ADMIN_PENDING' : null,
+        ).catchError((_) => false));
         await Future.wait(futures);
       }
     } catch (e) {

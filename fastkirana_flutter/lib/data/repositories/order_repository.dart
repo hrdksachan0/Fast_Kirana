@@ -236,7 +236,7 @@ class OrderRepository {
   /// Updates an order's status by trying the primary endpoint first,
   /// then the admin fallback. Returns true only if at least one endpoint
   /// succeeded. Mutates the local cache to reflect the new status.
-  Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
+  Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus, {bool isApproval = false, String? previousStatus}) async {
     final statusStr = newStatus == OrderStatus.adminPending ? 'ADMIN_PENDING' : newStatus.name.toUpperCase();
     final options = await AdminAuthorization.optionsAsync();
     final adminHeaders = Map<String, String>.from(options.headers ?? {});
@@ -262,6 +262,8 @@ class OrderRepository {
           'status': statusStr,
           'scope': 'ALL',
           'updateCombined': true,
+          'isApproval': isApproval,
+          if (previousStatus != null) 'previousStatus': previousStatus,
         },
         options: Options(headers: adminHeaders),
       );

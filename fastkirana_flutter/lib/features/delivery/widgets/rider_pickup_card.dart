@@ -568,16 +568,13 @@ class RiderPickupCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
-                // FULL-WIDTH SOLID ACTION BUTTON (Aapki Image 2 Jaisa: Never Cut Off, Never Squished)
+                // FULL-WIDTH SOLID ACTION BUTTON
                 Bounceable(
                   onTap: isUpdating
                       ? null
                       : () => onUpdateStatus?.call(
                             orderId,
                             'SHIPPED',
-                            extra: isBatch && partnerOrderId != null
-                                ? {'partnerOrderId': partnerOrderId, 'isBatch': true}
-                                : null,
                           ),
                   child: Container(
                     width: double.infinity,

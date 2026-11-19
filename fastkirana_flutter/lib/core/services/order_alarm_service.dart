@@ -9,7 +9,9 @@ import 'logger_service.dart';
 
 /// Zomato/Swiggy style continuous loud order alarm service for store & kitchen staff.
 class OrderAlarmService {
-  OrderAlarmService._();
+  OrderAlarmService._() {
+    _initAudioContext();
+  }
   static final OrderAlarmService instance = OrderAlarmService._();
 
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -17,10 +19,38 @@ class OrderAlarmService {
   bool _isPlaying = false;
   bool _isMuted = false;
   String? _activeOrderId;
+  bool _isModalShowing = false;
+  BuildContext? _modalContext;
+
+  Future<void> _initAudioContext() async {
+    try {
+      await _audioPlayer.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            isSpeakerphoneOn: true,
+            stayAwake: true,
+            contentType: AndroidContentType.sonification,
+            usageType: AndroidUsageType.alarm,
+            audioFocus: AndroidAudioFocus.gainTransientExclusive,
+          ),
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.playback,
+            options: const {
+              AVAudioSessionOptions.duckOthers,
+              AVAudioSessionOptions.defaultToSpeaker,
+            },
+          ),
+        ),
+      );
+    } catch (e, _) {
+      LoggerService.error('OrderAlarmService: init audio context error', e);
+    }
+  }
 
   bool get isPlaying => _isPlaying;
   bool get isMuted => _isMuted;
   String? get activeOrderId => _activeOrderId;
+  bool get isModalShowing => _isModalShowing;
 
   /// Toggle mute state for store / kitchen environment
   void toggleMute() {
@@ -42,6 +72,7 @@ class OrderAlarmService {
     required Order order,
     BuildContext? context,
     VoidCallback? onAccept,
+    VoidCallback? onDismiss,
   }) async {
     if (_isMuted) return;
 
@@ -67,12 +98,13 @@ class OrderAlarmService {
         context: context,
         order: order,
         onAccept: onAccept,
+        onDismiss: onDismiss,
       );
     }
   }
 
   /// Stop active alarm ringing and vibration
-  Future<void> stopAlarm() async {
+  Future<void> stopAlarm({bool closeModal = true}) async {
     _isPlaying = false;
     _activeOrderId = null;
     _alarmLoopTimer?.cancel();
@@ -81,6 +113,16 @@ class OrderAlarmService {
       await _audioPlayer.stop();
     } catch (e, _) {
       LoggerService.error('OrderAlarmService: stop audio error', e);
+    }
+    if (closeModal && _isModalShowing && _modalContext != null) {
+      final ctx = _modalContext;
+      _isModalShowing = false;
+      _modalContext = null;
+      if (ctx != null && ctx.mounted) {
+        try {
+          Navigator.of(ctx).pop();
+        } catch (_) {}
+      }
     }
   }
 
@@ -118,11 +160,15 @@ class OrderAlarmService {
     required BuildContext context,
     required Order order,
     VoidCallback? onAccept,
+    VoidCallback? onDismiss,
   }) {
+    if (_isModalShowing) return;
+    _isModalShowing = true;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
+        _modalContext = ctx;
         final isCombo = order.isCombined || (order.subOrders != null && order.subOrders!.length > 1);
         final baseToken = (order.readableId ?? '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
         final orderToken = isCombo && baseToken.isNotEmpty
@@ -302,7 +348,10 @@ class OrderAlarmService {
                               flex: 2,
                               child: OutlinedButton(
                                 onPressed: () {
-                                  stopAlarm();
+                                  _isModalShowing = false;
+                                  _modalContext = null;
+                                  stopAlarm(closeModal: false);
+                                  onDismiss?.call();
                                   Navigator.pop(ctx);
                                 },
                                 style: OutlinedButton.styleFrom(
@@ -325,7 +374,9 @@ class OrderAlarmService {
                               flex: 3,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  stopAlarm();
+                                  _isModalShowing = false;
+                                  _modalContext = null;
+                                  stopAlarm(closeModal: false);
                                   Navigator.pop(ctx);
                                   onAccept?.call();
                                 },
@@ -372,6 +423,7 @@ class OrderAlarmService {
     required Map<String, dynamic> orderMap,
     BuildContext? context,
     VoidCallback? onStartPicking,
+    VoidCallback? onDismiss,
   }) async {
     if (_isMuted) return;
 
@@ -397,6 +449,7 @@ class OrderAlarmService {
         context: context,
         orderMap: orderMap,
         onStartPicking: onStartPicking,
+        onDismiss: onDismiss,
       );
     }
   }
@@ -405,6 +458,7 @@ class OrderAlarmService {
     required BuildContext context,
     required Map<String, dynamic> orderMap,
     VoidCallback? onStartPicking,
+    VoidCallback? onDismiss,
   }) {
     showDialog(
       context: context,
@@ -568,6 +622,7 @@ class OrderAlarmService {
                               child: OutlinedButton(
                                 onPressed: () {
                                   stopAlarm();
+                                  onDismiss?.call();
                                   Navigator.pop(ctx);
                                 },
                                 style: OutlinedButton.styleFrom(
@@ -637,6 +692,7 @@ class OrderAlarmService {
     required Map<String, dynamic> orderMap,
     BuildContext? context,
     VoidCallback? onAccept,
+    VoidCallback? onDismiss,
   }) async {
     if (_isMuted) return;
 
@@ -664,6 +720,7 @@ class OrderAlarmService {
         context: context,
         orderMap: orderMap,
         onAccept: onAccept,
+        onDismiss: onDismiss,
       );
     }
   }
@@ -672,6 +729,7 @@ class OrderAlarmService {
     required BuildContext context,
     required Map<String, dynamic> orderMap,
     VoidCallback? onAccept,
+    VoidCallback? onDismiss,
   }) {
     showDialog(
       context: context,
@@ -888,6 +946,7 @@ class OrderAlarmService {
                               child: OutlinedButton(
                                 onPressed: () {
                                   stopAlarm();
+                                  onDismiss?.call();
                                   Navigator.pop(ctx);
                                 },
                                 style: OutlinedButton.styleFrom(

@@ -74,7 +74,7 @@ const cardVisibilityFields = {
 export const campaignBentoConfigSchema = z
   .object({
     version: z.literal(1).default(1),
-    enabled: z.boolean().default(false),
+    enabled: z.boolean().default(true),
     seasonalSwitchUp: z
       .object({
         ...cardVisibilityFields,
@@ -192,7 +192,7 @@ export type BentoCardKey =
 
 export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   version: 1,
-  enabled: false,
+  enabled: true,
   seasonalSwitchUp: {
     enabled: true,
     sortOrder: 1,
@@ -417,7 +417,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   giftingBoutique: {
     enabled: true,
     sortOrder: 4,
-    badge: '04',
+    badge: '',
     backgroundColor: '#FDF2F4',
     borderColor: '#FCE7F3',
     accentColor: '#15803D',

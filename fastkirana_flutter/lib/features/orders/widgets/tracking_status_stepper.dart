@@ -109,11 +109,12 @@ class TrackingStatusStepper extends StatelessWidget {
       );
     }
 
+    final bool actuallyDelivered = isDelivered && statusStep >= 4;
     final String badgeText;
     final Color badgeBg;
     final Color badgeFg;
 
-    if (isDelivered || statusStep >= 4) {
+    if (actuallyDelivered) {
       badgeText = 'COMPLETED';
       badgeBg = const Color(0xFFDCFCE7);
       badgeFg = const Color(0xFF15803D);
@@ -269,8 +270,58 @@ class TrackingStatusStepper extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   ...order!.subOrders!.map((sub) {
-                    final subIsDelivered = sub.status == OrderStatus.delivered;
                     final isRest = sub.restaurantId != null || (sub.readableId != null && sub.readableId!.toUpperCase().endsWith('-R'));
+
+                    // Guarantee sub-order status never lags behind the main order milestone
+                    final effectiveSubStatus = () {
+                      if (isDelivered || order!.status == OrderStatus.delivered || statusStep >= 4) {
+                        return OrderStatus.delivered;
+                      }
+                      if (isCancelled || order!.status == OrderStatus.cancelled || statusStep == -1) {
+                        return OrderStatus.cancelled;
+                      }
+                      if (statusStep >= 3 && (sub.status == OrderStatus.adminPending || sub.status == OrderStatus.pending)) {
+                        return OrderStatus.shipped;
+                      }
+                      if (statusStep >= 1 && sub.status == OrderStatus.adminPending) {
+                        return OrderStatus.confirmed;
+                      }
+                      return sub.status;
+                    }();
+
+                    final subIsDelivered = effectiveSubStatus == OrderStatus.delivered;
+                    final Color badgeTextColor;
+                    final Color badgeBgColor;
+
+                    switch (effectiveSubStatus) {
+                      case OrderStatus.delivered:
+                        badgeTextColor = const Color(0xFF16A34A);
+                        badgeBgColor = const Color(0xFFDCFCE7);
+                        break;
+                      case OrderStatus.shipped:
+                        badgeTextColor = const Color(0xFF15803D);
+                        badgeBgColor = const Color(0xFFDCFCE7);
+                        break;
+                      case OrderStatus.packed:
+                        badgeTextColor = const Color(0xFF6B21A8);
+                        badgeBgColor = const Color(0xFFF3E8FF);
+                        break;
+                      case OrderStatus.confirmed:
+                        badgeTextColor = const Color(0xFF1D4ED8);
+                        badgeBgColor = const Color(0xFFEFF6FF);
+                        break;
+                      case OrderStatus.cancelled:
+                        badgeTextColor = const Color(0xFFDC2626);
+                        badgeBgColor = const Color(0xFFFEE2E2);
+                        break;
+                      case OrderStatus.adminPending:
+                      case OrderStatus.pending:
+                      default:
+                        badgeTextColor = const Color(0xFFC2410C);
+                        badgeBgColor = const Color(0xFFFFF7ED);
+                        break;
+                    }
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2.5),
                       child: Row(
@@ -295,15 +346,15 @@ class TrackingStatusStepper extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: (subIsDelivered ? const Color(0xFF00A344) : const Color(0xFF2563EB)).withValues(alpha: 0.08),
+                              color: badgeBgColor,
                               borderRadius: BorderRadius.circular(5),
                             ),
                             child: Text(
-                              sub.status.displayName,
+                              effectiveSubStatus.displayName,
                               style: GoogleFonts.inter(
                                 fontSize: Responsive.scaledFontSize(context, 10),
                                 fontWeight: FontWeight.w800,
-                                color: subIsDelivered ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
+                                color: badgeTextColor,
                               ),
                             ),
                           ),

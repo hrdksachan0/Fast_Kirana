@@ -122,13 +122,9 @@ title.toString().contains('🛵') ||
     }
 
     // 5. STRICT ADMIN ISOLATION:
-    // Admin ONLY receives notification when an order is in ADMIN_PENDING state (awaiting approval).
-    // All intermediate status updates (packed, picked, on the way, delivered) and non-pending orders are strictly suppressed!
     final isAdmin = userRole == 'ADMIN' || userRole == 'SUPER_ADMIN';
     if (isAdmin) {
       final msgType = (data['type'] ?? '').toString().toUpperCase();
-      final msgScreen = (data['screen'] ?? '').toString();
-      final msgRole = (data['role'] ?? '').toString().toUpperCase();
       final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
       // STRICT HUB ISOLATION: Akbarpur admin never receives Ghatampur alerts, and vice versa!
@@ -141,33 +137,31 @@ title.toString().contains('🛵') ||
         }
       }
 
-      // Suppress all status updates and non-approval orders for Admin (Admin receives approval alert only!)
-      if (msgType == 'ORDER_STATUS_UPDATE' ||
+      // Suppress ONLY routine customer delivery status updates (e.g. out for delivery, delivered, cooking)
+      // DO NOT suppress new incoming orders (PENDING, ADMIN_PENDING, or CONFIRMED live orders)!
+      final isNewOrderAlert = msgType == 'NEW_ORDER' ||
+          msgType == 'STAFF_ALERT' ||
+          data['screen'] == 'admin-orders' ||
+          orderStatus == 'PENDING' ||
+          orderStatus == 'ADMIN_PENDING' ||
+          title.toString().contains('New Order') ||
+          title.toString().contains('New Food') ||
+          title.toString().contains('👨‍🍳') ||
+          title.toString().contains('🛎️') ||
+          title.toString().contains('🚨') ||
+          title.toString().contains('🔔');
+
+      if (!isNewOrderAlert && (
+          msgType == 'ORDER_STATUS_UPDATE' ||
           msgType == 'STATUS_UPDATE' ||
           msgType == 'ORDER_STATUS' ||
-          (orderStatus.isNotEmpty && orderStatus != 'ADMIN_PENDING') ||
-          orderStatus == 'CONFIRMED' ||
           orderStatus == 'PREPARING' ||
           orderStatus == 'COOKING' ||
           orderStatus == 'PACKED' ||
           orderStatus == 'SHIPPED' ||
           orderStatus == 'OUT_FOR_DELIVERY' ||
-          orderStatus == 'DELIVERED') {
-        debugPrint('NotificationService: Suppressed status update ($orderStatus) for Admin in background.');
-        return;
-      }
-
-      // Suppress sub-console alerts (picker, delivery, kitchen) so Admin receives EXACTLY ONE Master Admin alert!
-      if (msgScreen == 'picker' ||
-          msgRole == 'PICKER' ||
-          msgScreen == 'delivery' ||
-          msgRole == 'DELIVERY' ||
-          msgScreen == 'restaurant-console' ||
-          title.toString().contains('👨‍🍳') ||
-          title.toString().contains('📦 New Order') ||
-          title.toString().contains('🛵 New Delivery') ||
-          title.toString().contains('🛵 New Food')) {
-        debugPrint('NotificationService: Suppressed sub-console duplicate ($msgScreen/$msgRole) for Admin in background.');
+          orderStatus == 'DELIVERED')) {
+        debugPrint('NotificationService: Suppressed routine status update ($orderStatus) for Admin in background.');
         return;
       }
     }
@@ -197,7 +191,32 @@ title.toString().contains('🛵') ||
     } catch (_) {}
   }
 
-  final isOrderStatusUpdate = !isCancelledOrTerminal && (
+  final isDeliveryRiderAlert = data['type'] == 'DELIVERY_ASSIGNED' ||
+      title.toString().contains('🛵') ||
+      title.toString().toLowerCase().contains('delivery assigned') ||
+      ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
+          (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED'));
+
+  final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && (
+      data['type'] == 'NEW_ORDER' ||
+      data['type'] == 'VENDOR_NEW_ORDER' ||
+      orderStatus == 'PENDING' ||
+      orderStatus == 'PLACED' ||
+      data['screen'] == 'admin-orders' ||
+      data['role'] == 'ADMIN' ||
+      data['screen'] == 'restaurant-console' ||
+      (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'CONFIRMED' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
+      title.toString().contains('👨‍🍳') ||
+      title.toString().contains('🛎️') ||
+      title.toString().contains('💳') ||
+      title.toString().contains('🚨') ||
+      title.toString().contains('🔔') ||
+      title.toString().toLowerCase().contains('kitchen') ||
+      title.toString().toLowerCase().contains('new order') ||
+      title.toString().toLowerCase().contains('new approved order') ||
+      title.toString().toLowerCase().contains('awaiting approval')));
+
+  final isOrderStatusUpdate = !isCancelledOrTerminal && !isOrderAlert && (
       orderStatus == 'OUT_FOR_DELIVERY' ||
       orderStatus == 'DISPATCHED' ||
       orderStatus == 'DELIVERED' ||
@@ -219,28 +238,8 @@ title.toString().contains('🛵') ||
       (body ?? '').toString().toLowerCase().contains('on the way') ||
       (body ?? '').toString().toLowerCase().contains('arriving'));
 
-  final isDeliveryRiderAlert = data['type'] == 'DELIVERY_ASSIGNED' ||
-      title.toString().contains('🛵') ||
-      title.toString().toLowerCase().contains('delivery assigned') ||
-      ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
-          (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED'));
-
-  final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && !isOrderStatusUpdate && (
-      data['type'] == 'NEW_ORDER' ||
-      data['type'] == 'VENDOR_NEW_ORDER' ||
-      orderStatus == 'PENDING' ||
-      orderStatus == 'PLACED' ||
-      data['screen'] == 'admin-orders' ||
-      (data['screen'] == 'restaurant-console' && (orderStatus == 'PENDING' || orderStatus == 'CONFIRMED' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
-      (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'CONFIRMED' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
-      title.toString().contains('👨‍🍳') ||
-      title.toString().contains('🛎️') ||
-      title.toString().contains('💳') ||
-      title.toString().toLowerCase().contains('kitchen') ||
-      title.toString().toLowerCase().contains('new order')));
-
-  if (notification != null) {
-    // Android OS FCM client displays notification directly in system tray.
+  if (notification != null && !isOrderAlert) {
+    // Android OS FCM client displays notification directly in system tray for non-critical alerts.
     // Suppress localNotifications.show here to avoid showing 2 notifications for the same message.
     debugPrint('NotificationService: Android OS already displayed FCM notification in background.');
     return;
@@ -814,8 +813,6 @@ title.toString().contains('🛵') ||
       final isAdmin = userRole == 'ADMIN' || userRole == 'SUPER_ADMIN';
       if (isAdmin) {
         final msgType = (data['type'] ?? '').toString().toUpperCase();
-        final msgScreen = (data['screen'] ?? '').toString();
-        final msgRole = (data['role'] ?? '').toString().toUpperCase();
         final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
         // STRICT HUB ISOLATION: Akbarpur admin never receives Ghatampur alerts, and vice versa!
@@ -828,33 +825,31 @@ title.toString().contains('🛵') ||
           }
         }
 
-        // Suppress all status updates and non-approval orders for Admin (Admin receives approval alert only!)
-        if (msgType == 'ORDER_STATUS_UPDATE' ||
+        // Suppress ONLY routine customer delivery status updates (e.g. out for delivery, delivered, cooking)
+        // DO NOT suppress new incoming orders (PENDING, ADMIN_PENDING, or CONFIRMED live orders)!
+        final isNewOrderAlert = msgType == 'NEW_ORDER' ||
+            msgType == 'STAFF_ALERT' ||
+            data['screen'] == 'admin-orders' ||
+            orderStatus == 'PENDING' ||
+            orderStatus == 'ADMIN_PENDING' ||
+            title.toString().contains('New Order') ||
+            title.toString().contains('New Food') ||
+            title.toString().contains('👨‍🍳') ||
+            title.toString().contains('🛎️') ||
+            title.toString().contains('🚨') ||
+            title.toString().contains('🔔');
+
+        if (!isNewOrderAlert && (
+            msgType == 'ORDER_STATUS_UPDATE' ||
             msgType == 'STATUS_UPDATE' ||
             msgType == 'ORDER_STATUS' ||
-            (orderStatus.isNotEmpty && orderStatus != 'ADMIN_PENDING') ||
-            orderStatus == 'CONFIRMED' ||
             orderStatus == 'PREPARING' ||
             orderStatus == 'COOKING' ||
             orderStatus == 'PACKED' ||
             orderStatus == 'SHIPPED' ||
             orderStatus == 'OUT_FOR_DELIVERY' ||
-            orderStatus == 'DELIVERED') {
-          debugPrint('NotificationService: Suppressed status update ($orderStatus) for Admin in foreground.');
-          return;
-        }
-
-        // Suppress sub-console alerts (picker, delivery, kitchen) so Admin receives EXACTLY ONE Master Admin alert!
-        if (msgScreen == 'picker' ||
-            msgRole == 'PICKER' ||
-            msgScreen == 'delivery' ||
-            msgRole == 'DELIVERY' ||
-            msgScreen == 'restaurant-console' ||
-            title.toString().contains('👨‍🍳') ||
-            title.toString().contains('📦 New Order') ||
-            title.toString().contains('🛵 New Delivery') ||
-            title.toString().contains('🛵 New Food')) {
-          debugPrint('NotificationService: Suppressed sub-console duplicate ($msgScreen/$msgRole) for Admin in foreground.');
+            orderStatus == 'DELIVERED')) {
+          debugPrint('NotificationService: Suppressed routine status update ($orderStatus) for Admin in foreground.');
           return;
         }
       }
@@ -903,7 +898,33 @@ title.toString().contains('🛵') ||
       );
     }
 
-    final isOrderStatusUpdate = !isCancelledOrTerminal && (
+    final isDeliveryRiderAlert = data['type'] == 'DELIVERY_ASSIGNED' ||
+        title.toString().contains('🛵') ||
+        title.toString().toLowerCase().contains('delivery assigned') ||
+        ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
+            (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED'));
+
+    final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && (
+        data['type'] == 'NEW_ORDER' ||
+        data['type'] == 'VENDOR_NEW_ORDER' ||
+        orderStatus == 'PENDING' ||
+        orderStatus == 'PLACED' ||
+        data['screen'] == 'admin-orders' ||
+        data['role'] == 'ADMIN' ||
+        data['screen'] == 'restaurant-console' ||
+        (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'CONFIRMED' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
+        title.toString().contains('👨‍🍳') ||
+        title.toString().contains('🛎️') ||
+        title.toString().contains('💳') ||
+        title.toString().contains('🚨') ||
+        title.toString().contains('🔔') ||
+        title.toString().toLowerCase().contains('kitchen') ||
+        title.toString().toLowerCase().contains('new order') ||
+        title.toString().toLowerCase().contains('new live order') ||
+        title.toString().toLowerCase().contains('new approved order') ||
+        title.toString().toLowerCase().contains('awaiting approval')));
+
+    final isOrderStatusUpdate = !isCancelledOrTerminal && !isOrderAlert && (
         orderStatus == 'OUT_FOR_DELIVERY' ||
         orderStatus == 'DISPATCHED' ||
         orderStatus == 'DELIVERED' ||
@@ -924,26 +945,6 @@ title.toString().contains('🛵') ||
         body.toString().toLowerCase().contains('delivered') ||
         body.toString().toLowerCase().contains('on the way') ||
         body.toString().toLowerCase().contains('arriving'));
-
-    final isDeliveryRiderAlert = data['type'] == 'DELIVERY_ASSIGNED' ||
-        title.toString().contains('🛵') ||
-        title.toString().toLowerCase().contains('delivery assigned') ||
-        ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
-            (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED'));
-
-    final isOrderAlert = isDeliveryRiderAlert || (!isCancelledOrTerminal && !isOrderStatusUpdate && (
-        data['type'] == 'NEW_ORDER' ||
-        data['type'] == 'VENDOR_NEW_ORDER' ||
-        orderStatus == 'PENDING' ||
-        orderStatus == 'PLACED' ||
-        data['screen'] == 'admin-orders' ||
-        (data['screen'] == 'restaurant-console' && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
-        (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
-        title.toString().contains('👨‍🍳') ||
-        title.toString().contains('🛎️') ||
-        title.toString().contains('💳') ||
-        title.toString().toLowerCase().contains('kitchen') ||
-        title.toString().toLowerCase().contains('new order')));
 
     final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
         ? NotificationService.getOrderNotifId(cleanOrderId)

@@ -15,6 +15,9 @@ import '../../data/repositories/order_repository.dart';
 import '../orders/order_tracking_screen.dart';
 import '../../core/services/customer_sound_service.dart';
 import '../../core/services/logger_service.dart';
+import '../../core/utils/app_url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Ultra-Premium Centered Order Success & Payment Failed Screen
 /// Option 2 (Emerald Trust Glow) with Enlarged Checkmark (106px), Animated Words,
@@ -310,6 +313,57 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   String _formatAmount(double amt) {
     if (amt <= 0) return '0';
     return amt.truncateToDouble() == amt ? amt.toStringAsFixed(0) : amt.toStringAsFixed(2);
+  }
+
+  bool _isGiftOrder(Order? order) {
+    if (order == null) return false;
+    final notes = order.notes ?? '';
+    return notes.contains('Gift Note') ||
+        notes.contains('🎁') ||
+        notes.contains('SECRET GIFT') ||
+        notes.contains('Order for:') ||
+        notes.contains('[SEND LIVE TRACKING LINK');
+  }
+
+  Future<void> _shareGiftCardFromSuccess(Order order) async {
+    HapticFeedback.lightImpact();
+    final notes = order.notes ?? '';
+    String recipient = '';
+    final toMatch = RegExp(r'🎁 Order for:\s*(.*?)(?:\(|\||$)').firstMatch(notes);
+    if (toMatch != null && toMatch.group(1) != null) {
+      recipient = toMatch.group(1)!.trim();
+    }
+    if (recipient.isEmpty) {
+      recipient = order.customerName?.trim().isNotEmpty == true ? order.customerName!.trim() : 'Someone Special';
+    }
+
+    String giftNote = '';
+    final noteMatch = RegExp(r'💌 Gift Note:\s*(.*?)(?:\||$)').firstMatch(notes);
+    if (noteMatch != null && noteMatch.group(1) != null) {
+      giftNote = noteMatch.group(1)!.trim();
+    }
+
+    final trackingUrl = 'https://fastminute.in/order/${order.id}/track';
+    final sender = (order.customerName != null && order.customerName!.trim().isNotEmpty)
+        ? order.customerName!.trim()
+        : 'A loved one';
+    final noteSnippet = giftNote.isNotEmpty ? '\n💌 *Personal Note:* "$giftNote"' : '';
+
+    final shareText = '🎁 *Surprise Gift Delivery for $recipient!* ✨\n\n'
+        'From: *$sender*$noteSnippet\n\n'
+        '📍 *Track your live surprise delivery:* \n$trackingUrl\n\n'
+        '🚀 *FastMinute Express Delivery* — Arriving soon!\n'
+        '(Complimentary handwritten message card • Prices & invoice 100% hidden)';
+
+    final whatsappUrl = 'whatsapp://send?text=${Uri.encodeComponent(shareText)}';
+    final success = await AppUrlLauncher.launchSafely(
+      Uri.parse(whatsappUrl),
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!success) {
+      await Share.share(shareText, subject: '🎁 Surprise Gift Delivery from FastMinute');
+    }
   }
 
   @override
@@ -650,6 +704,50 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                           child: Column(
                             children: [
                               if (!isFailed) ...[
+                                if (_isGiftOrder(effectiveOrder)) ...[
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (effectiveOrder != null) {
+                                        _shareGiftCardFromSuccess(effectiveOrder);
+                                      }
+                                    },
+                                    child: Container(
+                                      height: 48,
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF25D366),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF25D366).withValues(alpha: 0.35),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Text('🎁', style: TextStyle(fontSize: 16)),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              'Share Surprise Card with Tracking',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: Responsive.scaledFontSize(context, 13.5),
+                                                fontWeight: FontWeight.w800,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 // Primary Action: Track Live Order Status
                                 GestureDetector(
                                   onTap: _navigateToTracking,

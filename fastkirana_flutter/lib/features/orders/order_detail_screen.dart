@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter_bounceable/flutter_bounceable.dart';
+import '../../core/utils/app_url_launcher.dart';
 import '../../data/models/order.dart';
 import '../../core/config/app_config.dart';
 import '../../core/utils/order_item_helper.dart';
@@ -244,6 +247,12 @@ class OrderDetailScreen extends StatelessWidget {
             // Pay Online Banner (if COD)
             if (order.paymentStatus != 'PAID' && order.status != OrderStatus.cancelled) ...[
               _buildPayOnlineCard(context),
+              const SizedBox(height: 14),
+            ],
+
+            // Gift Order Card & WhatsApp Tracking Share (If Gift Order)
+            if (_isGiftOrder(order)) ...[
+              _buildGiftCardShareBanner(context),
               const SizedBox(height: 14),
             ],
 
@@ -1110,5 +1119,234 @@ class OrderDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _isGiftOrder(Order order) {
+    final notes = order.notes ?? '';
+    return notes.contains('Gift Note') ||
+        notes.contains('SECRET GIFT') ||
+        notes.contains('Order for:') ||
+        notes.contains('[SEND LIVE TRACKING LINK');
+  }
+
+  Widget _buildGiftCardShareBanner(BuildContext context) {
+    final notes = order.notes ?? '';
+    String recipient = '';
+    final toMatch = RegExp(r'🎁 Order for:\s*(.*?)(?:\(|\||$)').firstMatch(notes);
+    if (toMatch != null && toMatch.group(1) != null) {
+      recipient = toMatch.group(1)!.trim();
+    }
+    if (recipient.isEmpty) {
+      recipient = order.customerName?.trim().isNotEmpty == true ? order.customerName!.trim() : 'Someone Special';
+    }
+
+    String giftNote = '';
+    final noteMatch = RegExp(r'💌 Gift Note:\s*(.*?)(?:\||$)').firstMatch(notes);
+    if (noteMatch != null && noteMatch.group(1) != null) {
+      giftNote = noteMatch.group(1)!.trim();
+    }
+
+    final trackingUrl = 'https://fastminute.in/order/${order.id}/track';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF7F9), Color(0xFFFDECEF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF2D3DC), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6B1728).withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6B1728),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🎁', style: TextStyle(fontSize: 10)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'SURPRISE GIFT ORDER ACTIVE',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: const Color(0xFFFFE082),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              const Text('💌', style: TextStyle(fontSize: 15)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'To: $recipient 💝',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF4A0E1C),
+            ),
+          ),
+          if (giftNote.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              '“$giftNote”',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF6B1728),
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.lock_outline_rounded, size: 12, color: Color(0xFF16A34A)),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Price & bill 100% hidden on delivery box',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF15803D),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Share on WhatsApp
+              Expanded(
+                child: Bounceable(
+                  onTap: () => _shareGiftTracking(context, recipient, giftNote, trackingUrl),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF25D366),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF25D366).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('💬', style: TextStyle(fontSize: 13)),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Share on WhatsApp',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Copy Link
+              Bounceable(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Clipboard.setData(ClipboardData(text: trackingUrl));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '📋 Gift tracking link copied to clipboard!',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 12),
+                      ),
+                      backgroundColor: const Color(0xFFBE123C),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFF2D3DC), width: 1.2),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.copy_rounded, size: 13, color: Color(0xFF4A0E1C)),
+                      SizedBox(width: 4),
+                      Text('Copy', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF4A0E1C))),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _shareGiftTracking(
+    BuildContext context,
+    String recipient,
+    String giftNote,
+    String trackingUrl,
+  ) async {
+    HapticFeedback.lightImpact();
+    final sender = (order.customerName != null && order.customerName!.trim().isNotEmpty)
+        ? order.customerName!.trim()
+        : 'A loved one';
+    final noteSnippet = giftNote.isNotEmpty ? '\n💌 *Personal Note:* "$giftNote"' : '';
+
+    final shareText = '🎁 *Surprise Gift Delivery for $recipient!* ✨\n\n'
+        'From: *$sender*$noteSnippet\n\n'
+        '📍 *Track your live surprise delivery:* \n$trackingUrl\n\n'
+        '🚀 *FastMinute Express Delivery* — Arriving soon!\n'
+        '(Complimentary handwritten message card • Prices & invoice 100% hidden)';
+
+    final whatsappUrl = 'whatsapp://send?text=${Uri.encodeComponent(shareText)}';
+    final success = await AppUrlLauncher.launchSafely(
+      Uri.parse(whatsappUrl),
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!success) {
+      await Share.share(shareText, subject: '🎁 Surprise Gift Delivery from FastMinute');
+    }
   }
 }

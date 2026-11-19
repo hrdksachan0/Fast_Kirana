@@ -52,6 +52,7 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
   bool _isInteracting = false;
   int _activeCardIndex = 0;
   int _lastCardsCount = 0;
+  List<CategoryCardData> _stableCards = const [];
 
   static const int _kVirtualMultiplier = 10000;
   int _initialVirtualPage = 5000;
@@ -76,11 +77,12 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
     _lastCardsCount = count;
 
     _stopAutoPlay();
-    _pageController?.dispose();
+    final prevController = _pageController;
 
     if (count <= 1) {
       _activeCardIndex = 0;
       _pageController = PageController(viewportFraction: 0.86);
+      prevController?.dispose();
       return;
     }
 
@@ -90,6 +92,7 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
       initialPage: _initialVirtualPage,
     );
     _activeCardIndex = 0;
+    prevController?.dispose();
 
     _startAutoPlay();
   }
@@ -346,7 +349,10 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
     final offersAsync = ref.watch(brandOfferCardsProvider(widget.type));
 
     final rawCards = offersAsync.valueOrNull ?? [];
-    final List<CategoryCardData> cards = List.of(rawCards);
+    if (rawCards.isNotEmpty) {
+      _stableCards = rawCards;
+    }
+    final List<CategoryCardData> cards = List.of(_stableCards.isNotEmpty ? _stableCards : rawCards);
 
     if (cards.isEmpty) {
       return const SizedBox.shrink();

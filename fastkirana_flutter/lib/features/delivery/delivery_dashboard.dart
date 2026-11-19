@@ -1256,10 +1256,16 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final subOrderIds = (safeOrder['subOrderIds'] as List<dynamic>?)?.cast<String>() ?? [];
 
     // Build the list of order IDs to update
-    final partnerId = extra?['partnerOrderId']?.toString();
-    final idsToUpdate = isCombined && subOrderIds.isNotEmpty
-        ? subOrderIds
-        : ((partnerId != null && partnerId.isNotEmpty && partnerId != orderId) ? [orderId, partnerId] : [orderId]);
+    // STRICT ORDER ISOLATION: When picking up (SHIPPED), update ONLY this specific order!
+    // Never cascade pickup across partner/batched orders.
+    final List<String> idsToUpdate;
+    if (newStatus == 'SHIPPED') {
+      idsToUpdate = [orderId];
+    } else if (isCombined && subOrderIds.isNotEmpty) {
+      idsToUpdate = subOrderIds;
+    } else {
+      idsToUpdate = [orderId];
+    }
 
     // Lock all related IDs optimistically for 8 seconds to prevent race condition bounce-backs
     for (final id in idsToUpdate) {
@@ -1409,15 +1415,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             sb.from('orders').update(sbData).eq('id', id).catchError((_) {});
           }
           final cid = safeOrder['combinedId']?.toString();
-          if (cid != null && cid.isNotEmpty) {
+          if (cid != null && cid.isNotEmpty && newStatus != 'SHIPPED') {
             sb.from('orders').update(sbData).eq('combinedId', cid).catchError((_) {});
-          }
-          final rid = safeOrder['readableId']?.toString();
-          if (rid != null && rid.isNotEmpty) {
-            final baseRid = rid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim();
-            if (baseRid.isNotEmpty) {
-              sb.from('orders').update(sbData).ilike('readableId', '$baseRid%').catchError((_) {});
-            }
           }
         }
       } catch (_) {}

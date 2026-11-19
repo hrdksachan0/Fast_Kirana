@@ -12,6 +12,10 @@ class LuxuryGiftEnvelopeCard extends StatelessWidget {
   final bool isSecretGift;
   final ValueChanged<bool> onSecretGiftToggle;
   final VoidCallback onTapEdit;
+  final VoidCallback? onShareCard;
+  final VoidCallback? onProceedToCheckout;
+  final int cartItemCount;
+  final double cartTotal;
 
   const LuxuryGiftEnvelopeCard({
     super.key,
@@ -21,6 +25,10 @@ class LuxuryGiftEnvelopeCard extends StatelessWidget {
     required this.isSecretGift,
     required this.onSecretGiftToggle,
     required this.onTapEdit,
+    this.onShareCard,
+    this.onProceedToCheckout,
+    this.cartItemCount = 0,
+    this.cartTotal = 0.0,
   });
 
   bool get _hasDetails => recipientName.isNotEmpty || giftNote.isNotEmpty;
@@ -209,64 +217,109 @@ class LuxuryGiftEnvelopeCard extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
-                  // Secret Gift Mode Toggle (Hide Prices on physical package)
-                  InkWell(
-                    onTap: () => onSecretGiftToggle(!isSecretGift),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 20,
+                  // Actions: Share Gift Card with Live Tracking & Direct Checkout
+                  Row(
+                    children: [
+                      // Share Gift Card Button (WhatsApp / Share Sheet)
+                      Expanded(
+                        flex: 5,
+                        child: Bounceable(
+                          onTap: onShareCard ?? onTapEdit,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: isSecretGift ? const Color(0xFF16A34A) : Colors.white,
-                              borderRadius: BorderRadius.circular(6),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isSecretGift ? const Color(0xFF16A34A) : const Color(0xFFD4AF37),
-                                width: 1.4,
+                                color: const Color(0xFF25D366).withValues(alpha: 0.6),
+                                width: 1.2,
                               ),
-                            ),
-                            child: isSecretGift
-                                ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                                : null,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Secret Surprise Mode',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF4A0E1C),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text('🔒', style: TextStyle(fontSize: 11)),
-                                  ],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
-                                Text(
-                                  'Price invoice & tags will be removed from delivery box',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF7A4A57),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('💬', style: TextStyle(fontSize: 13)),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Text(
+                                    'Share Card',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF15803D),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+
+                      // Direct Proceed to Checkout Button
+                      Expanded(
+                        flex: 6,
+                        child: Bounceable(
+                          onTap: onProceedToCheckout ?? onTapEdit,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFF881337),
+                                  Color(0xFFBE123C),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFBE123C).withValues(alpha: 0.35),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                              border: Border.all(
+                                color: const Color(0xFFFFDF73).withValues(alpha: 0.4),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('🎁', style: TextStyle(fontSize: 12)),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Text(
+                                    cartItemCount > 0
+                                        ? 'Checkout ($cartItemCount) ➔'
+                                        : 'Proceed ➔',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -759,13 +759,19 @@ export function CampaignBentoEditor({
           })}
         </div>
 
-        <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 cursor-pointer">
+        <label className={cn(
+          "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold cursor-pointer transition-all",
+          draft.enabled
+            ? "border-emerald-300 bg-emerald-50 text-emerald-800 shadow-2xs"
+            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+        )}>
           <input
             type="checkbox"
+            className="h-4 w-4 accent-emerald-600 rounded cursor-pointer"
             checked={draft.enabled}
             onChange={(e) => updateDraft((prev) => ({ ...prev, enabled: e.target.checked }))}
           />
-          Show Section on Storefront
+          <span>{draft.enabled ? '✓ Live on Storefront' : 'Section Hidden from Storefront'}</span>
         </label>
       </div>
 
@@ -787,10 +793,12 @@ export function CampaignBentoEditor({
             <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
               <input
                 type="checkbox"
+                className="h-4 w-4 accent-emerald-600 rounded cursor-pointer"
                 checked={draft[selectedCard].enabled}
                 onChange={(e) =>
                   updateDraft((prev) => ({
                     ...prev,
+                    enabled: e.target.checked ? true : prev.enabled,
                     [selectedCard]: { ...prev[selectedCard], enabled: e.target.checked },
                   }))
                 }

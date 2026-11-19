@@ -113,11 +113,12 @@ async function getOrderDetails(id: string) {
         function getCombinedStatus(statuses: string[]): string {
           const active = statuses.filter(s => s !== 'CANCELLED')
           if (active.length === 0) return 'CANCELLED'
-          if (active.includes('PENDING')) return 'PENDING'
+          if (active.includes('ADMIN_PENDING') || active.includes('PENDING')) return 'ADMIN_PENDING'
           if (active.includes('CONFIRMED')) return 'CONFIRMED'
-          if (active.includes('PACKED')) return 'PACKED'
+          if (active.includes('PREPARING') || active.includes('PACKED')) return 'PACKED'
           if (active.includes('SHIPPED')) return 'SHIPPED'
-          return 'DELIVERED'
+          if (active.every(s => s === 'DELIVERED')) return 'DELIVERED'
+          return active[0] || 'CONFIRMED'
         }
 
         const statuses = combinedOrders.map(o => o.status)

@@ -14,6 +14,7 @@ import { RiderBatchingService } from '@/services/rider-batching.service'
 
 const STAFF_ROLES = ['ADMIN', 'DELIVERY', 'PICKER', 'CHEF', 'RESTAURANT_OWNER']
 const VALID_STATUSES = ['ADMIN_PENDING', 'PENDING', 'CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+const recentCustomerStatusNotifications = new Map<string, number>()
 
 export async function GET(
   request: Request,
@@ -269,13 +270,16 @@ export async function GET(
         }
 
         function getCombinedStatus(statuses: string[]): string {
-          const active = statuses.filter(s => s !== 'CANCELLED')
+          const upper = statuses.map(s => String(s || '').toUpperCase().trim())
+          const active = upper.filter(s => s !== 'CANCELLED')
           if (active.length === 0) return 'CANCELLED'
+          if (active.includes('ADMIN_PENDING')) return 'ADMIN_PENDING'
           if (active.includes('PENDING')) return 'PENDING'
-          if (active.includes('CONFIRMED')) return 'CONFIRMED'
+          if (active.includes('CONFIRMED') || active.includes('PREPARING')) return 'CONFIRMED'
           if (active.includes('PACKED')) return 'PACKED'
           if (active.includes('SHIPPED')) return 'SHIPPED'
-          return 'DELIVERED'
+          if (active.every(s => s === 'DELIVERED')) return 'DELIVERED'
+          return active[0] || 'PENDING'
         }
 
         const statuses = combinedOrders.map(o => o.status)
@@ -933,8 +937,11 @@ export async function PATCH(
       existingOrder.combinedId && (
         isExplicitAll ||
         isCustomerCancel ||
+        isAdmin ||
+        status === 'CONFIRMED' ||
         status === 'SHIPPED' || 
-        status === 'DELIVERED'
+        status === 'DELIVERED' ||
+        status === 'CANCELLED'
       )
     )
 
@@ -1458,7 +1465,8 @@ export async function PATCH(
       }
 
       // If order was approved by Admin from ADMIN_PENDING to PENDING / CONFIRMED / etc, alert Restaurant or Dark Store specifically
-      const isAdminApproved = existingOrder.status === 'ADMIN_PENDING' && status !== 'ADMIN_PENDING' && status !== 'CANCELLED'
+      const isApproval = (body as any)?.isApproval === true || (body as any)?.previousStatus === 'ADMIN_PENDING'
+      const isAdminApproved = (existingOrder.status === 'ADMIN_PENDING' || isApproval) && status !== 'ADMIN_PENDING' && status !== 'CANCELLED'
       if (isAdminApproved) {
         dispatchAdminApprovedNotifications(existingOrder.id, origin).catch(err =>
           console.error('Error dispatching admin approved notifications:', err)
@@ -1482,65 +1490,79 @@ export async function PATCH(
 
         const { fcmMessaging } = await import('@/lib/firebase-admin')
         if (fcmMessaging) {
-          const dataPayload: Record<string, string> = {
-            title: statusTitle,
-            body: statusBody,
-            orderId: existingOrder.id,
-            readableId: baseOrderNo,
-            status: status || '',
-            screen: 'order-tracking',
-            url: `/orders/${existingOrder.id}`,
-            timestamp: Date.now().toString(),
+          const dedupKey = `${existingOrder.userId || uniquePhones[0] || 'customer'}_${baseOrderNo}_${status}`
+          const nowMs = Date.now()
+          for (const [k, t] of recentCustomerStatusNotifications.entries()) {
+            if (nowMs - t > 60000) recentCustomerStatusNotifications.delete(k)
           }
 
-          const fcmPayload = buildOrderFcmPayload(statusTitle, statusBody, dataPayload)
+          if (recentCustomerStatusNotifications.has(dedupKey) && (nowMs - (recentCustomerStatusNotifications.get(dedupKey) || 0) < 20000)) {
+            console.log(`[Deduplication] Suppressed duplicate customer notification for order #${baseOrderNo} (${status})`)
+          } else {
+            recentCustomerStatusNotifications.set(dedupKey, nowMs)
 
-          const broadcastPromises: Promise<any>[] = []
+            const dataPayload: Record<string, string> = {
+              title: statusTitle,
+              body: statusBody,
+              orderId: existingOrder.id,
+              readableId: baseOrderNo,
+              status: status || '',
+              screen: 'order-tracking',
+              url: `/orders/${existingOrder.id}`,
+              timestamp: Date.now().toString(),
+            }
 
-          // 1. Direct device token push to customer's active devices (Deduplicated)
-          const targetUserIds = [existingOrder.userId, fullOrder?.userId].filter(Boolean) as string[]
-          const customerTokenRecords = await prisma.fcmToken.findMany({
-            where: {
-              OR: [
-                ...(targetUserIds.length > 0 ? [{ userId: { in: targetUserIds } }] : []),
-                ...(uniquePhones.length > 0
-                  ? [
-                      { user: { phone: { in: uniquePhones } } },
-                      { user: { phone: { in: uniquePhones.map(p => `+91${p}`) } } },
-                      { user: { phone: { in: uniquePhones.map(p => `+91 ${p}`) } } },
-                    ]
-                  : []),
-              ],
-            },
-            select: { token: true },
-            orderBy: { createdAt: 'desc' },
-            take: 5,
-          })
+            const fcmPayload = buildOrderFcmPayload(statusTitle, statusBody, dataPayload)
 
-          const uniqueTokens = Array.from(new Set(customerTokenRecords.map(t => t.token)))
+            const broadcastPromises: Promise<any>[] = []
 
-          // 1. Direct delivery to active device tokens
-          for (const token of uniqueTokens) {
-            broadcastPromises.push(
-              fcmMessaging.send({
-                token,
-                notification: fcmPayload.notification,
-                data: dataPayload,
-                android: fcmPayload.android,
-                apns: fcmPayload.apns,
-              }).catch((err: any) => console.error('Customer direct token push error:', token.slice(0, 15), err?.message))
-            )
+            // 1. Direct device token push to customer's active devices (Deduplicated)
+            const targetUserIds = [existingOrder.userId, fullOrder?.userId].filter(Boolean) as string[]
+            const customerTokenRecords = await prisma.fcmToken.findMany({
+              where: {
+                OR: [
+                  ...(targetUserIds.length > 0 ? [{ userId: { in: targetUserIds } }] : []),
+                  ...(uniquePhones.length > 0
+                    ? [
+                        { user: { phone: { in: uniquePhones } } },
+                        { user: { phone: { in: uniquePhones.map(p => `+91${p}`) } } },
+                        { user: { phone: { in: uniquePhones.map(p => `+91 ${p}`) } } },
+                      ]
+                    : []),
+                ],
+              },
+              select: { token: true },
+              orderBy: { createdAt: 'desc' },
+              take: 5,
+            })
+
+            const uniqueTokens = Array.from(new Set(customerTokenRecords.map(t => t.token)))
+
+            // 1. Send to direct device tokens if present
+            if (uniqueTokens.length > 0) {
+              for (const token of uniqueTokens) {
+                broadcastPromises.push(
+                  fcmMessaging.send({
+                    token,
+                    notification: fcmPayload.notification,
+                    data: dataPayload,
+                    android: fcmPayload.android,
+                    apns: fcmPayload.apns,
+                  }).catch((err: any) => console.error('Customer direct token push error:', token.slice(0, 15), err?.message))
+                )
+              }
+            } else {
+              // 2. Fallback to phone topics ONLY if no registered device tokens found
+              for (const phone of uniquePhones) {
+                broadcastPromises.push(
+                  sendTopicWithRetry(fcmMessaging, { topic: `phone_${phone}`, ...fcmPayload })
+                    .catch((err: any) => console.error(`Topic phone_${phone} push error:`, err?.message))
+                )
+              }
+            }
+
+            await Promise.allSettled(broadcastPromises)
           }
-
-          // 2. Broadcast to phone topics (guarantees delivery on mobile devices subscribed to phone topic)
-          for (const phone of uniquePhones) {
-            broadcastPromises.push(
-              sendTopicWithRetry(fcmMessaging, { topic: `phone_${phone}`, ...fcmPayload })
-                .catch((err: any) => console.error(`Topic phone_${phone} push error:`, err?.message))
-            )
-          }
-
-          await Promise.allSettled(broadcastPromises)
         }
       } catch (fcmErr: any) {
         console.error('Universal FCM notification error:', fcmErr)

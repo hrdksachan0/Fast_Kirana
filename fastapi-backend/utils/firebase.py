@@ -187,6 +187,11 @@ async def send_fcm_notification(
             default_sound = True
             default_vibrate = True
 
+        # Derive collapse_key and tag from order identifier to prevent duplicate cards on customer devices
+        raw_oid = str(data_str.get("readableId") or data_str.get("orderId") or "").strip().lstrip("#")
+        clean_oid = re.sub(r'-[GR\d]+$', '', raw_oid)
+        collapse_id = f"order_{clean_oid}" if clean_oid else None
+
         message = messaging.MulticastMessage(
             tokens=clean_tokens,
             notification=messaging.Notification(
@@ -196,6 +201,7 @@ async def send_fcm_notification(
             data=data_str,
             android=messaging.AndroidConfig(
                 priority="high",
+                collapse_key=collapse_id,
                 notification=messaging.AndroidNotification(
                     icon="@mipmap/ic_launcher",
                     color="#E20A22",
@@ -204,11 +210,15 @@ async def send_fcm_notification(
                     default_sound=default_sound,
                     default_vibrate_timings=default_vibrate,
                     priority=priority,
-                    visibility="public"
+                    visibility="public",
+                    tag=collapse_id,
                 )
             ),
             apns=messaging.APNSConfig(
-                headers={"apns-priority": "10"},
+                headers={
+                    "apns-priority": "10",
+                    **({"apns-collapse-id": collapse_id} if collapse_id else {})
+                },
                 payload=messaging.APNSPayload(
                     aps=messaging.Aps(
                         alert=messaging.ApsAlert(title=title, body=body),
@@ -295,6 +305,11 @@ async def send_fcm_topic_notification(
             default_sound = True
             default_vibrate = True
 
+        # Derive collapse_key and tag from order identifier to prevent duplicate cards on customer devices
+        raw_oid = str(data_str.get("readableId") or data_str.get("orderId") or "").strip().lstrip("#")
+        clean_oid = re.sub(r'-[GR\d]+$', '', raw_oid)
+        collapse_id = f"order_{clean_oid}" if clean_oid else None
+
         message = messaging.Message(
             topic=clean_topic,
             notification=messaging.Notification(
@@ -304,6 +319,7 @@ async def send_fcm_topic_notification(
             data=data_str,
             android=messaging.AndroidConfig(
                 priority="high",
+                collapse_key=collapse_id,
                 notification=messaging.AndroidNotification(
                     icon="@mipmap/ic_launcher",
                     color="#E20A22",
@@ -312,11 +328,15 @@ async def send_fcm_topic_notification(
                     default_sound=default_sound,
                     default_vibrate_timings=default_vibrate,
                     priority=priority,
-                    visibility="public"
+                    visibility="public",
+                    tag=collapse_id,
                 )
             ),
             apns=messaging.APNSConfig(
-                headers={"apns-priority": "10"},
+                headers={
+                    "apns-priority": "10",
+                    **({"apns-collapse-id": collapse_id} if collapse_id else {})
+                },
                 payload=messaging.APNSPayload(
                     aps=messaging.Aps(
                         alert=messaging.ApsAlert(title=title, body=body),

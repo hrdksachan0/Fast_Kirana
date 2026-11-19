@@ -226,8 +226,8 @@ export function InteractiveCampaignBento({
     }
   }
 
-  // Hide entire section on live storefront (6-Card Bento hidden from web app)
-  if (!previewMode) {
+  // Hide entire section on live storefront if disabled in config
+  if (!previewMode && !activeConfig.enabled) {
     return null
   }
 

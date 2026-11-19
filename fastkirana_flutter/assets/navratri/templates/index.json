@@ -1,33 +1,33 @@
 [
   {
     "id": "navratri",
-    "name": "Navratri",
+    "name": "Navratri & Durga Puja",
     "type": "Festival",
-    "description": "Puja, dandiya and festive essentials in the original Navratri composition.",
-    "manifest": "navratri.json",
+    "description": "Jai Mata Di! Vrat essentials, sabudana, kuttu atta, falahar & sacred puja samagri.",
+    "manifest": "templates/navratri.json",
     "thumbnail": "navratri-festive.svg"
   },
   {
     "id": "diwali",
-    "name": "Diwali",
+    "name": "Shubh Diwali Mahotsav",
     "type": "Festival",
-    "description": "Warm lamps, sweets and home decorations for a Diwali collection.",
+    "description": "Warm clay diyas, Cadbury celebrations, kaju katli & festive gifts in 10-15 mins.",
     "manifest": "templates/diwali.json",
     "thumbnail": "diwali-celebration.svg"
   },
   {
     "id": "holi",
-    "name": "Holi",
+    "name": "Holi & Rangotsav",
     "type": "Festival",
-    "description": "Bright colours, festive snacks and drinks in a playful split composition.",
+    "description": "Organic herbal gulal, high-pressure pichkari, fresh mawa gujiya & kesar thandai.",
     "manifest": "templates/holi.json",
     "thumbnail": "holi-colour-play.svg"
   },
   {
     "id": "ramadan",
-    "name": "Ramadan",
+    "name": "Ramadan & Eid Mubarak",
     "type": "Festival",
-    "description": "Dates, tea and pantry ingredients for shared Ramadan meals.",
+    "description": "Premium kimia dates, sheer khurma roasted sewai, Rooh Afza & royal dry fruits.",
     "manifest": "templates/ramadan.json",
     "thumbnail": "ramadan-evening.svg"
   },

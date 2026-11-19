@@ -245,6 +245,8 @@ export const updateOrderStatusSchema = z.object({
   notes: z.string().nullable().optional(),
   scope: z.string().optional(),
   updateCombined: z.boolean().optional(),
+  isApproval: z.boolean().optional(),
+  previousStatus: z.string().optional(),
 })
 
 // ── Payment Schema ──────────────────────────────────────────────────

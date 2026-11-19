@@ -28,64 +28,77 @@ class GiftingBoutiqueCard extends ConsumerWidget {
     final giftingConfigAsync = ref.watch(giftingStoreConfigProvider);
     final config = giftingConfigAsync.valueOrNull;
 
-    // If Admin disabled the gifting store, hide card from home screen automatically
-    if (config != null && !config.enabled) {
+    // Card-level visibility is governed by card.enabled and hub rules
+    if (!card.enabled) {
       return const SizedBox.shrink();
     }
 
-    const borderColor = Color(0xFFF2D1DA);
-    const roseInk = Color(0xFF4C0E1E);
-    const roseSubtle = Color(0xFF8C5362);
-    final maroonPill = config?.gradientEnd ?? const Color(0xFF881337);
+    // Resolve colors and styling from card config (with elegant fallbacks)
+    final bg = card.backgroundColor ?? const Color(0xFFFDF2F4);
+    final borderColor = card.borderColor ?? const Color(0xFFFCE7F3);
+    final roseInk = card.textColor ?? const Color(0xFF831843);
+    final roseSubtle = (card.textColor ?? const Color(0xFF831843)).withValues(alpha: 0.72);
+    final maroonPill = card.accentColor ?? const Color(0xFF881337);
 
-    final title = config != null && config.bannerTitle.trim().isNotEmpty
-        ? config.bannerTitle.trim()
-        : 'Thoughtful Gifts,\nDelivered With Love';
+    // Dynamic Title & Subtitle from Admin Bento Card Editor (fallback to rich defaults)
+    final title = card.title.trim().isNotEmpty
+        ? card.title.trim()
+        : (config != null && config.bannerTitle.trim().isNotEmpty
+            ? config.bannerTitle.trim()
+            : 'Little things, big feelings.');
 
-    final subtitle = config != null && config.bannerSubtitle.trim().isNotEmpty
-        ? config.bannerSubtitle.trim()
-        : 'Little things, big feelings.\nFresh blooms, cakes & treats.';
+    final subtitle = card.subtitle.trim().isNotEmpty
+        ? card.subtitle.trim()
+        : (config != null && config.bannerSubtitle.trim().isNotEmpty
+            ? config.bannerSubtitle.trim()
+            : 'Flowers, cakes & thoughtful surprises.');
 
-    final bannerUrl = config?.bannerImageUrl.trim() ?? '';
+    final badgeText = (card.badge.trim().isNotEmpty && card.badge.trim() != '04') ? card.badge.trim() : '';
 
-    // If the banner image is the pre-baked artwork (e.g. perfect-gifting-banner.webp or gifting-boutique-hero-hd),
-    // it already contains printed artistic typography ("Gifting Store", "Curated by FastMinute", etc.).
-    // Showing overlapping Flutter text overlays on top ruins readability.
-    final hasBakedArtTypography = bannerUrl.contains('perfect-gifting-banner') ||
-        bannerUrl.contains('gifting-boutique-hero') ||
-        bannerUrl.isEmpty ||
-        title == 'Gifting Store' ||
-        title == 'Thoughtful Gifts,\nDelivered With Love';
+    final bannerUrl = (card.heroImage != null && card.heroImage!.trim().isNotEmpty)
+        ? card.heroImage!.trim()
+        : (config?.bannerImageUrl.trim().isNotEmpty == true
+            ? config!.bannerImageUrl.trim()
+            : '');
+
+    // Only suppress Flutter text overlay if the banner is explicitly the marketing banner with baked-in lettering
+    final hasBakedArtTypography = bannerUrl.contains('perfect-gifting-banner');
 
     return GestureDetector(
       onTap: () => _openGiftingPage(context),
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: (MediaQuery.sizeOf(context).width * 0.44 * (MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.3) > 1.0 ? 1.08 : 1.0)).clamp(168.0, 196.0),
+        height: (MediaQuery.sizeOf(context).width * 0.46 * (MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.25) > 1.0 ? 1.06 : 1.0)).clamp(172.0, 198.0),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
+          color: bg,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              config?.gradientStart.withValues(alpha: 0.18) ?? const Color(0xFFFDECEF),
-              config?.gradientEnd.withValues(alpha: 0.25) ?? const Color(0xFFF9D8E0),
+              bg,
+              bg.withValues(alpha: 0.94),
+              const Color(0xFFFCE7F3).withValues(alpha: 0.5),
             ],
           ),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: borderColor, width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF881337).withValues(alpha: 0.07),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
+              color: maroonPill.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: Stack(
           children: [
-            // Full-bleed HD Gifting Boutique hero artwork (or uploaded image from Admin)
-            Positioned.fill(
+            // Full-bleed HD Gifting Boutique hero artwork (aligned right to leave space for copy)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: MediaQuery.sizeOf(context).width * 0.52,
               child: bannerUrl.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: bannerUrl,
@@ -105,55 +118,100 @@ class GiftingBoutiqueCard extends ConsumerWidget {
                     ),
             ),
 
+            // Subtle gradient scrim from left to protect text legibility
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    stops: const [0.0, 0.45, 0.65, 1.0],
+                    colors: [
+                      bg,
+                      bg.withValues(alpha: 0.95),
+                      bg.withValues(alpha: 0.4),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Left-side editorial copy + Explore Gifts CTA
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: hasBakedArtTypography ? MainAxisAlignment.end : MainAxisAlignment.spaceBetween,
-                children: [
-                  if (!hasBakedArtTypography)
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: SizedBox(
+                width: MediaQuery.sizeOf(context).width * 0.50,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                          decoration: BoxDecoration(
-                            color: maroonPill,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'Gifting Boutique',
-                            style: TextStyle(
-                              fontFamily: 'Plus Jakarta Sans',
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.2,
-                              color: Colors.white,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (badgeText.isNotEmpty) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: borderColor, width: 1),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontSize: 9.0,
+                                    fontWeight: FontWeight.w800,
+                                    color: roseInk,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: maroonPill,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'GIFTING BOUTIQUE',
+                                style: TextStyle(
+                                  fontFamily: 'Plus Jakarta Sans',
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 7),
                         Text(
                           title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'NotoSerif',
-                            fontSize: 15.0,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
                             color: roseInk,
                             height: 1.15,
                             letterSpacing: -0.3,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 3.5),
                         Text(
                           subtitle,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Plus Jakarta Sans',
                             fontSize: 10.0,
                             fontWeight: FontWeight.w500,
@@ -163,41 +221,42 @@ class GiftingBoutiqueCard extends ConsumerWidget {
                         ),
                       ],
                     ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
-                    decoration: BoxDecoration(
-                      color: maroonPill,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: maroonPill.withValues(alpha: 0.26),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Explore Gifts',
-                          style: TextStyle(
-                            fontFamily: 'Plus Jakarta Sans',
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
+                      decoration: BoxDecoration(
+                        color: maroonPill,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: maroonPill.withValues(alpha: 0.28),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Explore Gifts',
+                            style: TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontSize: 12.0,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 14,
                             color: Colors.white,
                           ),
-                        ),
-                        SizedBox(width: 6),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 15,
-                          color: Colors.white,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

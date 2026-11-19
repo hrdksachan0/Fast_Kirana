@@ -94,6 +94,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final existingNotes = ref.read(checkoutControllerProvider.notifier).customDeliveryNotes;
+      if (existingNotes.isNotEmpty) {
+        _deliveryNotesController.text = existingNotes;
+      }
       ref.read(checkoutControllerProvider.notifier).init(
         context: context,
         discountAmount: widget.discountAmount,
@@ -623,6 +627,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       const SizedBox(height: 8),
 
+                      // 3.5 Gift Card Preview & Customization (When Gifting details are configured)
+                      if (checkoutState.customReceiverName?.isNotEmpty == true ||
+                          checkoutState.customDeliveryNotes.contains('Gift Note') ||
+                          checkoutState.customDeliveryNotes.contains('SECRET GIFT') ||
+                          checkoutState.customDeliveryNotes.contains('[SEND LIVE TRACKING LINK')) ...[
+                        _buildGiftOrderPreviewCard(
+                          context: context,
+                          checkoutState: checkoutState,
+                          controller: controller,
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+
                       // 4. Cart Items Review Card
                       CheckoutItemsReviewCard(items: items),
                       const SizedBox(height: 8),
@@ -800,7 +817,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           controller.setPaymentMethod(method);
                         },
                         onConfirm: () {
-                          controller.updateNotes(_deliveryNotesController.text);
+                          if (_deliveryNotesController.text.trim().isNotEmpty) {
+                            controller.updateNotes(_deliveryNotesController.text.trim());
+                          }
                           controller.handlePlaceOrder(context, cart: activeCart);
                         },
                       );
@@ -883,5 +902,268 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     ],
   ),
 );
+  }
+
+  Widget _buildGiftOrderPreviewCard({
+    required BuildContext context,
+    required CheckoutState checkoutState,
+    required CheckoutController controller,
+  }) {
+    final notes = checkoutState.customDeliveryNotes;
+    String giftNote = '';
+    final noteMatch = RegExp(r'💌 Gift Note:\s*(.*?)(?:\||$)').firstMatch(notes);
+    if (noteMatch != null && noteMatch.group(1) != null) {
+      giftNote = noteMatch.group(1)!.trim();
+    }
+    final isSecret = notes.contains('SECRET GIFT');
+    final recipientName = (checkoutState.customReceiverName != null && checkoutState.customReceiverName!.isNotEmpty)
+        ? checkoutState.customReceiverName!
+        : 'Someone Special';
+    final recipientPhone = checkoutState.customReceiverPhone ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF7F9), Color(0xFFFDECEF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF2D3DC), width: 1.1),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6B1728).withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6B1728),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('✨', style: TextStyle(fontSize: 10)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'COMPLIMENTARY GIFT CARD ATTACHED',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: const Color(0xFFFFE082),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Bounceable(
+                onTap: () {
+                  _showEditGiftCardSheet(
+                    context: context,
+                    currentName: checkoutState.customReceiverName ?? '',
+                    currentPhone: checkoutState.customReceiverPhone ?? '',
+                    currentNote: giftNote,
+                    isSecret: isSecret,
+                    controller: controller,
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBE123C), width: 0.8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.edit_outlined, size: 11, color: Color(0xFFBE123C)),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Edit Card',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFBE123C),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'To: $recipientName${recipientPhone.isNotEmpty ? ' ($recipientPhone)' : ''} 💝',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF4A0E1C),
+            ),
+          ),
+          if (giftNote.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              '“$giftNote”',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11.5,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF6B1728),
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.lock_outline_rounded, size: 12, color: Color(0xFF16A34A)),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Price & bill hidden on box • Live tracking shared with recipient',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF15803D),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditGiftCardSheet({
+    required BuildContext context,
+    required String currentName,
+    required String currentPhone,
+    required String currentNote,
+    required bool isSecret,
+    required CheckoutController controller,
+  }) {
+    final nameCtrl = TextEditingController(text: currentName);
+    final phoneCtrl = TextEditingController(text: currentPhone);
+    final noteCtrl = TextEditingController(text: currentNote);
+    bool secretMode = isSecret;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                top: 18,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '🎁 Customize Gift Card Details',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: AppDesignSystem.slate900,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: nameCtrl,
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration(
+                      labelText: 'Receiver Name',
+                      hintText: 'e.g. Priya, Rohit, Mom',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration(
+                      labelText: 'Receiver Phone (for Live Tracking SMS/WhatsApp)',
+                      hintText: '10-digit phone',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: noteCtrl,
+                    maxLines: 2,
+                    maxLength: 200,
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      labelText: 'Personal Gift Note 💌',
+                      hintText: 'e.g. Happy Birthday! Wishing you the best!',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFBE123C),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        final n = nameCtrl.text.trim();
+                        final p = phoneCtrl.text.trim();
+                        final note = noteCtrl.text.trim();
+                        controller.setReceiverDetails(n.isNotEmpty ? n : null, p.isNotEmpty ? p : null);
+                        final secretPrefix = secretMode ? '🎁 [SECRET GIFT: HIDE PRICE & INVOICE]\n' : '';
+                        final trackingPrefix = p.isNotEmpty ? '📱 [SEND LIVE TRACKING LINK TO: $p]\n' : '';
+                        final fullNote = '$secretPrefix$trackingPrefix${note.isNotEmpty ? '💌 Gift Note: $note' : ''}';
+                        controller.updateNotes(fullNote);
+                        _deliveryNotesController.text = fullNote;
+                        Navigator.pop(ctx);
+                        setState(() {});
+                      },
+                      child: Text('Save Gift Card 💌', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

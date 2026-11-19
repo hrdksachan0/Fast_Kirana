@@ -5,6 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/utils/app_url_launcher.dart';
+import '../../core/routes/page_transitions.dart';
+import '../../providers/auth_provider.dart';
+import '../checkout/checkout_screen.dart';
 import '../../data/models/gifting_store_config.dart';
 import '../../providers/gifting_store_provider.dart';
 
@@ -46,6 +52,90 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     _receiverPhoneCtrl.dispose();
     _giftNoteCtrl.dispose();
     super.dispose();
+  }
+
+  void _syncDetailsToCheckout() {
+    final n = _receiverNameCtrl.text.trim();
+    final p = _receiverPhoneCtrl.text.trim();
+    final note = _giftNoteCtrl.text.trim();
+    ref.read(checkoutControllerProvider.notifier).setReceiverDetails(
+      n.isNotEmpty ? n : null,
+      p.isNotEmpty ? p : null,
+    );
+    final secretPrefix = _isSecretGift ? '🎁 [SECRET GIFT: HIDE PRICE & INVOICE]\n' : '';
+    final trackingPrefix = _sendTrackingLink && p.isNotEmpty ? '📱 [SEND LIVE TRACKING LINK TO: $p]\n' : '';
+    if (note.isNotEmpty || _isSecretGift || _sendTrackingLink) {
+      ref.read(checkoutControllerProvider.notifier).updateNotes(
+        '$secretPrefix$trackingPrefix${note.isNotEmpty ? '💌 Gift Note: $note' : ''}',
+      );
+    }
+  }
+
+  Future<void> _shareGiftCard() async {
+    HapticFeedback.lightImpact();
+    _syncDetailsToCheckout();
+    final n = _receiverNameCtrl.text.trim();
+    final note = _giftNoteCtrl.text.trim();
+    final toName = n.isNotEmpty ? n : 'Someone Special';
+    final user = ref.read(authProvider).valueOrNull;
+    final fromName = (user?.name != null && user!.name!.trim().isNotEmpty)
+        ? user.name!.trim()
+        : 'Your loved one';
+    final noteText = note.isNotEmpty ? note : 'Wishing you a wonderful celebration and lots of happiness!';
+
+    final shareText = '🎁 *Surprise Gift Card for $toName!* 💖\n\n'
+        'From: *$fromName*\n'
+        '💌 *Personal Note:* "$noteText"\n\n'
+        '🚚 *FastMinute Express Delivery*\n'
+        '📍 *Track your live surprise delivery:* https://fastminute.in/order/track\n\n'
+        '✨ Complimentary handwritten greeting card • 100% Secret Surprise (Price & Invoice Hidden)';
+
+    final whatsappUrl = 'whatsapp://send?text=${Uri.encodeComponent(shareText)}';
+    final success = await AppUrlLauncher.launchSafely(
+      Uri.parse(whatsappUrl),
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!success) {
+      await Share.share(shareText, subject: '🎁 Surprise Gift from FastMinute');
+    }
+
+    // Auto-advance to Checkout per user request so order is placed with live tracking
+    final cart = ref.read(cartProvider).valueOrNull;
+    if (cart != null && cart.items.isNotEmpty && mounted) {
+      Navigator.push(
+        context,
+        FadeSlideRoute(page: const CheckoutScreen()),
+      );
+    }
+  }
+
+  void _proceedToCheckout() {
+    HapticFeedback.mediumImpact();
+    _syncDetailsToCheckout();
+    final cart = ref.read(cartProvider).valueOrNull;
+    final items = cart?.items ?? [];
+
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '🎁 Please select gift hampers or products below to proceed to checkout!',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
+          ),
+          backgroundColor: const Color(0xFFBE123C),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      FadeSlideRoute(page: const CheckoutScreen()),
+    );
   }
 
   void _showReceiverDetailsSheet() {
@@ -481,13 +571,13 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
                     isSecretGift: _isSecretGift,
                     onSecretGiftToggle: (val) {
                       setState(() => _isSecretGift = val);
-                      final note = _giftNoteCtrl.text.trim();
-                      final secretPrefix = val ? '🎁 [SECRET GIFT: HIDE PRICE & INVOICE]\n' : '';
-                      ref.read(checkoutControllerProvider.notifier).updateNotes(
-                        '$secretPrefix${note.isNotEmpty ? '💌 Gift Note: $note' : ''}',
-                      );
+                      _syncDetailsToCheckout();
                     },
                     onTapEdit: _showReceiverDetailsSheet,
+                    onShareCard: _shareGiftCard,
+                    onProceedToCheckout: _proceedToCheckout,
+                    cartItemCount: cartItems.length,
+                    cartTotal: cart?.subtotal ?? 0.0,
                   ),
                 ),
 

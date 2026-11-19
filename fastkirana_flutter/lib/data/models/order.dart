@@ -406,13 +406,42 @@ class Order {
       }
     }
 
+    final parsedStatus = parseStatus(json['status']);
+    final rawSubOrders = json['subOrders'];
+    List<Order>? parsedSubOrders;
+    if (rawSubOrders is List) {
+      parsedSubOrders = rawSubOrders.map((x) => x is Order ? x : Order.fromJson(x)).toList();
+    }
+
+    // Client-side fail-safe: A combined order can NEVER be DELIVERED if any active sub-order is not delivered!
+    OrderStatus effectiveStatus = parsedStatus;
+    final isComboOrder = json['isCombined'] == true || (json['combinedId'] != null && json['combinedId'].toString().trim().isNotEmpty);
+    if (isComboOrder && parsedSubOrders != null && parsedSubOrders.isNotEmpty) {
+      final activeSubs = parsedSubOrders.where((s) => s.status != OrderStatus.cancelled).toList();
+      if (activeSubs.isNotEmpty && !activeSubs.every((s) => s.status == OrderStatus.delivered)) {
+        if (activeSubs.any((s) => s.status == OrderStatus.adminPending)) {
+          effectiveStatus = OrderStatus.adminPending;
+        } else if (activeSubs.any((s) => s.status == OrderStatus.pending)) {
+          effectiveStatus = OrderStatus.pending;
+        } else if (activeSubs.any((s) => s.status == OrderStatus.confirmed)) {
+          effectiveStatus = OrderStatus.confirmed;
+        } else if (activeSubs.any((s) => s.status == OrderStatus.packed)) {
+          effectiveStatus = OrderStatus.packed;
+        } else if (activeSubs.any((s) => s.status == OrderStatus.shipped)) {
+          effectiveStatus = OrderStatus.shipped;
+        }
+      } else if (activeSubs.isEmpty && parsedSubOrders.every((s) => s.status == OrderStatus.cancelled)) {
+        effectiveStatus = OrderStatus.cancelled;
+      }
+    }
+
     return Order(
       id: json['id']?.toString() ?? '',
       readableId: json['readableId']?.toString() ?? json['readable_id']?.toString(),
       userId: json['userId']?.toString() ?? json['user_id']?.toString() ?? '',
       addressId: json['addressId']?.toString() ?? json['address_id']?.toString() ?? '',
       restaurantId: parsedRestId,
-      status: parseStatus(json['status']),
+      status: effectiveStatus,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
       discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
       deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
@@ -527,9 +556,7 @@ class Order {
       items: itemsList,
       combinedId: json['combinedId']?.toString(),
       isCombined: json['isCombined'] == true || (json['combinedId'] != null && json['combinedId'].toString().trim().isNotEmpty),
-      subOrders: (json['subOrders'] is List)
-          ? (json['subOrders'] as List).map((x) => x is Order ? x : Order.fromJson(x)).toList()
-          : null,
+      subOrders: parsedSubOrders,
       subLabels: (json['subLabels'] is List) ? (json['subLabels'] as List).map((x) => x.toString()).toList() : null,
       kotPrinted: json['kot_printed'] == true || json['kotPrinted'] == true || json['kot_sent'] == true || json['kotSent'] == true,
     );

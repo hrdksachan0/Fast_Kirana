@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "demo": true,
+  "enabled": true,
+  "autoplay": true,
+  "layout": "classic",
+  "searchPrefix": "Search for",
+  "decorationImage": "gold-lights.svg",
+  "labels": {
+    "sectionLabel": "🌺 Shubh Navratri & Durga Puja",
+    "specialsHeading": "🪔 15-Min Vrat & Puja Deals",
+    "curvedTabLabel": "🔥 Vrat & Falahar Bestsellers",
+    "loadingText": "Mata Rani ki kripa & puja samagri load ho rahi hai…",
+    "emptyText": "Is collection me aur items add ho rahe hain. Dusre tab ya search dekhein.",
+    "demoLabel": "Navratri Special Deal",
+    "resultsDemoLabel": "Navratri collection · live prices"
+  },
+  "appearance": {
+    "background": "#881337",
+    "card": "#FFFDF7",
+    "text": "#3B0A0A",
+    "smallText": "#881337",
+    "headerText": "#FFFDF7",
+    "headerOutline": "#4C0519",
+    "underline": "#F59E0B",
+    "tabSurface": "#FEF3C7"
+  },
+  "timings": {
+    "headerMs": 4500,
+    "productMs": 3200,
+    "searchMs": 3600,
+    "crossfadeMs": 450
+  },
+  "searchSuggestions": [
+    "Sabudana",
+    "Kuttu Ka Atta",
+    "Sendha Namak",
+    "Makhana",
+    "Chunri",
+    "Camphor",
+    "Desi Ghee",
+    "Kaju Katli"
+  ],
+  "navigation": [],
+  "headers": [
+    {
+      "id": "navratri-header-1",
+      "kind": "illustration",
+      "eyebrow": "15-MIN VRAT & PUJA DELIVERY",
+      "title": "🌺 Jai Mata Di",
+      "subtitle": "Kuttu Atta, Sabudana, Sendha Namak & Puja Thali delivered in 10-15 mins",
+      "image": "navratri-festive.svg"
+    },
+    {
+      "id": "navratri-header-2",
+      "kind": "title",
+      "eyebrow": "100% SHUDDH VRAT ESSENTIALS",
+      "title": "Shuddh Vrat & Falahar",
+      "subtitle": "Fortune Desi Ghee, Roasted Makhana, Sabudana & Dry Fruits",
+      "image": null
+    },
+    {
+      "id": "navratri-header-3",
+      "kind": "brand",
+      "eyebrow": "DIVINE PUJA COLLECTION",
+      "title": "Mata Ji Ki Aarti & Puja",
+      "subtitle": "Pooja Supari, Kapoor, Agarbatti, Dhoop & Mata Rani Chunri",
+      "image": "navratri-festive.svg"
+    }
+  ],
+  "products": [
+    {
+      "id": "navratri-sabudana",
+      "name": "Premium Big Sabudana (1 kg)",
+      "image": "daily-rice.svg",
+      "originalPrice": 105,
+      "price": 85,
+      "currency": "INR",
+      "categoryId": "navratri-vrat-category",
+      "destinationId": "search-navratri-sabudana"
+    },
+    {
+      "id": "navratri-kuttu",
+      "name": "Shuddh Kuttu Atta (Buckwheat 500 g)",
+      "image": "value-atta.svg",
+      "originalPrice": 90,
+      "price": 75,
+      "currency": "INR",
+      "categoryId": "navratri-vrat-category",
+      "destinationId": "search-navratri-kuttu"
+    },
+    {
+      "id": "navratri-sendha",
+      "name": "Tata Sendha Namak (Rock Salt 1 kg)",
+      "image": "daily-vegetables.svg",
+      "originalPrice": 35,
+      "price": 30,
+      "currency": "INR",
+      "categoryId": "navratri-vrat-category",
+      "destinationId": "search-navratri-sendha"
+    },
+    {
+      "id": "navratri-makhana",
+      "name": "Phool Makhana Super Clean (250 g)",
+      "image": "summer-coconut.svg",
+      "originalPrice": 260,
+      "price": 210,
+      "currency": "INR",
+      "categoryId": "navratri-dryfruits-category",
+      "destinationId": "search-navratri-makhana"
+    }
+  ],
+  "categories": [
+    {
+      "id": "navratri-vrat-category",
+      "label": "Vrat Atta & Sabudana",
+      "image": "daily-rice.svg",
+      "destinationId": "search-navratri-vrat",
+      "keywords": [
+        "sabudana",
+        "kuttu",
+        "singhara",
+        "sendha namak",
+        "vrat"
+      ]
+    },
+    {
+      "id": "navratri-puja-category",
+      "label": "Puja Samagri & Diyas",
+      "image": "puja-thali.svg",
+      "destinationId": "search-navratri-puja",
+      "keywords": [
+        "puja",
+        "agarbatti",
+        "dhoop",
+        "kapoor",
+        "diya",
+        "chunri",
+        "supari"
+      ]
+    },
+    {
+      "id": "navratri-dryfruits-category",
+      "label": "Dry Fruits & Makhana",
+      "image": "summer-coconut.svg",
+      "destinationId": "search-navratri-dryfruits",
+      "keywords": [
+        "makhana",
+        "badam",
+        "kaju",
+        "kishmish",
+        "dry fruit"
+      ]
+    },
+    {
+      "id": "navratri-sweets-category",
+      "label": "Festive Mithai & Fruits",
+      "image": "diwali-ladoo.svg",
+      "destinationId": "search-navratri-sweets",
+      "keywords": [
+        "mithai",
+        "sweet",
+        "ladoo",
+        "fruit",
+        "apple",
+        "banana"
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "id": "top-picks",
+      "label": "🔥 Top Picks",
+      "image": "navratri-festive.svg",
+      "keywords": [
+        "sabudana",
+        "kuttu",
+        "makhana"
+      ]
+    },
+    {
+      "id": "navratri-falahar",
+      "label": "🥣 Vrat & Falahar",
+      "image": "daily-rice.svg",
+      "keywords": [
+        "sabudana",
+        "kuttu",
+        "singhara",
+        "sendha namak"
+      ]
+    },
+    {
+      "id": "navratri-puja",
+      "label": "🪔 Puja Samagri",
+      "image": "puja-thali.svg",
+      "keywords": [
+        "puja",
+        "kapoor",
+        "agarbatti",
+        "chunri"
+      ]
+    },
+    {
+      "id": "navratri-dryfruits",
+      "label": "🥜 Dry Fruits & Nuts",
+      "image": "summer-coconut.svg",
+      "keywords": [
+        "makhana",
+        "kaju",
+        "badam",
+        "kishmish"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "id": "search-navratri-vrat",
+      "kind": "search",
+      "query": "sabudana"
+    },
+    {
+      "id": "search-navratri-puja",
+      "kind": "search",
+      "query": "puja"
+    },
+    {
+      "id": "search-navratri-dryfruits",
+      "kind": "search",
+      "query": "makhana"
+    },
+    {
+      "id": "search-navratri-sweets",
+      "kind": "search",
+      "query": "mithai"
+    },
+    {
+      "id": "search-navratri-sabudana",
+      "kind": "search",
+      "query": "sabudana"
+    },
+    {
+      "id": "search-navratri-kuttu",
+      "kind": "search",
+      "query": "kuttu"
+    },
+    {
+      "id": "search-navratri-sendha",
+      "kind": "search",
+      "query": "sendha namak"
+    },
+    {
+      "id": "search-navratri-makhana",
+      "kind": "search",
+      "query": "makhana"
+    }
+  ]
+}

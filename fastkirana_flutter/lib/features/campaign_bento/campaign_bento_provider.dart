@@ -248,8 +248,9 @@ class CampaignBentoNotifier extends StateNotifier<CampaignBentoConfig> {
             endDate: gb['endDate'] as String? ?? card.endDate,
             timeSlot: gb['timeSlot'] as String? ?? card.timeSlot,
             targetHubs: (gb['targetHubs'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? card.targetHubs,
-            title: (gb['title'] as String?)?.trim() ?? card.title,
-            subtitle: (gb['subtitle'] as String?)?.trim() ?? card.subtitle,
+            title: (gb['title'] as String?)?.trim().isNotEmpty == true ? (gb['title'] as String).trim() : card.title,
+            subtitle: (gb['subtitle'] as String?)?.trim().isNotEmpty == true ? (gb['subtitle'] as String).trim() : card.subtitle,
+            heroImage: _normalizeImage(gb['heroImage'] as String?, card.heroImage ?? 'assets/navratri/gifting-boutique-hero-hd.jpg'),
             items: items.isNotEmpty ? items : card.items,
           );
         }

@@ -352,8 +352,27 @@ async def send_pwa_notification_to_roles(roles: list, title: str, body: str, dat
         logger.error(f"Failed to dispatch FCM push notification to roles: {str(e)}")
 
 
+_recent_customer_notifications: Dict[str, float] = {}
+_recent_rider_packed_notifications: Dict[str, float] = {}
+
 async def send_pwa_notification_to_user(user_id: str, title: str, body: str, data: dict, db: AsyncSession = None, phone: str = None):
     try:
+        # Deduplicate customer status notifications for combined sub-orders within 30 seconds
+        clean_order_id = re.sub(r'-[GR\d]+$', '', str(data.get("readableId") or data.get("orderId") or "").strip().lstrip("#"))
+        order_status = str(data.get("status") or "").upper()
+        dedup_key = f"{user_id or phone}:{clean_order_id}:{order_status}"
+        now_ts = time.time()
+
+        # Clean expired keys older than 60s
+        for k in list(_recent_customer_notifications.keys()):
+            if now_ts - _recent_customer_notifications[k] > 60:
+                _recent_customer_notifications.pop(k, None)
+
+        if dedup_key in _recent_customer_notifications and (now_ts - _recent_customer_notifications[dedup_key]) < 30:
+            logger.info(f"Deduplicated duplicate customer notification for {dedup_key}")
+            return
+        _recent_customer_notifications[dedup_key] = now_ts
+
         # Check if user has registered device tokens
         tokens = []
         if user_id:
@@ -477,11 +496,13 @@ async def dispatch_isolated_status_update_notifications(
     restaurant_id: Optional[str],
     shop_name: Optional[str],
     status_val: str,
-    store_id: Optional[str] = None
+    store_id: Optional[str] = None,
+    delivery_user_id: Optional[str] = None
 ):
     """
     Dispatches order status update notifications with strict outlet isolation:
-    - When PACKED: Alert Delivery Rider to pick up and deliver.
+    - When PACKED: Alert assigned Delivery Rider ONLY to pick up and deliver.
+      (Unassigned orders NEVER spam riders; they are dispatched via dispatch_rider_assignment_notification upon assignment)
     - Restaurant orders alert canonical restaurant topic.
     - Grocery orders alert darkstore pickers.
     """
@@ -490,28 +511,37 @@ async def dispatch_isolated_status_update_notifications(
         base_order_no = re.sub(r'-[GR\d]+$', '', readable_id or "")
         safe_shop_name = (shop_name or "").replace("FastKirana", "FastMinute")
 
-        # ── RIDER NOTIFICATION: Triggered ONLY when order is PACKED & ready for pickup ──
-        # (Designated rider is specifically buzzed via dispatch_rider_assignment_notification when assigned)
-        if status_val == "PACKED" or (restaurant_id and status_val in ["COOKED", "PREPARED"]):
-            rider_title = f"🛵 Order #{base_order_no} is Packed & Ready!"
-            rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) is packed. Tap to pick up & deliver."
-            msg_type = "ORDER_PACKED"
+        # ── RIDER NOTIFICATION: Triggered ONLY when order is PACKED & an actual designated rider is assigned ──
+        # If order is UNASSIGNED (delivery_user_id is None), do NOT spam riders with personal delivery alarms!
+        # When an admin assigns a rider, dispatch_rider_assignment_notification buzzes that rider directly.
+        if (status_val == "PACKED" or (restaurant_id and status_val in ["COOKED", "PREPARED"])) and delivery_user_id:
+            clean_duid = str(delivery_user_id).strip()
+            if clean_duid.upper() not in ["", "NONE", "NULL", "UNASSIGNED", "STORE_ADMIN_SELF"]:
+                now_s = time.time()
+                dedup_key = f"{clean_duid}:{base_order_no}:PACKED"
+                if dedup_key not in _recent_rider_packed_notifications or (now_s - _recent_rider_packed_notifications[dedup_key]) > 30:
+                    _recent_rider_packed_notifications[dedup_key] = now_s
+                    # Clean expired keys older than 60s
+                    for k in list(_recent_rider_packed_notifications.keys()):
+                        if now_s - _recent_rider_packed_notifications[k] > 60:
+                            _recent_rider_packed_notifications.pop(k, None)
 
-            rider_data = {
-                "orderId": order_id,
-                "readableId": str(readable_id),
-                "storeId": str(store_id or ""),
-                "restaurantId": str(restaurant_id or ""),
-                "status": status_val,
-                "screen": "delivery",
-                "url": "/delivery",
-                "type": msg_type,
-                "role": "DELIVERY",
-                "timestamp": now_ts,
-            }
-            # Strict Hub Isolation: Send ONLY to this hub's rider topic
-            rider_topic = f"delivery_orders_{store_id}" if store_id else "delivery_orders"
-            await send_fcm_topic_notification(rider_topic, rider_title, rider_body, rider_data)
+                    rider_title = f"🛵 Order #{base_order_no} is Packed & Ready!"
+                    rider_body = f"Order #{base_order_no} ({safe_shop_name or 'Store'}) is packed. Tap to pick up & deliver."
+                    rider_data = {
+                        "orderId": order_id,
+                        "readableId": str(readable_id),
+                        "storeId": str(store_id or ""),
+                        "restaurantId": str(restaurant_id or ""),
+                        "status": status_val,
+                        "screen": "delivery",
+                        "url": "/delivery",
+                        "type": "ORDER_PACKED",
+                        "role": "DELIVERY",
+                        "timestamp": now_ts,
+                    }
+                    # Send directly to the designated assigned rider
+                    await send_fcm_topic_notification(f"user_{clean_duid}", rider_title, rider_body, rider_data)
 
         if restaurant_id:
             # RESTAURANT / KITCHEN ISOLATED STATUS UPDATE:
@@ -2940,79 +2970,110 @@ async def create_order(
                                     "weight": weight_variant,
                                 })
 
-                        for v_id, v_data in vendor_groups.items():
-                            v_obj = v_data["vendor"]
-                            v_items = v_data["items"]
-                            total_val = sum(i["quantity"] * i["cost"] for i in v_items)
+                        # Alert vendors ONLY if the order is already confirmed/auto-approved (NOT ADMIN_PENDING)
+                        if not is_admin_pending:
+                            for v_id, v_data in vendor_groups.items():
+                                v_obj = v_data["vendor"]
+                                v_items = v_data["items"]
+                                total_val = sum(i["quantity"] * i["cost"] for i in v_items)
 
-                            await ws_manager.broadcast_to_channel(f"vendor_{v_id}", {
-                                "event": "NEW_VENDOR_ORDER",
-                                "type": "new-vendor-order",
-                                "orderId": ord_item.id,
-                                "readableId": ord_item.readableId,
-                                "items": v_items,
-                                "totalVendorCost": total_val,
-                                "createdAt": ord_item.createdAt.isoformat(),
-                            })
+                                await ws_manager.broadcast_to_channel(f"vendor_{v_id}", {
+                                    "event": "NEW_VENDOR_ORDER",
+                                    "type": "new-vendor-order",
+                                    "orderId": ord_item.id,
+                                    "readableId": ord_item.readableId,
+                                    "items": v_items,
+                                    "totalVendorCost": total_val,
+                                    "createdAt": ord_item.createdAt.isoformat(),
+                                })
 
-                            clean_v_phone = ""
-                            if v_obj.phone:
-                                clean_v_phone = re.sub(r'\D', '', str(v_obj.phone))[-10:]
-                                if len(clean_v_phone) == 10:
-                                    item_lines = "\n".join([f"• {i['quantity']}x {i['name']} {('[' + i['weight'] + ']') if i['weight'] else ''}" for i in v_items])
-                                    v_alert_text = (
-                                        f"🔔 *FastMinute New Order Alert #{ord_item.readableId}*\n\n"
-                                        f"Customer ordered items from your catalog:\n{item_lines}\n\n"
-                                        f"💰 Total Supply Cost: ₹{total_val:.2f}\n"
-                                        f"⚡ Please pack and keep ready for FastMinute picker pickup!"
-                                    )
-                                    await send_whatsapp_alert(clean_v_phone, v_alert_text)
+                                clean_v_phone = ""
+                                if v_obj.phone:
+                                    clean_v_phone = re.sub(r'\D', '', str(v_obj.phone))[-10:]
+                                    if len(clean_v_phone) == 10:
+                                        item_lines = "\n".join([f"• {i['quantity']}x {i['name']} {('[' + i['weight'] + ']') if i['weight'] else ''}" for i in v_items])
+                                        v_alert_text = (
+                                            f"🔔 *FastMinute New Order Alert #{ord_item.readableId}*\n\n"
+                                            f"Customer ordered items from your catalog:\n{item_lines}\n\n"
+                                            f"💰 Total Supply Cost: ₹{total_val:.2f}\n"
+                                            f"⚡ Please pack and keep ready for FastMinute picker pickup!"
+                                        )
+                                        await send_whatsapp_alert(clean_v_phone, v_alert_text)
 
-                            vendor_topic = f"vendor_{v_id}"
-                            fcm_title = f"📦 New Order #{ord_item.readableId} for Your Store!"
-                            fcm_body = f"{len(v_items)} item(s) to pack (₹{total_val:.0f}). Tap to view and mark ready!"
-                            fcm_data = {
-                                "type": "VENDOR_NEW_ORDER",
-                                "orderId": ord_item.id,
-                                "readableId": str(ord_item.readableId),
-                                "vendorId": v_id,
-                                "screen": "vendor-console",
-                                "click_action": "FLUTTER_NOTIFICATION_CLICK",
-                            }
-                            send_fcm_topic_notification(vendor_topic, fcm_title, fcm_body, fcm_data)
-                            if clean_v_phone and len(clean_v_phone) == 10:
-                                send_fcm_topic_notification(f"phone_{clean_v_phone}", fcm_title, fcm_body, fcm_data)
+                                vendor_topic = f"vendor_{v_id}"
+                                fcm_title = f"📦 New Order #{ord_item.readableId} for Your Store!"
+                                fcm_body = f"{len(v_items)} item(s) to pack (₹{total_val:.0f}). Tap to view and mark ready!"
+                                fcm_data = {
+                                    "type": "VENDOR_NEW_ORDER",
+                                    "orderId": ord_item.id,
+                                    "readableId": str(ord_item.readableId),
+                                    "vendorId": v_id,
+                                    "screen": "vendor-console",
+                                    "click_action": "FLUTTER_NOTIFICATION_CLICK",
+                                }
+                                send_fcm_topic_notification(vendor_topic, fcm_title, fcm_body, fcm_data)
+                                if clean_v_phone and len(clean_v_phone) == 10:
+                                    send_fcm_topic_notification(f"phone_{clean_v_phone}", fcm_title, fcm_body, fcm_data)
                 except Exception as vendor_notify_err:
                     logger.warning(f"Could not dispatch vendor notifications for order #{ord_item.readableId}: {vendor_notify_err}")
 
         background_tasks.add_task(_dispatch_post_order_broadcasts, created_orders, items, db_products, user_id, trace_id)
 
-        for order in created_orders:
-            # 1. FCM Push Notification directly to Customer
-            customer_title = "🎉 Order Placed Successfully!"
-            customer_body = f"Your order #{order.readableId} of ₹{order.total:.2f} has been placed with FastMinute Express! ⚡"
-            background_tasks.add_task(
-                send_pwa_notification_to_user,
-                order.userId,
-                customer_title,
-                customer_body,
-                {"orderId": order.id, "status": order.status.value, "type": "ORDER_PLACED"},
-                None,
-                address.phone if address else None
-            )
+        # 1. FCM Push Notification directly to Customer (Single consolidated notification for combined orders)
+        cust_order_for_notif = created_orders[0]
+        base_readable = re.sub(r'-[GR\d]+$', '', str(cust_order_for_notif.readableId or "").strip().lstrip("#"))
+        total_combined_amount = sum(safe_float(o.total) for o in created_orders)
 
-            # 2. Strict Isolated FCM Push Notifications to Restaurant/Grocery Workers
-            background_tasks.add_task(
-                dispatch_isolated_order_fcm_notifications,
-                order.id,
-                order.readableId,
-                order.restaurantId,
-                order.shopName,
-                float(order.total),
-                order.status.value,
-                order.storeId,
-                "PAID" if is_online_paid else "PENDING"
-            )
+        customer_title = "🎉 Order Placed Successfully!"
+        customer_body = f"Your order #{base_readable} of ₹{total_combined_amount:.2f} has been placed with FastMinute Express! ⚡"
+        background_tasks.add_task(
+            send_pwa_notification_to_user,
+            cust_order_for_notif.userId,
+            customer_title,
+            customer_body,
+            {
+                "orderId": cust_order_for_notif.id,
+                "readableId": base_readable,
+                "status": cust_order_for_notif.status.value,
+                "type": "ORDER_PLACED"
+            },
+            None,
+            address.phone if address else None
+        )
+
+        if is_admin_pending:
+            # 2. Strict Single Consolidated FCM Push Notification to Admin for approval
+            outlets = " + ".join(dict.fromkeys(o.shopName for o in created_orders if o.shopName)) or "FastMinute Store"
+            admin_title = "🚨 New Order Awaiting Approval!"
+            admin_body = f"Order #{base_readable} ({outlets}, ₹{total_combined_amount:.2f}) needs admin approval. Tap to review."
+            admin_data = {
+                "orderId": cust_order_for_notif.id,
+                "readableId": base_readable,
+                "storeId": str(cust_order_for_notif.storeId or ""),
+                "status": "ADMIN_PENDING",
+                "paymentStatus": "PAID" if is_online_paid else "PENDING",
+                "isPaid": "true" if is_online_paid else "false",
+                "screen": "admin-orders",
+                "type": "NEW_ORDER",
+                "role": "ADMIN",
+                "timestamp": str(int(datetime.utcnow().timestamp() * 1000)),
+            }
+            admin_topic = f"admin_orders_{cust_order_for_notif.storeId}" if cust_order_for_notif.storeId else "admin_orders"
+            background_tasks.add_task(send_fcm_topic_notification, admin_topic, admin_title, admin_body, admin_data)
+        else:
+            # Auto-approved order: dispatch isolated outlet alerts to Darkstore pickers and Restaurant chefs
+            for order in created_orders:
+                background_tasks.add_task(
+                    dispatch_isolated_order_fcm_notifications,
+                    order.id,
+                    order.readableId,
+                    order.restaurantId,
+                    order.shopName,
+                    float(order.total),
+                    order.status.value,
+                    order.storeId,
+                    "PAID" if is_online_paid else "PENDING"
+                )
 
         # Return full order object matching Flutter Order.fromJson expectations
         main_order = next((o for o in created_orders if not o.restaurantId), created_orders[0])
@@ -3231,18 +3292,23 @@ async def list_orders(
 
         # Customer grouping
         def get_combined_status(statuses: List[str]) -> str:
-            active = [s for s in statuses if s != "CANCELLED"]
+            upper = [str(s or "").upper().strip() for s in statuses]
+            active = [s for s in upper if s != "CANCELLED"]
             if not active:
                 return "CANCELLED"
+            if "ADMIN_PENDING" in active:
+                return "ADMIN_PENDING"
             if "PENDING" in active:
                 return "PENDING"
-            if "CONFIRMED" in active:
+            if "CONFIRMED" in active or "PREPARING" in active:
                 return "CONFIRMED"
             if "PACKED" in active:
                 return "PACKED"
             if "SHIPPED" in active:
                 return "SHIPPED"
-            return "DELIVERED"
+            if all(s == "DELIVERED" for s in active):
+                return "DELIVERED"
+            return active[0] if active else "PENDING"
 
         grouped_orders = []
         processed_ids = set()
@@ -3486,18 +3552,23 @@ async def get_order_details(
                 all_items.extend(co.items)
 
             def get_combined_status(statuses: List[str]) -> str:
-                active = [s for s in statuses if s != "CANCELLED"]
+                upper = [str(s or "").upper().strip() for s in statuses]
+                active = [s for s in upper if s != "CANCELLED"]
                 if not active:
                     return "CANCELLED"
+                if "ADMIN_PENDING" in active:
+                    return "ADMIN_PENDING"
                 if "PENDING" in active:
                     return "PENDING"
-                if "CONFIRMED" in active:
+                if "CONFIRMED" in active or "PREPARING" in active:
                     return "CONFIRMED"
                 if "PACKED" in active:
                     return "PACKED"
                 if "SHIPPED" in active:
                     return "SHIPPED"
-                return "DELIVERED"
+                if all(s == "DELIVERED" for s in active):
+                    return "DELIVERED"
+                return active[0] if active else "PENDING"
 
             statuses = [safe_enum_str(o.status, "PENDING") for o in combined_orders]
             combined_status = get_combined_status(statuses)
@@ -4217,11 +4288,17 @@ async def update_order(
                     order.deliveryLat = float(r_user.liveLat)
                     order.deliveryLng = float(r_user.liveLng)
 
-    # Sibling synchronization (H6 FIX: outlet isolation, cascade-cancel on explicit all, customer cancel, or admin cancel)
+    # Sibling synchronization (H6 FIX: outlet isolation, cascade-cancel on explicit all, customer cancel, or admin actions)
     is_explicit_all = payload.get("scope") == "ALL" or payload.get("updateCombined") is True
     is_customer_cancel = is_owner and target_status == OrderStatus.CANCELLED
     is_admin_cancel = is_admin and target_status == OrderStatus.CANCELLED
-    should_sync_status = is_explicit_all or is_customer_cancel or is_admin_cancel or target_status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]
+    should_sync_status = (
+        is_explicit_all or
+        is_customer_cancel or
+        is_admin_cancel or
+        is_admin or
+        target_status in [OrderStatus.CONFIRMED, OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.CANCELLED]
+    )
 
     companions = []
     if order.combinedId:
@@ -4531,7 +4608,8 @@ async def update_order(
         order.restaurantId,
         order.shopName,
         st_val,
-        order.storeId
+        order.storeId,
+        order.deliveryUserId
     )
 
     deliv_user_dict = None

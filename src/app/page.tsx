@@ -652,7 +652,7 @@ export default async function Home() {
             return null
           }
         })()}
-        initialBentoCampaign={null}
+        initialBentoCampaign={bentoCampaignRaw ? parseCampaignBentoConfig(bentoCampaignRaw) : null}
       />
 
       {/* LocalBusiness JSON-LD Schema Markup */}

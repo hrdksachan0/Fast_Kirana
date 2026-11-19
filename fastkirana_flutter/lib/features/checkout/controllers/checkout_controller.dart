@@ -52,6 +52,7 @@ class CheckoutState {
   final Set<String> selectedDeliveryInstructions;
   final String? customReceiverName;
   final String? customReceiverPhone;
+  final String customDeliveryNotes;
   final String? pendingOrderId;
   final String? pendingCashfreeOrderId;
   final Cart? pendingCart;
@@ -68,6 +69,7 @@ class CheckoutState {
     this.selectedDeliveryInstructions = const {'ring_bell'},
     this.customReceiverName,
     this.customReceiverPhone,
+    this.customDeliveryNotes = '',
     this.pendingOrderId,
     this.pendingCashfreeOrderId,
     this.pendingCart,
@@ -85,6 +87,7 @@ class CheckoutState {
     Set<String>? selectedDeliveryInstructions,
     String? customReceiverName,
     String? customReceiverPhone,
+    String? customDeliveryNotes,
     Object? pendingOrderId = _sentinel,
     Object? pendingCashfreeOrderId = _sentinel,
     Object? pendingCart = _sentinel,
@@ -102,6 +105,7 @@ class CheckoutState {
       selectedDeliveryInstructions: selectedDeliveryInstructions ?? this.selectedDeliveryInstructions,
       customReceiverName: clearReceiverDetails ? null : (customReceiverName ?? this.customReceiverName),
       customReceiverPhone: clearReceiverDetails ? null : (customReceiverPhone ?? this.customReceiverPhone),
+      customDeliveryNotes: customDeliveryNotes ?? this.customDeliveryNotes,
       pendingOrderId: identical(pendingOrderId, _sentinel) ? this.pendingOrderId : pendingOrderId as String?,
       pendingCashfreeOrderId: identical(pendingCashfreeOrderId, _sentinel) ? this.pendingCashfreeOrderId : pendingCashfreeOrderId as String?,
       pendingCart: identical(pendingCart, _sentinel) ? this.pendingCart : pendingCart as Cart?,
@@ -132,6 +136,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   String? _cookingInstruction;
   double _tipAmount = 0.0;
   String _customDeliveryNotes = '';
+  String get customDeliveryNotes => _customDeliveryNotes;
   bool _isHandlingPaymentDismissal = false;
 
   CheckoutController(this.ref) : super(const CheckoutState());
@@ -329,6 +334,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
   void updateNotes(String notes) {
     _customDeliveryNotes = notes;
+    state = state.copyWith(customDeliveryNotes: notes);
   }
 
   // ─── Cashfree Payment Handlers ─────────────────────────────────────────────

@@ -3,104 +3,108 @@
   "demo": true,
   "enabled": true,
   "autoplay": true,
-  "layout": "banner",
+  "layout": "classic",
   "searchPrefix": "Search for",
-  "decorationImage": null,
+  "decorationImage": "gold-lights.svg",
   "labels": {
-    "sectionLabel": "Ramadan, together",
-    "specialsHeading": "Ramadan Picks",
-    "curvedTabLabel": "Top Picks",
-    "loadingText": "Loading this store’s ramadan collection…",
-    "emptyText": "No matching products in this collection yet. Try another tab or search the catalogue.",
-    "demoLabel": "Demo prices",
-    "resultsDemoLabel": "Demo collection · illustrative prices"
+    "sectionLabel": "🌙 Ramadan Mubarak & Eid Celebration",
+    "specialsHeading": "✨ 15-Min Iftar & Sehri Deals",
+    "curvedTabLabel": "🔥 Iftar Bestsellers",
+    "loadingText": "Iftar aur sehri ki barkat load ho rahi hai…",
+    "emptyText": "Is collection me aur items add ho rahe hain. Dusre tab ya search dekhein.",
+    "demoLabel": "Festive Ramadan Special",
+    "resultsDemoLabel": "Ramadan collection · live prices"
   },
   "appearance": {
-    "background": "#237768",
-    "card": "#FFF6DD",
-    "text": "#255947",
-    "smallText": "#193F36",
-    "headerText": "#FFF6DD",
-    "headerOutline": "#123D35",
-    "underline": "#236F61",
-    "tabSurface": "#FFF6DD"
+    "background": "#064E3B",
+    "card": "#FFFDF7",
+    "text": "#062E22",
+    "smallText": "#047857",
+    "headerText": "#FFFDF7",
+    "headerOutline": "#022C22",
+    "underline": "#D4AF37",
+    "tabSurface": "#ECFDF5"
   },
   "timings": {
-    "headerMs": 5500,
-    "productMs": 4200,
-    "searchMs": 3800,
-    "crossfadeMs": 500
+    "headerMs": 4500,
+    "productMs": 3200,
+    "searchMs": 3600,
+    "crossfadeMs": 450
   },
   "searchSuggestions": [
-    "Dates",
-    "Vermicelli",
+    "Kimia Dates",
+    "Rooh Afza",
+    "Roasted Vermicelli",
     "Almonds",
-    "Tea"
+    "Kaju",
+    "Kishmish",
+    "Basmati Rice",
+    "Rose Sharbat"
   ],
   "navigation": [],
   "headers": [
     {
       "id": "ramadan-header-1",
       "kind": "illustration",
-      "eyebrow": "",
-      "title": "Make space for togetherness",
-      "subtitle": "Ingredients for meals to share",
+      "eyebrow": "15-MIN IFTAR & SEHRI DELIVERY",
+      "title": "🌙 Ramadan Mubarak",
+      "subtitle": "Medjool Dates, Rooh Afza, Sevaiyan & Dry Fruits delivered in 10-15 mins",
       "image": "ramadan-evening.svg"
     },
     {
       "id": "ramadan-header-2",
       "kind": "title",
-      "eyebrow": "",
-      "title": "A thoughtful basket for your table",
-      "subtitle": "Dates, dry fruits and pantry staples",
+      "eyebrow": "SEHRI & IFTAR SPECIALS",
+      "title": "Dastarkhwan ki Ronak",
+      "subtitle": "Premium Kimia Dates, Roasted Sewai & Royal Dry Fruits",
       "image": null
     },
     {
       "id": "ramadan-header-3",
       "kind": "brand",
-      "eyebrow": "",
-      "title": "Gather with FastKirana",
-      "subtitle": "Create a collection for your home",
+      "eyebrow": "SWEET EID CELEBRATIONS",
+      "title": "Eid-ul-Fitr Specials",
+      "subtitle": "Fragrant Basmati Rice, Pure Ghee & Sheer Khurma Essentials",
       "image": "ramadan-evening.svg"
     }
   ],
   "products": [
     {
       "id": "ramadan-dates",
-      "name": "Dates Box",
+      "name": "Premium Kimia Dates Box (500 g)",
       "image": "ramadan-dates.svg",
-      "originalPrice": 140,
-      "price": 140,
+      "originalPrice": 240,
+      "price": 199,
       "currency": "INR",
       "categoryId": "ramadan-dates-category",
       "destinationId": "search-ramadan-dates"
     },
     {
       "id": "ramadan-vermicelli",
-      "name": "Roasted Vermicelli",
+      "name": "Roasted Sheer Khurma Vermicelli",
       "image": "ramadan-vermicelli.svg",
-      "originalPrice": 45,
-      "price": 45,
+      "originalPrice": 65,
+      "price": 55,
       "currency": "INR",
       "categoryId": "ramadan-vermicelli-category",
       "destinationId": "search-ramadan-vermicelli"
     },
     {
       "id": "ramadan-almonds",
-      "name": "Almonds",
+      "name": "Royal California Almonds & Kaju (500 g)",
       "image": "ramadan-almonds.svg",
-      "originalPrice": 190,
-      "price": 190,
+      "originalPrice": 420,
+      "price": 380,
       "currency": "INR",
       "categoryId": "ramadan-almonds-category",
       "destinationId": "search-ramadan-almonds"
     },
     {
       "id": "ramadan-tea",
-      "name": "Tea Leaves",
+      "name": "Hamdard Rooh Afza Sharbat (750 ml)",
       "image": "ramadan-tea.svg",
-      "originalPrice": 110,
-      "price": 110,
+      "originalPrice": 185,
+      "price": 175,
       "currency": "INR",
       "categoryId": "ramadan-tea-category",
       "destinationId": "search-ramadan-tea"
@@ -109,79 +113,97 @@
   "categories": [
     {
       "id": "ramadan-dates-category",
-      "label": "Dates & Fruit",
+      "label": "Dates & Khajoor",
       "image": "ramadan-dates.svg",
       "destinationId": "search-ramadan-dates",
       "keywords": [
         "date",
+        "khajoor",
+        "kimia",
         "fruit"
       ]
     },
     {
       "id": "ramadan-vermicelli-category",
-      "label": "Pantry Ingredients",
+      "label": "Sevaiyan & Sheer Khurma",
       "image": "ramadan-vermicelli.svg",
       "destinationId": "search-ramadan-vermicelli",
       "keywords": [
         "vermicelli",
         "sewai",
+        "sewaiyan",
+        "sheer khurma",
         "pantry"
       ]
     },
     {
       "id": "ramadan-almonds-category",
-      "label": "Nuts & Dry Fruits",
+      "label": "Royal Dry Fruits & Nuts",
       "image": "ramadan-almonds.svg",
       "destinationId": "search-ramadan-almonds",
       "keywords": [
         "almond",
-        "nut",
-        "dry fruit"
+        "badam",
+        "kaju",
+        "kishmish",
+        "dry fruit",
+        "pista"
       ]
     },
     {
       "id": "ramadan-tea-category",
-      "label": "Tea & Drinks",
+      "label": "Rooh Afza & Iftar Drinks",
       "image": "ramadan-tea.svg",
       "destinationId": "search-ramadan-tea",
       "keywords": [
+        "rooh afza",
+        "sharbat",
+        "rose",
         "tea",
-        "drink"
+        "drink",
+        "beverage"
       ]
     }
   ],
   "tabs": [
     {
       "id": "top-picks",
-      "label": "Top Picks",
+      "label": "🔥 Top Picks",
       "image": "ramadan-evening.svg",
-      "keywords": []
+      "keywords": [
+        "dates",
+        "rooh afza",
+        "vermicelli"
+      ]
     },
     {
       "id": "ramadan-dates",
-      "label": "Dates & Nuts",
+      "label": "🌙 Dates & Khajoor",
       "image": "ramadan-dates.svg",
       "keywords": [
         "date",
-        "almond",
-        "nut"
+        "khajoor",
+        "kimia"
       ]
     },
     {
       "id": "ramadan-pantry",
-      "label": "Pantry",
+      "label": "🥣 Sevai & Sheer Khurma",
       "image": "ramadan-vermicelli.svg",
       "keywords": [
         "vermicelli",
         "sewai",
-        "pantry"
+        "sugar",
+        "ghee"
       ]
     },
     {
       "id": "ramadan-drinks",
-      "label": "Tea & Drinks",
+      "label": "🥤 Rooh Afza & Drinks",
       "image": "ramadan-tea.svg",
       "keywords": [
+        "rooh afza",
+        "sharbat",
         "tea",
         "drink"
       ]
@@ -206,7 +228,7 @@
     {
       "id": "search-ramadan-tea",
       "kind": "search",
-      "query": "tea"
+      "query": "rooh afza"
     }
   ]
 }
