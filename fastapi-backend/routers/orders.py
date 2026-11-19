@@ -443,8 +443,9 @@ async def dispatch_isolated_order_fcm_notifications(
             }
             if store_id:
                 await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_title, admin_body, admin_data)
-            else:
-                await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
+            await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
+            await send_fcm_topic_notification("admin_orders_all", admin_title, admin_body, admin_data)
+            await send_fcm_topic_notification("admin_orders_ghatampur", admin_title, admin_body, admin_data)
             return  # Stop here! Do not notify restaurant/picker/rider until approved
 
         # ── CASE 2: AUTO-APPROVED / CONFIRMED ──
@@ -3047,7 +3048,8 @@ async def create_order(
         if is_admin_pending:
             # 2. Strict Single Consolidated FCM Push Notification to Admin for approval
             outlets = " + ".join(dict.fromkeys(o.shopName for o in created_orders if o.shopName)) or "FastMinute Store"
-            admin_title = "🚨 New Order Awaiting Approval!"
+            is_combined = len(created_orders) > 1
+            admin_title = "🚨 New Combined Order Awaiting Approval!" if is_combined else "🚨 New Order Awaiting Approval!"
             admin_body = f"Order #{base_readable} ({outlets}, ₹{total_combined_amount:.2f}) needs admin approval. Tap to review."
             admin_data = {
                 "orderId": cust_order_for_notif.id,
@@ -3059,10 +3061,15 @@ async def create_order(
                 "screen": "admin-orders",
                 "type": "NEW_ORDER",
                 "role": "ADMIN",
+                "isCombined": "true" if is_combined else "false",
                 "timestamp": str(int(datetime.utcnow().timestamp() * 1000)),
             }
-            admin_topic = f"admin_orders_{cust_order_for_notif.storeId}" if cust_order_for_notif.storeId else "admin_orders"
-            background_tasks.add_task(send_fcm_topic_notification, admin_topic, admin_title, admin_body, admin_data)
+            # Broadcast to all canonical admin topics so admin buzzer is NEVER missed regardless of store assignment
+            admin_topics = {"admin_orders", "admin_orders_all", "admin_orders_ghatampur"}
+            if cust_order_for_notif.storeId:
+                admin_topics.add(f"admin_orders_{cust_order_for_notif.storeId}")
+            for t in admin_topics:
+                background_tasks.add_task(send_fcm_topic_notification, t, admin_title, admin_body, admin_data)
         else:
             # Auto-approved order: dispatch isolated outlet alerts to Darkstore pickers and Restaurant chefs
             for order in created_orders:

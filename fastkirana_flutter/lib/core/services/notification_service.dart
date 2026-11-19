@@ -202,6 +202,8 @@ title.toString().contains('🛵') ||
       data['type'] == 'VENDOR_NEW_ORDER' ||
       orderStatus == 'PENDING' ||
       orderStatus == 'PLACED' ||
+      orderStatus == 'ADMIN_PENDING' ||
+      data['status'] == 'ADMIN_PENDING' ||
       data['screen'] == 'admin-orders' ||
       data['role'] == 'ADMIN' ||
       data['screen'] == 'restaurant-console' ||
@@ -213,6 +215,8 @@ title.toString().contains('🛵') ||
       title.toString().contains('🔔') ||
       title.toString().toLowerCase().contains('kitchen') ||
       title.toString().toLowerCase().contains('new order') ||
+      title.toString().toLowerCase().contains('new combined order') ||
+      title.toString().toLowerCase().contains('combined order') ||
       title.toString().toLowerCase().contains('new approved order') ||
       title.toString().toLowerCase().contains('awaiting approval')));
 
@@ -250,10 +254,12 @@ title.toString().contains('🛵') ||
     }
   }
 
-  if (notification != null) {
-    // Android OS FCM client displays notification directly in system tray.
-    // Suppress localNotifications.show here to avoid showing 2 duplicate notifications for the same message.
-    debugPrint('NotificationService: Android OS already displayed FCM notification in background.');
+  if (notification != null && !isOrderAlert) {
+    // Android OS FCM client displays notification directly in system tray for routine customer notifications.
+    // Suppress localNotifications.show here to avoid showing 2 duplicate notifications for customer.
+    // BUT for isOrderAlert (Admin buzzers, Kitchen buzzers, Rider alarms), NEVER return early!
+    // We MUST execute localNotifications.show with fastkirana_order_buzzer_v2, fullScreenIntent, and alarm chime!
+    debugPrint('NotificationService: Suppressing duplicate routine FCM notification in background.');
     return;
   }
 
@@ -261,9 +267,10 @@ title.toString().contains('🛵') ||
   if (body != null && body.toString().trim().isNotEmpty) {
     try {
       final rawOrderId = data['readableId'] ?? data['orderId'] ?? data['id'];
-      final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
-          ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
-          : null;
+      final baseOrderNum = NotificationService.getBaseOrderNumber(rawOrderId);
+      final cleanOrderId = baseOrderNum.isNotEmpty
+          ? baseOrderNum
+          : rawOrderId?.toString().trim().replaceAll('#', '');
 
       // Background Deduplication within 30 seconds: exactly ONE notification per order
       final dedupKey = (cleanOrderId != null && cleanOrderId.isNotEmpty)
@@ -288,19 +295,51 @@ title.toString().contains('🛵') ||
           : (message.messageId?.hashCode ?? message.hashCode);
       final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
 
+      // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
+      // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
       final channelId = isOrderAlert
           ? 'fastkirana_order_buzzer_v2'
-          : (isOrderStatusUpdate ? 'fastkirana_order_status' : 'fastkirana_alerts');
+          : (isOrderStatusUpdate ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
       final channelName = isOrderAlert
           ? 'Kitchen & Order Buzz Alerts'
-          : (isOrderStatusUpdate ? 'Live Order Tracking & Delivery' : 'FastMinute Alerts');
+          : (isOrderStatusUpdate ? 'Live Order Status & Dynamic Tracking' : 'FastMinute Alerts');
       final channelDesc = isOrderAlert
           ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
           : (isOrderStatusUpdate
-              ? 'Real-time chime alerts for Dispatched, Out for Delivery, and Delivered orders.'
+              ? 'Persistent lock-screen live activity with real-time delivery progress.'
               : 'Notifications for order updates and tracking.');
 
-      String cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+      int? progress;
+      if (rawStatus == 'CONFIRMED') {
+        progress = 35;
+      } else if (rawStatus == 'PREPARING' || rawStatus == 'COOKING') {
+        progress = 45;
+      } else if (rawStatus == 'PACKED') {
+        progress = 60;
+      } else if (rawStatus == 'SHIPPED' || rawStatus == 'OUT_FOR_DELIVERY') {
+        progress = 80;
+      } else if (rawStatus == 'ARRIVING_SOON') {
+        progress = 95;
+      }
+
+      String cleanTitle;
+      if (isOrderStatusUpdate && cleanOrderId != null && cleanOrderId.isNotEmpty) {
+        if (rawStatus == 'PACKED') {
+          cleanTitle = 'Order Packed 🛍️ • #$cleanOrderId';
+        } else if (rawStatus == 'SHIPPED' || rawStatus == 'OUT_FOR_DELIVERY') {
+          cleanTitle = 'Out for Delivery 🛵 • #$cleanOrderId';
+        } else if (rawStatus == 'ARRIVING_SOON') {
+          cleanTitle = 'Arriving Soon! 🛵 • #$cleanOrderId';
+        } else if (rawStatus == 'CONFIRMED') {
+          cleanTitle = 'Order Confirmed 👨‍🍳 • #$cleanOrderId';
+        } else if (rawStatus == 'DELIVERED') {
+          cleanTitle = '🎉 Order Delivered! • #$cleanOrderId';
+        } else {
+          cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute').trim();
+        }
+      } else {
+        cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute').trim();
+      }
       cleanTitle = cleanTitle
           .replaceAll('Order Placed Successfully!', 'Order Placed!')
           .replaceAll('Combined Order Placed Successfully!', 'Order Placed!')
@@ -318,6 +357,12 @@ title.toString().contains('🛵') ||
         priority: Priority.high,
         tag: tag,
         fullScreenIntent: isOrderAlert,
+        ongoing: (isOrderStatusUpdate && rawStatus != 'DELIVERED' && rawStatus != 'CANCELLED'),
+        onlyAlertOnce: true,
+        showProgress: progress != null,
+        maxProgress: 100,
+        progress: progress ?? 0,
+        subText: null, // STRICTLY NULL: prevents Android OS from appending truncated text ("Packe...") to header line!
         playSound: true,
         sound: (isOrderAlert || isOrderStatusUpdate) ? const RawResourceAndroidNotificationSound('order_chime') : null,
         audioAttributesUsage: isOrderAlert ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
@@ -330,6 +375,7 @@ title.toString().contains('🛵') ||
         styleInformation: BigTextStyleInformation(
           cleanBody,
           contentTitle: cleanTitle,
+          summaryText: isOrderStatusUpdate ? 'FastMinute Live' : null,
         ),
       );
 
@@ -351,29 +397,49 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
+  /// Extracts pure 4-digit human order number (e.g. "4227" from "FK-4227-G", "#4227-R", or "order_4227")
+  static String getBaseOrderNumber(dynamic raw) {
+    if (raw == null) return '';
+    final str = raw.toString().trim();
+    if (str.isEmpty) return '';
+    final noPrefix = str
+        .replaceAll('#', '')
+        .replaceAll(RegExp(r'^FK-', caseSensitive: false), '')
+        .replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[^0-9]'), '')
+        .trim();
+    return noPrefix;
+  }
+
   /// Stable single notification ID per order to prevent duplicate stacking/grouping
   static int getOrderNotifId(String? orderId, {String? readableId}) {
-    final raw = (readableId != null && readableId.trim().isNotEmpty) ? readableId : (orderId ?? 'order');
-    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isNotEmpty && digits.length >= 4) {
-      return (int.tryParse(digits.substring(digits.length - 4)) ?? 1000) + 50000;
+    final base = getBaseOrderNumber(readableId != null && readableId.trim().isNotEmpty ? readableId : orderId);
+    if (base.isNotEmpty) {
+      final lastDigits = base.length >= 4 ? base.substring(base.length - 4) : base;
+      final num = int.tryParse(lastDigits);
+      if (num != null) return num + 50000;
     }
+    final raw = (readableId != null && readableId.trim().isNotEmpty) ? readableId : (orderId ?? 'order');
     return (raw.hashCode.abs() % 100000) + 50000;
   }
 
   /// Collect all candidate notification IDs that may have been used for an order's live tracker
   static Set<int> getCandidateOrderNotifIds(String? orderId, {String? readableId}) {
     final ids = <int>{};
+    final base = getBaseOrderNumber(readableId != null && readableId.trim().isNotEmpty ? readableId : orderId);
+    if (base.isNotEmpty) {
+      ids.add(getOrderNotifId(base));
+    }
     final oid = orderId?.replaceAll('#', '').trim() ?? '';
     final rid = readableId?.replaceAll('#', '').trim() ?? '';
     if (oid.isNotEmpty) {
       ids.add(getOrderNotifId(oid));
-      final baseOid = oid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      final baseOid = getBaseOrderNumber(oid);
       if (baseOid.isNotEmpty) ids.add(getOrderNotifId(baseOid));
     }
     if (rid.isNotEmpty) {
       ids.add(getOrderNotifId(oid, readableId: rid));
-      final baseRid = rid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
+      final baseRid = getBaseOrderNumber(rid);
       if (baseRid.isNotEmpty) ids.add(getOrderNotifId(oid, readableId: baseRid));
     }
     return ids;
@@ -389,17 +455,17 @@ class NotificationService {
     try {
       final targetPlugin = plugin ?? FlutterLocalNotificationsPlugin();
       final ids = getCandidateOrderNotifIds(orderId, readableId: readableId);
+      final base = getBaseOrderNumber(readableId != null && readableId.trim().isNotEmpty ? readableId : orderId);
       final cleanRid = readableId?.replaceAll('#', '').trim() ?? '';
-      final baseRid = cleanRid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
       final cleanOid = orderId?.replaceAll('#', '').trim() ?? '';
-      final baseOid = cleanOid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '');
 
       final tags = <String?>[
         null,
-        if (cleanRid.isNotEmpty) 'order_$cleanRid',
-        if (baseRid.isNotEmpty && baseRid != cleanRid) 'order_$baseRid',
-        if (cleanOid.isNotEmpty && cleanOid != cleanRid) 'order_$cleanOid',
-        if (baseOid.isNotEmpty && baseOid != cleanOid && baseOid != baseRid) 'order_$baseOid',
+        if (base.isNotEmpty) 'order_$base',
+        if (cleanRid.isNotEmpty && cleanRid != base) 'order_$cleanRid',
+        if (cleanRid.isNotEmpty) 'order_${cleanRid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')}',
+        if (cleanOid.isNotEmpty && cleanOid != base && cleanOid != cleanRid) 'order_$cleanOid',
+        if (cleanOid.isNotEmpty) 'order_${cleanOid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')}',
       ];
       for (final id in ids) {
         for (final tag in tags) {
@@ -919,9 +985,10 @@ title.toString().contains('🛵') ||
     } catch (_) {}
 
     final rawOrderId = data['readableId'] ?? data['orderId'] ?? data['id'];
-    final cleanOrderId = (rawOrderId != null && rawOrderId.toString().trim().isNotEmpty)
-        ? rawOrderId.toString().trim().replaceAll('#', '').replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')
-        : null;
+    final baseOrderNum = NotificationService.getBaseOrderNumber(rawOrderId);
+    final cleanOrderId = baseOrderNum.isNotEmpty
+        ? baseOrderNum
+        : rawOrderId?.toString().trim().replaceAll('#', '');
 
     final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
@@ -972,6 +1039,8 @@ title.toString().contains('🛵') ||
         data['type'] == 'VENDOR_NEW_ORDER' ||
         orderStatus == 'PENDING' ||
         orderStatus == 'PLACED' ||
+        orderStatus == 'ADMIN_PENDING' ||
+        data['status'] == 'ADMIN_PENDING' ||
         data['screen'] == 'admin-orders' ||
         data['role'] == 'ADMIN' ||
         data['screen'] == 'restaurant-console' ||
@@ -984,6 +1053,8 @@ title.toString().contains('🛵') ||
         title.toString().toLowerCase().contains('kitchen') ||
         title.toString().toLowerCase().contains('new order') ||
         title.toString().toLowerCase().contains('new live order') ||
+        title.toString().toLowerCase().contains('new combined order') ||
+        title.toString().toLowerCase().contains('combined order') ||
         title.toString().toLowerCase().contains('new approved order') ||
         title.toString().toLowerCase().contains('awaiting approval')));
 
@@ -1016,19 +1087,51 @@ title.toString().contains('🛵') ||
         ? 'order_$cleanOrderId'
         : (isCartAlert ? 'cart_alert' : 'general_alert');
 
+    // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
+    // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
     final channelId = isOrderAlert
         ? 'fastkirana_order_buzzer_v2'
-        : (isOrderStatusUpdate ? 'fastkirana_order_status' : 'fastkirana_alerts');
+        : (isOrderStatusUpdate ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
     final channelName = isOrderAlert
         ? 'Kitchen & Order Buzz Alerts'
-        : (isOrderStatusUpdate ? 'Live Order Tracking & Delivery' : 'FastMinute Alerts');
+        : (isOrderStatusUpdate ? 'Live Order Status & Dynamic Tracking' : 'FastMinute Alerts');
     final channelDesc = isOrderAlert
         ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
         : (isOrderStatusUpdate
-            ? 'Real-time chime alerts for Dispatched, Out for Delivery, and Delivered orders.'
+            ? 'Persistent lock-screen live activity with real-time delivery progress.'
             : 'Notifications for order updates and tracking.');
 
-    String cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+    int? progress;
+    if (orderStatus == 'CONFIRMED') {
+      progress = 35;
+    } else if (orderStatus == 'PREPARING' || orderStatus == 'COOKING') {
+      progress = 45;
+    } else if (orderStatus == 'PACKED') {
+      progress = 60;
+    } else if (orderStatus == 'SHIPPED' || orderStatus == 'OUT_FOR_DELIVERY') {
+      progress = 80;
+    } else if (orderStatus == 'ARRIVING_SOON') {
+      progress = 95;
+    }
+
+    String cleanTitle;
+    if (isOrderStatusUpdate && cleanOrderId != null && cleanOrderId.isNotEmpty) {
+      if (orderStatus == 'PACKED') {
+        cleanTitle = 'Order Packed 🛍️ • #$cleanOrderId';
+      } else if (orderStatus == 'SHIPPED' || orderStatus == 'OUT_FOR_DELIVERY') {
+        cleanTitle = 'Out for Delivery 🛵 • #$cleanOrderId';
+      } else if (orderStatus == 'ARRIVING_SOON') {
+        cleanTitle = 'Arriving Soon! 🛵 • #$cleanOrderId';
+      } else if (orderStatus == 'CONFIRMED') {
+        cleanTitle = 'Order Confirmed 👨‍🍳 • #$cleanOrderId';
+      } else if (orderStatus == 'DELIVERED') {
+        cleanTitle = '🎉 Order Delivered! • #$cleanOrderId';
+      } else {
+        cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute').trim();
+      }
+    } else {
+      cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute').trim();
+    }
     cleanTitle = cleanTitle
         .replaceAll('Order Placed Successfully!', 'Order Placed!')
         .replaceAll('Combined Order Placed Successfully!', 'Order Placed!')
@@ -1051,10 +1154,17 @@ title.toString().contains('🛵') ||
           priority: Priority.high,
           tag: tag,
           showWhen: true,
+          ongoing: (isOrderStatusUpdate && orderStatus != 'DELIVERED' && orderStatus != 'CANCELLED'),
+          onlyAlertOnce: true,
+          showProgress: progress != null,
+          maxProgress: 100,
+          progress: progress ?? 0,
+          subText: null, // STRICTLY NULL: prevents Android OS from appending truncated text ("Packe...") to header line!
           when: DateTime.now().millisecondsSinceEpoch,
           styleInformation: BigTextStyleInformation(
             cleanBody,
             contentTitle: cleanTitle,
+            summaryText: isOrderStatusUpdate ? 'FastMinute Live' : null,
           ),
           playSound: true,
           sound: (isOrderAlert || isOrderStatusUpdate) ? const RawResourceAndroidNotificationSound('order_chime') : null,
@@ -1106,15 +1216,14 @@ title.toString().contains('🛵') ||
     if (kIsWeb) return;
 
     final isTerminal = order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled;
+    final baseNum = NotificationService.getBaseOrderNumber(
+      order.readableId != null && order.readableId!.trim().isNotEmpty
+          ? order.readableId!
+          : (order.displayId.isNotEmpty ? order.displayId : order.id),
+    );
+    final displayTag = baseNum.isNotEmpty ? '#$baseNum' : '#ORDER';
+    final notifTag = baseNum.isNotEmpty ? 'order_$baseNum' : 'order_${order.id}';
     final int notifId = NotificationService.getOrderNotifId(order.id, readableId: order.readableId);
-    final rawDisplay = (order.readableId != null && order.readableId!.trim().isNotEmpty)
-        ? order.readableId!.trim()
-        : (order.displayId.isNotEmpty ? order.displayId : order.id);
-    final cleanDisplayId = rawDisplay.replaceAll('#', '').trim();
-    final displayTag = cleanDisplayId.isNotEmpty
-        ? (cleanDisplayId.startsWith('FK-') ? '#$cleanDisplayId' : '#FK-$cleanDisplayId')
-        : '#ORDER';
-    final notifTag = cleanDisplayId.isNotEmpty ? 'order_$cleanDisplayId' : 'order_${order.id}';
 
     if (isTerminal) {
       _lastLiveActivityOrderId = null;
@@ -1127,8 +1236,8 @@ title.toString().contains('🛵') ||
         // Show one-time celebration delivery notification with pleasant chime
         try {
           final androidDelivered = AndroidNotificationDetails(
-            'fastkirana_order_status',
-            'Live Order Tracking & Delivery',
+            'fastkirana_live_tracking_v1',
+            'Live Order Status & Dynamic Tracking',
             channelDescription: 'Real-time alerts for delivered orders.',
             importance: Importance.max,
             priority: Priority.high,
@@ -1138,6 +1247,7 @@ title.toString().contains('🛵') ||
             color: const Color(0xFF00A344),
             colorized: true,
             tag: notifTag,
+            subText: null,
             styleInformation: BigTextStyleInformation(
               'Your FastMinute order was delivered. Thank you for shopping fresh with us! 🎉',
               contentTitle: '🎉 Order Delivered! • $displayTag',
@@ -1164,7 +1274,6 @@ title.toString().contains('🛵') ||
 
     String title;
     String body;
-    String subText;
     int progress;
     List<AndroidNotificationAction> actions = [];
 
@@ -1185,18 +1294,15 @@ title.toString().contains('🛵') ||
           if (customEtaText.toLowerCase().contains('now') || customEtaText.toLowerCase().contains('arriving')) {
             title = 'Arriving Now! 🛵 • $displayTag';
             body = '$riderName has reached your doorstep!\n📍 FastMinute Live Doorstep Delivery';
-            subText = 'At Doorstep • 95%';
             progress = customProgress ?? 95;
           } else {
             title = 'Arriving in $customEtaText 🛵 • $displayTag';
             body = '$riderName is on the way to your doorstep\n📍 FastMinute Live GPS Tracking';
-            subText = 'On the way • 80%';
             progress = customProgress ?? 80;
           }
         } else {
           title = 'Out for Delivery 🛵 • $displayTag';
           body = '$riderName is heading to your doorstep\n📍 FastMinute Live GPS Tracking';
-          subText = 'In Transit • 75%';
           progress = customProgress ?? 75;
         }
 
@@ -1220,7 +1326,6 @@ title.toString().contains('🛵') ||
         body = rawRiderName.isNotEmpty
             ? '$riderName is assigned & picking up package\n🏪 Ghatampur Central Hub'
             : 'Store packed your fresh items • Awaiting rider pickup\n🏪 Ghatampur Central Hub';
-        subText = 'Packed • 60%';
         progress = customProgress ?? 60;
         actions = [
           const AndroidNotificationAction(
@@ -1234,7 +1339,6 @@ title.toString().contains('🛵') ||
       case OrderStatus.confirmed:
         title = 'Order Confirmed 👨‍🍳 • $displayTag';
         body = 'Store accepted your order & preparing fresh items\n🏪 Ghatampur Central Hub';
-        subText = 'Preparing • 35%';
         progress = customProgress ?? 35;
         actions = [
           const AndroidNotificationAction(
@@ -1250,7 +1354,6 @@ title.toString().contains('🛵') ||
       default:
         title = 'Store Verifying ⏳ • $displayTag';
         body = 'Ghatampur Central Hub is checking freshness & stock\n⏳ FastMinute Express';
-        subText = 'Verifying • 15%';
         progress = customProgress ?? 15;
         actions = [
           const AndroidNotificationAction(
@@ -1278,11 +1381,11 @@ title.toString().contains('🛵') ||
       showProgress: true,
       maxProgress: 100,
       progress: progress,
-      subText: subText,
+      subText: null, // STRICTLY NULL: prevents Android OS from appending truncated text ("Packe...") to header line!
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
-        summaryText: subText,
+        summaryText: 'FastMinute Live',
       ),
       category: AndroidNotificationCategory.status,
       visibility: NotificationVisibility.public,
@@ -1294,12 +1397,11 @@ title.toString().contains('🛵') ||
       actions: actions,
     );
 
-    final iosDetails = DarwinNotificationDetails(
+    const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: false,
       interruptionLevel: InterruptionLevel.timeSensitive,
-      subtitle: subText,
       categoryIdentifier: 'order_tracking',
     );
 
@@ -1544,10 +1646,17 @@ title.toString().contains('🛵') ||
         }
 
         if (isAdmin) {
-          final hasAssignedStore = (storeId != null && storeId.isNotEmpty);
-          final adminTopic = hasAssignedStore ? 'admin_orders_$storeId' : 'admin_orders';
-          keepTopics.add(adminTopic);
-          await subscribeToTopic(adminTopic);
+          final adminTopics = <String>{
+            'admin_orders',
+            'admin_orders_all',
+            'admin_orders_ghatampur',
+            'admin_orders_hub-209206',
+            if (storeId != null && storeId.isNotEmpty) 'admin_orders_$storeId',
+          };
+          for (final topic in adminTopics) {
+            keepTopics.add(topic);
+            await subscribeToTopic(topic);
+          }
           await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);
         } else if (isRestaurant) {
           if (rId != null && rId.isNotEmpty) {
