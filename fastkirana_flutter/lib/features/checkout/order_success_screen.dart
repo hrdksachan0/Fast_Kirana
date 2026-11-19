@@ -698,7 +698,163 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                         ),
                       ),
 
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 14),
+
+                      // 3.1 COD REASSURANCE BANNER
+                      if (!isFailed && !isOnline) ...[
+                        FadeTransition(
+                          opacity: _contentFadeAnim,
+                          child: SlideTransition(
+                            position: _contentSlideAnim,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('💵', style: TextStyle(fontSize: 14)),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      effectiveOrder?.isCombined == true
+                                          ? 'Pay ₹$amountFormatted cash or UPI to rider at doorstep (single payment)'
+                                          : 'Keep ₹$amountFormatted ready in cash or UPI upon delivery',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 11.5),
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF92400E),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // 3.2 COMBINED MULTI-OUTLET BREAKDOWN CARD
+                      if (!isFailed &&
+                          effectiveOrder?.isCombined == true &&
+                          effectiveOrder?.subOrders != null &&
+                          effectiveOrder!.subOrders!.length > 1) ...[
+                        FadeTransition(
+                          opacity: _contentFadeAnim,
+                          child: SlideTransition(
+                            position: _contentSlideAnim,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.02),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.hub_rounded, size: 13, color: Color(0xFF2563EB)),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            'COMBINED ORDER (2 OUTLETS)',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 10),
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF2563EB),
+                                              letterSpacing: 0.3,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        '1 Delivery Route',
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...effectiveOrder.subOrders!.map((sub) {
+                                    final isRest = sub.restaurantId != null ||
+                                        (sub.readableId != null && sub.readableId!.toUpperCase().endsWith('-R'));
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 6),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFFF1F5F9)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Text(isRest ? '🍽️' : '🏪', style: const TextStyle(fontSize: 14)),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  sub.shopName ?? (isRest ? 'Restaurant' : 'FastMinute Darkstore'),
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                                                    fontWeight: FontWeight.w700,
+                                                    color: slateDark,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  isRest ? 'Kitchen preparing food' : 'Store packing items',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: Responsive.scaledFontSize(context, 10),
+                                                    color: slateMuted,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (sub.readableId != null)
+                                            Text(
+                                              '#${sub.readableId}',
+                                              style: GoogleFonts.jetBrainsMono(
+                                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF64748B),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
+                      const SizedBox(height: 14),
 
                       // 4. ACTION BUTTONS (Option 2 Centered Layout)
                       FadeTransition(
