@@ -415,8 +415,10 @@ class Order {
 
     // Client-side fail-safe: A combined order can NEVER be DELIVERED if any active sub-order is not delivered!
     OrderStatus effectiveStatus = parsedStatus;
-    final isComboOrder = json['isCombined'] == true || (json['combinedId'] != null && json['combinedId'].toString().trim().isNotEmpty);
-    if (isComboOrder && parsedSubOrders != null && parsedSubOrders.isNotEmpty) {
+    final isComboOrder = json['isCombined'] == true ||
+        (json['combinedId'] != null && json['combinedId'].toString().trim().isNotEmpty) ||
+        (parsedSubOrders != null && parsedSubOrders.length > 1);
+    if ((isComboOrder || (parsedSubOrders != null && parsedSubOrders.isNotEmpty)) && parsedSubOrders != null && parsedSubOrders.isNotEmpty) {
       final activeSubs = parsedSubOrders.where((s) => s.status != OrderStatus.cancelled).toList();
       if (activeSubs.isNotEmpty && !activeSubs.every((s) => s.status == OrderStatus.delivered)) {
         if (activeSubs.any((s) => s.status == OrderStatus.adminPending)) {
@@ -555,7 +557,7 @@ class Order {
       deliveredAt: parseNullableDate(json['deliveredAt']),
       items: itemsList,
       combinedId: json['combinedId']?.toString(),
-      isCombined: json['isCombined'] == true || (json['combinedId'] != null && json['combinedId'].toString().trim().isNotEmpty),
+      isCombined: json['isCombined'] == true || (json['combinedId'] != null && json['combinedId'].toString().trim().isNotEmpty) || (parsedSubOrders != null && parsedSubOrders.length > 1),
       subOrders: parsedSubOrders,
       subLabels: (json['subLabels'] is List) ? (json['subLabels'] as List).map((x) => x.toString()).toList() : null,
       kotPrinted: json['kot_printed'] == true || json['kotPrinted'] == true || json['kot_sent'] == true || json['kotSent'] == true,

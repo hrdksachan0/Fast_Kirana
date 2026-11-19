@@ -1476,7 +1476,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     // Safety guard for combined orders: if any active sub-order is not delivered,
     // the status step MUST NOT advance to Delivered (4)!
-    if (_order != null && _order!.isCombined && _order!.subOrders != null && _order!.subOrders!.isNotEmpty) {
+    if (_order != null && (_order!.isCombined || (_order!.subOrders != null && _order!.subOrders!.isNotEmpty)) && _order!.subOrders != null && _order!.subOrders!.isNotEmpty) {
       final activeSubs = _order!.subOrders!.where((s) => s.status != OrderStatus.cancelled).toList();
       if (activeSubs.isNotEmpty && !activeSubs.every((s) => s.status == OrderStatus.delivered)) {
         if (activeSubs.any((s) => s.status == OrderStatus.adminPending || s.status == OrderStatus.pending)) {

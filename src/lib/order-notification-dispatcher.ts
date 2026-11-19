@@ -119,7 +119,31 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     console.error('Unified admin FCM error:', fcmErr)
   }
 
-  // ─── 2. PER-ORDER CUSTOMER & AUTO-APPROVED STAFF NOTIFICATIONS ──────────────────────
+  // ─── 2. EXACTLY 1 CONSOLIDATED CUSTOMER NOTIFICATION (No 2x duplicates for combined orders) ───
+  const primaryCustOrder = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
+  const totalCombinedAmount = createdOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
+  const isAnyAdminPending = createdOrders.some((o) => o.status === OrderStatus.ADMIN_PENDING)
+  const outletSummary = Array.from(new Set(createdOrders.map((o) => (o.shopName || '').replace(/FastKirana/g, 'FastMinute')).filter(Boolean))).join(' + ') || 'FastMinute Store'
+
+  sendPushNotification(primaryCustOrder.userId, {
+    title: isAnyAdminPending
+      ? '⏳ Order Placed — Waiting for Store Approval'
+      : isOnlinePaid
+      ? '💳 Order Confirmed & Paid!'
+      : notificationTitle,
+    body: isAnyAdminPending
+      ? `Your order #${baseDisplayId} (${outletSummary}, ₹${totalCombinedAmount.toFixed(0)}) is received and awaiting store confirmation.`
+      : isOnlinePaid
+      ? `Order #${baseDisplayId} (${outletSummary}, ₹${totalCombinedAmount.toFixed(0)}) has been placed and paid online.`
+      : `Your order #${baseDisplayId} (${outletSummary}, ₹${totalCombinedAmount.toFixed(0)}) has been placed.`,
+    icon: `${origin}/icons/icon-192.png`,
+    badge: `${origin}/icons/icon-192.png`,
+    tag: `order-${baseDisplayId}`,
+    renotify: true,
+    data: { orderId: primaryCustOrder.id, readableId: baseDisplayId },
+  }).catch((err: any) => console.error('Error sending customer web push:', err))
+
+  // ─── 3. PER-OUTLET STAFF & KITCHEN NOTIFICATIONS (Strictly Separate per outlet) ──────
   for (const order of createdOrders) {
     const isRestaurant = Boolean(order.orderType === 'RESTAURANT' || order.restaurantId)
     const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
@@ -127,47 +151,14 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     const isAdminPending = order.status === OrderStatus.ADMIN_PENDING
     const safeShopName = (order.shopName || '').replace(/FastKirana/g, 'FastMinute')
 
-    // Customer Web Push Notification
-    sendPushNotification(order.userId, {
-      title: isAdminPending
-        ? '⏳ Order Placed — Waiting for Store Approval'
-        : isOnlinePaid
-        ? '💳 Order Confirmed & Paid!'
-        : notificationTitle,
-      body: isAdminPending
-        ? `Your order #${displayId} of ₹${order.total} is received and awaiting store confirmation.`
-        : isOnlinePaid
-        ? `Order #${displayId} of ₹${order.total} has been placed and paid online.`
-        : `Your order #${displayId} of ₹${order.total} has been placed.`,
-      icon: `${origin}/icons/icon-192.png`,
-      badge: `${origin}/icons/icon-192.png`,
-      tag: `order-${order.id}`,
-      renotify: true,
-      data: { orderId: order.id },
-    }).catch((err: any) => console.error('Error sending customer web push:', err))
-
     // If order requires admin approval, DO NOT notify pickers, riders, or restaurants yet!
     // They will be notified ONLY upon admin approval.
     if (isAdminPending) {
       continue
     }
 
-    // Auto-approved Restaurant order: Notify Delivery and Restaurant Owner
+    // Auto-approved Restaurant order: Notify Restaurant Owner / Kitchen ONLY
     if (isRestaurant && order.restaurantId) {
-      const rolesToNotify = [Role.DELIVERY].filter((r) => !notifiedWebRoles.has(r))
-      if (rolesToNotify.length > 0) {
-        rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
-        sendPushNotificationToRoles(rolesToNotify, {
-          title: isOnlinePaid ? '💳 Online Payment Food Order!' : '🍽️ New Food Order!',
-          body: isOnlinePaid
-            ? `Order #${displayId} for ${safeShopName || 'Restaurant'} (₹${order.total}) — PAID Online ✅`
-            : `Order #${displayId} for ${safeShopName || 'Restaurant'} (₹${order.total}) received.`,
-          tag: `order-${order.id}`,
-          data: { orderId: order.id, storeId: order.storeId || '' },
-        }).catch((err: any) => console.error('Error sending push to delivery:', err))
-      }
-
-      // Notify Restaurant Owner
       if (order.status !== OrderStatus.CANCELLED) {
         sendPushNotificationToRestaurant(order.restaurantId, {
           title: `👨‍🍳 New Food Order #${displayId}!`,
@@ -177,18 +168,18 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         }).catch((err: any) => console.error('Error sending push notification to restaurant:', err))
       }
     } else {
-      // Auto-approved Pure Grocery order: Notify Picker and Delivery
-      const rolesToNotify = [Role.PICKER, Role.DELIVERY].filter((r) => !notifiedWebRoles.has(r))
+      // Auto-approved Grocery order: Notify Dark Store Pickers ONLY
+      const rolesToNotify = [Role.PICKER].filter((r) => !notifiedWebRoles.has(r))
       if (rolesToNotify.length > 0) {
         rolesToNotify.forEach((r) => notifiedWebRoles.add(r))
         sendPushNotificationToRoles(rolesToNotify, {
           title: isOnlinePaid ? '💳 Online Payment Order Confirmed!' : notificationTitle,
           body: isOnlinePaid
             ? `Order #${displayId} of ₹${order.total} — PAID Online ✅`
-            : `Order #${displayId} of ₹${order.total} has been placed.`,
+            : `Order #${displayId} of ₹${order.total} has been placed. Tap to pack.`,
           tag: `order-${order.id}`,
           data: { orderId: order.id, storeId: order.storeId || '' },
-        }).catch((err: any) => console.error('Error sending push notification to grocery staff:', err))
+        }).catch((err: any) => console.error('Error sending push notification to grocery pickers:', err))
       }
     }
 
@@ -196,7 +187,7 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
     try {
       const { fcmMessaging } = await import('@/lib/firebase-admin')
       if (fcmMessaging) {
-        // Direct FCM push to Delivery & Picker staff for grocery orders
+        // Direct FCM push to Picker staff for grocery orders
         if (!isRestaurant) {
           const pickerPayload = buildOrderFcmPayload(
             isOnlinePaid ? '💳 New PAID Order to Pick!' : '📦 New Grocery Order to Pick!',
@@ -214,31 +205,11 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
             }
           )
 
-          const riderPayload = buildOrderFcmPayload(
-            isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver!',
-            `New order #${displayId} of ₹${order.total} is ready for processing.`,
-            {
-              title: isOnlinePaid ? '💳 New PAID Order!' : '🛵 New Order to Deliver!',
-              body: `New order #${displayId} of ₹${order.total} is ready for processing.`,
-              orderId: order.id,
-              readableId: displayId,
-              status: order.status,
-              screen: 'delivery',
-              type: 'NEW_ORDER',
-              role: 'DELIVERY',
-              timestamp: Date.now().toString(),
-            }
-          )
-
-          // Broadcast to Hub-Scoped Picker & Rider Topics
           const pickerTopic = order.storeId ? `picker_orders_${order.storeId}` : 'picker_orders'
           sendTopicWithRetry(fcmMessaging, { topic: pickerTopic, ...pickerPayload }).catch(() => {})
-
-          const riderTopic = order.storeId ? `delivery_orders_${order.storeId}` : 'delivery_orders'
-          sendTopicWithRetry(fcmMessaging, { topic: riderTopic, ...riderPayload }).catch(() => {})
         }
 
-        // Restaurant owner notification
+        // Restaurant kitchen FCM notification (Isolated to this restaurant)
         if (isRestaurant && order.restaurantId && order.status !== OrderStatus.CANCELLED) {
           const restaurantPayload = buildOrderFcmPayload(
             `👨‍🍳 New Order for ${order.shopName || 'Kitchen'}!`,
@@ -486,23 +457,75 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
       ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
       : null
 
+    // ─── 1. EXACTLY 1 CONSOLIDATED CUSTOMER APPROVAL NOTIFICATION ─────────────────────
+    const primaryTargetOrder = allTargetOrders.find((o) => !o.restaurantId) || allTargetOrders[0]
+    const baseDisplayId = baseRid || (primaryTargetOrder.readableId ? String(primaryTargetOrder.readableId) : primaryTargetOrder.id.slice(-6).toUpperCase())
+    const totalApprovedAmount = allTargetOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)
+    const outletsCombined = Array.from(new Set(allTargetOrders.map((o) => (o.shopName || '').replace(/FastKirana/g, 'FastMinute')).filter(Boolean))).join(' + ') || 'FastMinute Store'
+
+    // Customer Web Push (Single consolidated notification)
+    sendPushNotification(primaryTargetOrder.userId, {
+      title: '✅ Order Approved & Confirmed!',
+      body: `Your order #${baseDisplayId} (${outletsCombined}, ₹${totalApprovedAmount.toFixed(0)}) has been approved and is now being prepared!`,
+      icon: `${baseOrigin}/icons/icon-192.png`,
+      badge: `${baseOrigin}/icons/icon-192.png`,
+      tag: `order-${baseDisplayId}`,
+      renotify: true,
+      data: { orderId: primaryTargetOrder.id, readableId: baseDisplayId },
+    }).catch((err: any) => console.error('Error sending customer approval web push:', err))
+
+    // Customer Phone FCM (Single consolidated notification)
+    const customerPhone = primaryTargetOrder.address?.phone || primaryTargetOrder.user?.phone || ''
+    const cleanPhone = getLast10Digits(customerPhone)
+    if (fcmMessaging && cleanPhone && cleanPhone.length === 10) {
+      const custApprovalPayload = buildOrderFcmPayload(
+        '✅ Order Approved & Confirmed!',
+        `Your order #${baseDisplayId} (${outletsCombined}, ₹${totalApprovedAmount.toFixed(0)}) has been approved and is now being prepared!`,
+        {
+          title: '✅ Order Approved & Confirmed!',
+          body: `Your order #${baseDisplayId} (${outletsCombined}, ₹${totalApprovedAmount.toFixed(0)}) has been approved and is now being prepared!`,
+          orderId: primaryTargetOrder.id,
+          readableId: baseDisplayId,
+          status: 'CONFIRMED',
+          screen: 'order-tracking',
+          timestamp: Date.now().toString(),
+        }
+      )
+      sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custApprovalPayload }).catch(() => {})
+    }
+
+    // ─── 2. RIDER ASSIGNMENT BUZZER (Triggered ONLY if a designated rider is assigned) ──
+    const assignedRiderId = primaryTargetOrder.deliveryUserId || allTargetOrders.find((o) => o.deliveryUserId)?.deliveryUserId
+    if (assignedRiderId && String(assignedRiderId).trim().toUpperCase() !== 'UNASSIGNED' && String(assignedRiderId).trim().toUpperCase() !== 'STORE_ADMIN_SELF') {
+      const cleanRiderId = String(assignedRiderId).trim()
+      const riderPayload = buildOrderFcmPayload(
+        `🛵 Order #${baseDisplayId} Assigned to You!`,
+        `Order #${baseDisplayId} (${outletsCombined}, ₹${totalApprovedAmount.toFixed(0)}) has been assigned to you. Tap to deliver.`,
+        {
+          title: `🛵 Order #${baseDisplayId} Assigned to You!`,
+          body: `Order #${baseDisplayId} (${outletsCombined}, ₹${totalApprovedAmount.toFixed(0)}) has been assigned to you. Tap to deliver.`,
+          orderId: primaryTargetOrder.id,
+          readableId: baseDisplayId,
+          status: 'CONFIRMED',
+          screen: 'delivery',
+          url: '/delivery',
+          role: 'DELIVERY',
+          type: 'ORDER_ASSIGNED',
+          timestamp: Date.now().toString(),
+        }
+      )
+      if (fcmMessaging) {
+        sendTopicWithRetry(fcmMessaging, { topic: `user_${cleanRiderId}`, ...riderPayload }).catch(() => {})
+      }
+    }
+
+    // ─── 3. PER-OUTLET SEPARATE NOTIFICATIONS (Kitchen & Dark Store Pickers) ───────────
     for (const order of allTargetOrders) {
       const displayId = order.readableId ? String(order.readableId) : order.id.slice(-6).toUpperCase()
       const isRestaurant = Boolean(order.orderType === 'RESTAURANT' || order.restaurantId)
       const outletName = order.shopName || (isRestaurant ? 'Restaurant' : 'FastMinute Dark Store')
 
-      // 1. Notify Customer (Web Push + FCM)
-      sendPushNotification(order.userId, {
-        title: '✅ Order Approved & Confirmed!',
-        body: `Your order #${displayId} of ₹${order.total} has been approved by ${outletName} and is now being prepared.`,
-        icon: `${baseOrigin}/icons/icon-192.png`,
-        badge: `${baseOrigin}/icons/icon-192.png`,
-        tag: `order-${order.id}`,
-        renotify: true,
-        data: { orderId: order.id },
-      }).catch((err: any) => console.error('Error sending customer approval web push:', err))
-
-      // 2. Staff Web & FCM Notifications
+      // Staff Web & FCM Notifications
       if (isRestaurant && order.restaurantId) {
         // Instant Realtime Supabase Broadcast for Kitchen Console Chime & Refresh
         if (supabase) {
@@ -598,105 +621,36 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
           }).catch((err: any) => console.error('Error fetching restaurant FCM tokens:', err))
         }
       } else {
-        // Pure Grocery Order -> Pickers & Riders
-        sendPushNotificationToRoles([Role.PICKER, Role.DELIVERY], {
-          title: '📦 New Approved Order to Pick & Deliver!',
+        // Pure Grocery Dark Store Order: Alert Pickers
+        const pickerRoles = [Role.PICKER]
+        sendPushNotificationToRoles(pickerRoles, {
+          title: `📦 Order #${displayId} Approved!`,
           body: `Order #${displayId} of ₹${order.total} has been approved. Ready for packing!`,
           tag: `order-${order.id}`,
-          data: { orderId: order.id },
-        }).catch((err: any) => console.error('Error sending push to pickers/riders:', err))
+          data: { orderId: order.id, storeId: order.storeId || '' },
+        }).catch((err: any) => console.error('Error sending push to pickers:', err))
 
         if (fcmMessaging) {
           const staffPayload = buildOrderFcmPayload(
-            '📦 New Approved Order to Pick & Deliver!',
+            '📦 New Approved Order to Pick!',
             `Order #${displayId} of ₹${order.total} is approved. Ready for packing!`,
             {
-              title: '📦 New Approved Order to Pick & Deliver!',
+              title: '📦 New Approved Order to Pick!',
               body: `Order #${displayId} of ₹${order.total} is approved. Ready for packing!`,
               orderId: order.id,
               readableId: displayId,
+              storeId: order.storeId || '',
               status: order.status || 'PENDING',
-              screen: 'delivery',
+              screen: 'picker',
+              role: 'PICKER',
+              type: 'NEW_ORDER',
               timestamp: Date.now().toString(),
             }
           )
 
-          if (order.storeId) {
-            sendTopicWithRetry(fcmMessaging, { topic: `staff_orders_${order.storeId}`, ...staffPayload }).catch(() => {})
-          } else {
-            sendTopicWithRetry(fcmMessaging, { topic: 'staff_orders', ...staffPayload }).catch(() => {})
-          }
-
-          prisma.fcmToken.findMany({
-            where: {
-              user: { role: { in: [Role.DELIVERY, Role.PICKER] } },
-            },
-            select: { token: true },
-          }).then((staffTokens) => {
-            for (const sToken of staffTokens) {
-              fcmMessaging.send({ token: sToken.token, ...staffPayload }).catch(() => {})
-            }
-          }).catch(() => {})
+          const pickerTopic = order.storeId ? `picker_orders_${order.storeId}` : 'picker_orders'
+          sendTopicWithRetry(fcmMessaging, { topic: pickerTopic, ...staffPayload }).catch(() => {})
         }
-      }
-
-      // 2B. Direct FCM & Topic Broadcast to Delivery Riders (Both Restaurant & Grocery)
-      if (fcmMessaging) {
-        const riderApprovalPayload = buildOrderFcmPayload(
-          `🛵 New Delivery Order #${displayId}!`,
-          `Order #${displayId} (${outletName}, ₹${order.total}) approved by Admin! Ready to deliver.`,
-          {
-            title: `🛵 New Delivery Order #${displayId}!`,
-            body: `Order #${displayId} (${outletName}, ₹${order.total}) approved by Admin! Ready to deliver.`,
-            orderId: order.id,
-            readableId: displayId,
-            status: order.status || 'PENDING',
-            screen: 'delivery',
-            url: '/delivery',
-            role: 'DELIVERY',
-            type: 'NEW_ORDER',
-            timestamp: Date.now().toString(),
-          }
-        )
-
-        // Strict Hub Isolation: Send ONLY to this hub's rider topic
-        const riderTopic = order.storeId ? `delivery_orders_${order.storeId}` : 'delivery_orders'
-        sendTopicWithRetry(fcmMessaging, { topic: riderTopic, ...riderApprovalPayload }).catch(() => {})
-
-        // Direct tokens strictly for riders assigned to THIS store/hub
-        prisma.fcmToken.findMany({
-          where: {
-            user: {
-              role: Role.DELIVERY,
-              ...(order.storeId ? { assignedStoreId: order.storeId } : {}),
-            },
-          },
-          select: { token: true },
-        }).then((riderTokens) => {
-          for (const rToken of riderTokens) {
-            fcmMessaging.send({ token: rToken.token, ...riderApprovalPayload }).catch(() => {})
-          }
-        }).catch(() => {})
-      }
-
-      // 3. Direct Customer Phone Broadcast
-      const customerPhone = order.address?.phone || order.user?.phone || ''
-      const cleanPhone = getLast10Digits(customerPhone)
-      if (fcmMessaging && cleanPhone && cleanPhone.length === 10) {
-        const custApprovalPayload = buildOrderFcmPayload(
-          '✅ Order Approved & Confirmed!',
-          `Your order #${displayId} has been approved and is now being prepared.`,
-          {
-            title: '✅ Order Approved & Confirmed!',
-            body: `Your order #${displayId} has been approved and is now being prepared.`,
-            orderId: order.id,
-            readableId: displayId,
-            status: order.status || 'PENDING',
-            screen: 'order-tracking',
-            timestamp: Date.now().toString(),
-          }
-        )
-        sendTopicWithRetry(fcmMessaging, { topic: `phone_${cleanPhone}`, ...custApprovalPayload }).catch(() => {})
       }
     }
   } catch (err) {
