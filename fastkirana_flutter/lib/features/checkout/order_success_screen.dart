@@ -439,21 +439,25 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
         body: Stack(
           alignment: Alignment.topCenter,
           children: [
-            // Delicate Celebration Confetti (Only on Success, drops softly)
+            // Minimalist Luxury CRED-Style Celebration Confetti
             if (!isFailed)
               ConfettiWidget(
                 confettiController: _confettiController,
                 blastDirectionality: BlastDirectionality.explosive,
                 shouldLoop: false,
+                numberOfParticles: 36,
+                gravity: 0.12,
+                emissionFrequency: 0.04,
+                maxBlastForce: 24,
+                minBlastForce: 10,
                 colors: const [
-                  Color(0xFF10B981),
-                  Color(0xFF059669),
-                  Color(0xFF34D399),
-                  Color(0xFF38BDF8),
-                  Color(0xFFFBBF24),
+                  Color(0xFFF59E0B), // Warm Gold
+                  Color(0xFF10B981), // Emerald
+                  Color(0xFF3B82F6), // Royal Blue
+                  Color(0xFFF43F5E), // Rose Coral
+                  Color(0xFF8B5CF6), // Violet Silk
+                  Color(0xFFFCD34D), // Champagne Gold
                 ],
-                numberOfParticles: 24, // Clean & delicate, does not cover text
-                gravity: 0.18,
               ),
 
             SafeArea(
@@ -554,7 +558,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                           child: Column(
                             children: [
                               Text(
-                                isFailed ? 'Payment Failed' : 'Congratulations!',
+                                isFailed ? 'Payment Failed' : 'Order Placed Successfully! 🛒',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.outfit(
                                   fontSize: Responsive.scaledFontSize(context, 26),
@@ -568,7 +572,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                                 isFailed
                                     ? (widget.failureReason ??
                                         'Your money was not deducted. Your cart items are completely safe.')
-                                    : 'Store has started packing your order',
+                                    : 'Your order is confirmed & store has started packing',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
                                   fontSize: Responsive.scaledFontSize(context, 14),

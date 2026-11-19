@@ -2045,19 +2045,25 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   ),
                 ),
 
-          // Confetti Overlay on Delivery
+          // Minimalist Luxury CRED-Style Celebration Confetti
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
               shouldLoop: false,
+              numberOfParticles: 36,
+              gravity: 0.12,
+              emissionFrequency: 0.04,
+              maxBlastForce: 24,
+              minBlastForce: 10,
               colors: const [
-                Color(0xFFE20A22),
-                Color(0xFF00A344),
-                Color(0xFF2563EB),
-                Color(0xFFF59E0B),
-                Color(0xFFEC4899),
+                Color(0xFFF59E0B), // Warm Gold
+                Color(0xFF10B981), // Emerald
+                Color(0xFF3B82F6), // Royal Blue
+                Color(0xFFF43F5E), // Rose Coral
+                Color(0xFF8B5CF6), // Violet Silk
+                Color(0xFFFCD34D), // Champagne Gold
               ],
             ),
           ),
