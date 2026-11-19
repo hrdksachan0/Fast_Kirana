@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/design_system.dart';
+import '../../core/utils/app_confirmation_dialog.dart';
+import '../../providers/auth_provider.dart';
 import 'privacy_policy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -126,10 +130,25 @@ class SettingsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppDesignSystem.danger.withValues(alpha: 0.15)),
               ),
-              child: TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.logout_rounded, color: AppDesignSystem.danger),
-                label: Text('Logout', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: AppDesignSystem.danger)),
+              child: Consumer(
+                builder: (context, ref, _) => TextButton.icon(
+                  onPressed: () async {
+                    final confirmed = await AppConfirmationDialog.showLogout(
+                      context: context,
+                      title: 'Log Out of FastMinute?',
+                      subtitle: 'You will need to verify your phone number or email to log back in.',
+                      accountNote: 'Your cart items, saved addresses, and active orders stay secure in the cloud.',
+                      confirmLabel: 'Log Out',
+                    );
+                    if (confirmed == true && context.mounted) {
+                      HapticFeedback.heavyImpact();
+                      ref.read(authProvider.notifier).clear();
+                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                    }
+                  },
+                  icon: const Icon(Icons.logout_rounded, color: AppDesignSystem.danger),
+                  label: Text('Logout', style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w700, color: AppDesignSystem.danger)),
+                ),
               ),
             ),
           ],

@@ -281,7 +281,7 @@ export async function GET(
           if (active.length === 0) return 'CANCELLED'
           if (active.includes('ADMIN_PENDING')) return 'ADMIN_PENDING'
           if (active.includes('PENDING')) return 'PENDING'
-          if (active.includes('CONFIRMED') || active.includes('PREPARING')) return 'CONFIRMED'
+          if (active.includes('CONFIRMED') || active.includes('PREPARING') || active.includes('COOKING')) return 'CONFIRMED'
           if (active.includes('PACKED')) return 'PACKED'
           if (active.includes('SHIPPED')) return 'SHIPPED'
           if (active.every(s => s === 'DELIVERED')) return 'DELIVERED'
@@ -660,24 +660,46 @@ export async function PATCH(
 
       const baseReadableId = (existingOrder.readableId || '').replace(/-[GR\d]+$/i, '')
 
-      if (existingOrder.combinedId) {
-        await prisma.$executeRaw`
-          UPDATE orders 
-          SET "deliveryUserId" = ${cleanDeliveryUserId},
-              status = ${targetStatus}::"OrderStatus",
-              "updatedAt" = NOW()
-          WHERE "combinedId" = ${existingOrder.combinedId}
-        `
+      if (status) {
+        if (existingOrder.combinedId) {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET "deliveryUserId" = ${cleanDeliveryUserId},
+                status = ${status}::"OrderStatus",
+                "updatedAt" = NOW()
+            WHERE "combinedId" = ${existingOrder.combinedId}
+          `
+        } else {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET "deliveryUserId" = ${cleanDeliveryUserId},
+                status = ${status}::"OrderStatus",
+                "updatedAt" = NOW()
+            WHERE id = ${existingOrder.id}
+               OR ("combinedId" IS NOT NULL AND "combinedId" = ${existingOrder.id})
+               OR ("readableId" IS NOT NULL AND (${baseReadableId ? `("readableId" = ${existingOrder.readableId} OR "readableId" ILIKE ${baseReadableId + '-%'})` : `"readableId" = ${existingOrder.readableId}`}))
+          `
+        }
       } else {
-        await prisma.$executeRaw`
-          UPDATE orders 
-          SET "deliveryUserId" = ${cleanDeliveryUserId},
-              status = ${targetStatus}::"OrderStatus",
-              "updatedAt" = NOW()
-          WHERE id = ${existingOrder.id}
-             OR ("combinedId" IS NOT NULL AND "combinedId" = ${existingOrder.id})
-             OR ("readableId" IS NOT NULL AND (${baseReadableId ? `("readableId" = ${existingOrder.readableId} OR "readableId" ILIKE ${baseReadableId + '-%'})` : `"readableId" = ${existingOrder.readableId}`}))
-        `
+        // Rider assigned WITHOUT status change: update deliveryUserId across the combined order,
+        // but preserve each sub-order's individual preparation/cooking status!
+        if (existingOrder.combinedId) {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET "deliveryUserId" = ${cleanDeliveryUserId},
+                "updatedAt" = NOW()
+            WHERE "combinedId" = ${existingOrder.combinedId}
+          `
+        } else {
+          await prisma.$executeRaw`
+            UPDATE orders 
+            SET "deliveryUserId" = ${cleanDeliveryUserId},
+                "updatedAt" = NOW()
+            WHERE id = ${existingOrder.id}
+               OR ("combinedId" IS NOT NULL AND "combinedId" = ${existingOrder.id})
+               OR ("readableId" IS NOT NULL AND (${baseReadableId ? `("readableId" = ${existingOrder.readableId} OR "readableId" ILIKE ${baseReadableId + '-%'})` : `"readableId" = ${existingOrder.readableId}`}))
+          `
+        }
       }
 
       // Realtime SSE broadcast for Web Admin & mobile clients
@@ -940,15 +962,15 @@ export async function PATCH(
     // If a picker cancels or edits a grocery sub-order (-G), the restaurant companion order (-R) MUST NEVER be cancelled!
     const isExplicitAll = body.scope === 'ALL' || body.updateCombined === true
     const isCustomerCancel = isOwner && status === 'CANCELLED'
+    const isAdminCancelAll = isAdmin && status === 'CANCELLED' && (isExplicitAll || !existingOrder.readableId?.includes('-'))
+    // PACKED status is strictly outlet-isolated: grocery packing NEVER auto-packs restaurant dishes, and vice versa!
+    const isGlobalLifecycleStatus = status === 'CONFIRMED' || status === 'SHIPPED' || status === 'DELIVERED'
     const shouldUpdateAllCombined = Boolean(
       existingOrder.combinedId && (
         isExplicitAll ||
         isCustomerCancel ||
-        isAdmin ||
-        status === 'CONFIRMED' ||
-        status === 'SHIPPED' || 
-        status === 'DELIVERED' ||
-        status === 'CANCELLED'
+        isAdminCancelAll ||
+        isGlobalLifecycleStatus
       )
     )
 

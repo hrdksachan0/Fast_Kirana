@@ -154,63 +154,16 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> clear() async {
-    // 1. Unsubscribe from ALL FCM topics and unregister DB token while auth headers are still intact
-    try {
-      final dio = _ref.read(dioProvider);
-      await NotificationService().unsubscribeAllTopics(dio).timeout(const Duration(seconds: 6), onTimeout: () {});
-      await NotificationService().clearAllNotifications().timeout(const Duration(seconds: 2), onTimeout: () {});
-    } catch (e) {
-      LoggerService.error('AuthProvider: background notification cleanup error', e);
-    }
-
-    // 2. Clear in-memory auth state and cache
+    // 1. Instantly set in-memory auth state to null and invalidate memory caches (0ms)
     state = const AsyncValue.data(null);
     SecureStorage.invalidateCache();
 
-    // 3. Clear all cached addresses and orders from disk
-    try {
-      await Future.wait([
-        AddressRepository.clearCache(),
-        OrderRepository.clearCache(),
-      ]);
-    } catch (_) {}
-
-    final prefs = await SharedPreferences.getInstance();
-
-    // 4. Wipe all user-scoped, role-scoped, hub-scoped, and session keys from SharedPreferences
-    final allKeys = prefs.getKeys().toList();
-    for (final key in allKeys) {
-      if (key.startsWith('user_') ||
-          key.startsWith('auth_') ||
-          key.startsWith('cart_') ||
-          key.startsWith('wallet_') ||
-          key.startsWith('local_restaurant_') ||
-          key.startsWith('cached_admin_') ||
-          key.startsWith('admin_last_') ||
-          key == 'assigned_store_id' ||
-          key == 'assigned_restaurant_id' ||
-          key == 'rider_store_id' ||
-          key == 'pending_fcm_token' ||
-          key == 'admin_auto_approve_orders' ||
-          key == 'admin_stats_saved_date' ||
-          key == 'staff_customer_mode' ||
-          key == 'has_chosen_location' ||
-          key == 'selected_address' ||
-          key == 'pending_cart_sync' ||
-          key == 'offline_location_queue') {
-        await prefs.remove(key);
-      }
-    }
-
-    // 5. Delete all secure credentials
-    await SecureStorage.deleteAll();
-
-    // 6. Reset in-memory Riverpod providers so old data does not leak into other accounts
+    // 2. Instantly reset Riverpod state so UI reflects clean state immediately
     try {
       _ref.read(addressesProvider.notifier).clear();
       _ref.invalidate(addressesProvider);
       _ref.read(selectedAddressProvider.notifier).state = null;
-      await _ref.read(cartProvider.notifier).clearCart();
+      _ref.read(cartProvider.notifier).clearCart();
       _ref.invalidate(ordersProvider);
       _ref.read(walletNotifierProvider.notifier).reset();
       _ref.invalidate(walletNotifierProvider);
@@ -218,6 +171,58 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     } catch (e) {
       LoggerService.error('AuthProvider: error clearing state on logout', e);
     }
+
+    // 3. Offload all network and disk I/O cleanup to a non-blocking background task!
+    // This completely eliminates the 6-8s UI freeze and prevents screen redraw flicker.
+    final dio = _ref.read(dioProvider);
+    unawaited(_runBackgroundLogoutCleanup(dio));
+  }
+
+  static Future<void> _runBackgroundLogoutCleanup(dynamic dio) async {
+    try {
+      await NotificationService().unsubscribeAllTopics(dio).timeout(const Duration(seconds: 4), onTimeout: () {});
+      await NotificationService().clearAllNotifications().timeout(const Duration(seconds: 1), onTimeout: () {});
+    } catch (e) {
+      LoggerService.error('AuthProvider: background notification cleanup error', e);
+    }
+
+    try {
+      await Future.wait([
+        AddressRepository.clearCache(),
+        OrderRepository.clearCache(),
+      ]);
+    } catch (_) {}
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final allKeys = prefs.getKeys().toList();
+      for (final key in allKeys) {
+        if (key.startsWith('user_') ||
+            key.startsWith('auth_') ||
+            key.startsWith('cart_') ||
+            key.startsWith('wallet_') ||
+            key.startsWith('local_restaurant_') ||
+            key.startsWith('cached_admin_') ||
+            key.startsWith('admin_last_') ||
+            key == 'assigned_store_id' ||
+            key == 'assigned_restaurant_id' ||
+            key == 'rider_store_id' ||
+            key == 'pending_fcm_token' ||
+            key == 'admin_auto_approve_orders' ||
+            key == 'admin_stats_saved_date' ||
+            key == 'staff_customer_mode' ||
+            key == 'has_chosen_location' ||
+            key == 'selected_address' ||
+            key == 'pending_cart_sync' ||
+            key == 'offline_location_queue') {
+          await prefs.remove(key);
+        }
+      }
+    } catch (_) {}
+
+    try {
+      await SecureStorage.deleteAll();
+    } catch (_) {}
   }
 
   /// Alias for clear() to maintain standard naming across dashboards

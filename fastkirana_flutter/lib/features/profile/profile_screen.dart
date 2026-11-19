@@ -42,14 +42,10 @@ class ProfileScreen extends ConsumerWidget {
       confirmLabel: 'Log Out',
     );
 
-    if (confirmed == true) {
+    if (confirmed == true && context.mounted) {
       HapticFeedback.heavyImpact();
-      await ref.read(authProvider.notifier).clear();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logged out successfully')),
-        );
-      }
+      ref.read(authProvider.notifier).clear();
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
   }
 

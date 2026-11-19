@@ -432,6 +432,8 @@ class Order {
         } else if (activeSubs.any((s) => s.status == OrderStatus.shipped)) {
           effectiveStatus = OrderStatus.shipped;
         }
+      } else if (activeSubs.isNotEmpty && activeSubs.every((s) => s.status == OrderStatus.delivered)) {
+        effectiveStatus = OrderStatus.delivered;
       } else if (activeSubs.isEmpty && parsedSubOrders.every((s) => s.status == OrderStatus.cancelled)) {
         effectiveStatus = OrderStatus.cancelled;
       }

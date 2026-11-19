@@ -1488,6 +1488,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         } else if (activeSubs.any((s) => s.status == OrderStatus.shipped)) {
           return 3; // Stage 3: Out for Delivery (Rider in Transit)
         }
+      } else if (activeSubs.isNotEmpty && activeSubs.every((s) => s.status == OrderStatus.delivered)) {
+        return 4; // Stage 4: Delivered Safely
       }
     }
 

@@ -3300,7 +3300,7 @@ async def list_orders(
                 return "ADMIN_PENDING"
             if "PENDING" in active:
                 return "PENDING"
-            if "CONFIRMED" in active or "PREPARING" in active:
+            if "CONFIRMED" in active or "PREPARING" in active or "COOKING" in active:
                 return "CONFIRMED"
             if "PACKED" in active:
                 return "PACKED"
@@ -3560,7 +3560,7 @@ async def get_order_details(
                     return "ADMIN_PENDING"
                 if "PENDING" in active:
                     return "PENDING"
-                if "CONFIRMED" in active or "PREPARING" in active:
+                if "CONFIRMED" in active or "PREPARING" in active or "COOKING" in active:
                     return "CONFIRMED"
                 if "PACKED" in active:
                     return "PACKED"
