@@ -238,9 +238,9 @@ title.toString().contains('🛵') ||
       (body ?? '').toString().toLowerCase().contains('on the way') ||
       (body ?? '').toString().toLowerCase().contains('arriving'));
 
-  if (notification != null && !isOrderAlert) {
-    // Android OS FCM client displays notification directly in system tray for non-critical alerts.
-    // Suppress localNotifications.show here to avoid showing 2 notifications for the same message.
+  if (notification != null) {
+    // Android OS FCM client displays notification directly in system tray.
+    // Suppress localNotifications.show here to avoid showing 2 duplicate notifications for the same message.
     debugPrint('NotificationService: Android OS already displayed FCM notification in background.');
     return;
   }

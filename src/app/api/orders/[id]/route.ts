@@ -654,12 +654,9 @@ export async function PATCH(
 
       const cleanDeliveryUserId = (deliveryUserId && typeof deliveryUserId === 'string' && deliveryUserId.trim().length > 0 && deliveryUserId !== 'UNASSIGNED') ? deliveryUserId.trim() : null
 
-      // Determine appropriate status: if unpicked (PENDING/CONFIRMED), mark PACKED so rider sees "Ready for Pickup".
-      // If status was explicitly passed (e.g. PACKED or SHIPPED), prioritize it, otherwise preserve status!
+      // Preserve existing status unless explicitly requested. Assigning a rider does NOT mean the order is PACKED!
+      // (Order stays CONFIRMED / PREPARING / COOKING until Kitchen/Store actually packs it).
       let targetStatus = status || existingOrder.status
-      if (!status && cleanDeliveryUserId && (existingOrder.status === 'PENDING' || existingOrder.status === 'CONFIRMED')) {
-        targetStatus = 'PACKED'
-      }
 
       const baseReadableId = (existingOrder.readableId || '').replace(/-[GR\d]+$/i, '')
 
@@ -793,52 +790,56 @@ export async function PATCH(
               orderId: existingOrder.id,
               screen: 'delivery-dashboard',
               type: 'DELIVERY_ASSIGNED',
-              status: targetStatus || 'PACKED',
-              orderStatus: targetStatus || 'PACKED',
+              status: targetStatus || existingOrder.status || 'CONFIRMED',
+              orderStatus: targetStatus || existingOrder.status || 'CONFIRMED',
             }
 
             const sendPromises: Promise<any>[] = []
 
-            for (const t of riderTokens) {
-              sendPromises.push(
-                fcmMessaging.send({
-                  token: t.token,
-                  notification: {
-                    title: 'New Delivery Assigned! 🛵',
-                    body: `Order #${readableNo} has been assigned to you.`,
-                  },
-                  data: fcmDataPayload,
-                  android: {
-                    priority: 'high',
+            // Strict Single Dispatch: Multicast to direct tokens if available.
+            // Only fallback to phone topic if no active tokens are found.
+            if (riderTokens.length > 0) {
+              for (const t of riderTokens) {
+                sendPromises.push(
+                  fcmMessaging.send({
+                    token: t.token,
                     notification: {
-                      sound: 'order_chime',
-                      channelId: 'fastkirana_order_buzzer_v2',
+                      title: 'New Delivery Assigned! 🛵',
+                      body: `Order #${readableNo} has been assigned to you.`,
                     },
-                  },
-                }).catch(() => {})
-              )
-            }
-
-            // Also broadcast to rider phone topic if available
-            const cleanPhone = (riderUser?.phone || cleanDeliveryUserId).replace(/\D/g, '').slice(-10)
-            if (cleanPhone.length === 10) {
-              sendPromises.push(
-                sendTopicWithRetry(fcmMessaging, {
-                  topic: `phone_${cleanPhone}`,
-                  notification: {
-                    title: 'New Delivery Assigned! 🛵',
-                    body: `Order #${readableNo} has been assigned to you.`,
-                  },
-                  data: fcmDataPayload,
-                  android: {
-                    priority: 'high',
+                    data: fcmDataPayload,
+                    android: {
+                      priority: 'high',
+                      notification: {
+                        sound: 'order_chime',
+                        channelId: 'fastkirana_order_buzzer_v2',
+                      },
+                    },
+                  }).catch(() => {})
+                )
+              }
+            } else {
+              // Fallback to rider phone topic ONLY if no registered device tokens exist
+              const cleanPhone = (riderUser?.phone || cleanDeliveryUserId).replace(/\D/g, '').slice(-10)
+              if (cleanPhone.length === 10) {
+                sendPromises.push(
+                  sendTopicWithRetry(fcmMessaging, {
+                    topic: `phone_${cleanPhone}`,
                     notification: {
-                      sound: 'order_chime',
-                      channelId: 'fastkirana_order_buzzer_v2',
+                      title: 'New Delivery Assigned! 🛵',
+                      body: `Order #${readableNo} has been assigned to you.`,
                     },
-                  },
-                }).catch(() => {})
-              )
+                    data: fcmDataPayload,
+                    android: {
+                      priority: 'high',
+                      notification: {
+                        sound: 'order_chime',
+                        channelId: 'fastkirana_order_buzzer_v2',
+                      },
+                    },
+                  }).catch(() => {})
+                )
+              }
             }
 
             await Promise.allSettled(sendPromises)
