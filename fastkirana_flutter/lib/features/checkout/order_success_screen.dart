@@ -70,6 +70,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   Timer? _autoRedirectTimer;
   Timer? _countdownTimer;
   int _secondsRemaining = 5;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -170,23 +171,21 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
       _fetchLiveOrderStatus();
       _syncTimer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchLiveOrderStatus());
 
-      // Smooth auto-redirect to live tracking after 5 seconds per user command
+      // Guaranteed 5-second countdown to auto-redirect
       _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (!mounted) {
+        if (!mounted || _hasNavigated) {
           timer.cancel();
           return;
         }
-        setState(() {
-          if (_secondsRemaining > 1) {
+        if (_secondsRemaining > 1) {
+          setState(() {
             _secondsRemaining--;
-          } else {
-            timer.cancel();
-          }
-        });
-      });
-
-      _autoRedirectTimer = Timer(const Duration(seconds: 5), () {
-        if (mounted) {
+          });
+        } else {
+          setState(() {
+            _secondsRemaining = 0;
+          });
+          timer.cancel();
           _navigateToTracking();
         }
       });
@@ -210,36 +209,32 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {}
 
   void _navigateToTracking() {
-    if (!mounted) return;
+    if (!mounted || _hasNavigated) return;
+    _hasNavigated = true;
     _autoRedirectTimer?.cancel();
     _countdownTimer?.cancel();
-    final lifecycle = WidgetsBinding.instance.lifecycleState;
-    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) {
-      return;
-    }
+    _syncTimer?.cancel();
+
     HapticFeedback.mediumImpact();
     final effectiveOrder = _liveOrder ?? widget.order;
     final trackingId = effectiveOrder?.id ?? effectiveOrder?.readableId ?? widget.orderId ?? '';
+
     try {
-      // Ultra-smooth Material FadeThrough transition (550ms) per user request
-      Navigator.pushReplacement(
-        context,
-        FadeThroughRoute(
+      Navigator.of(context).pushReplacement(
+        FadeSlideRoute(
           page: OrderTrackingScreen(
             orderId: trackingId,
             initialOrder: effectiveOrder,
           ),
-          transitionDurationOverride: const Duration(milliseconds: 550),
         ),
       );
     } catch (_) {
       AppRouter.navigatorKey.currentState?.pushReplacement(
-        FadeThroughRoute(
+        FadeSlideRoute(
           page: OrderTrackingScreen(
             orderId: trackingId,
             initialOrder: effectiveOrder,
           ),
-          transitionDurationOverride: const Duration(milliseconds: 550),
         ),
       );
     }
@@ -439,17 +434,19 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
         body: Stack(
           alignment: Alignment.topCenter,
           children: [
-            // Minimalist Luxury CRED-Style Celebration Confetti
+            // Minimalist Luxury CRED-Style Celebration Confetti (Delicate silk flakes, never blocks text)
             if (!isFailed)
               ConfettiWidget(
                 confettiController: _confettiController,
                 blastDirectionality: BlastDirectionality.explosive,
                 shouldLoop: false,
-                numberOfParticles: 36,
-                gravity: 0.12,
-                emissionFrequency: 0.04,
-                maxBlastForce: 24,
-                minBlastForce: 10,
+                numberOfParticles: 16,
+                gravity: 0.15,
+                emissionFrequency: 0.03,
+                maxBlastForce: 18,
+                minBlastForce: 8,
+                minimumSize: const Size(5, 3),
+                maximumSize: const Size(9, 5),
                 colors: const [
                   Color(0xFFF59E0B), // Warm Gold
                   Color(0xFF10B981), // Emerald
@@ -464,13 +461,13 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
               child: Center(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // 1. HERO ANIMATED BADGE (Enlarged 106px Badge + Outer Breathing Halo + Self-Drawing Tick/Cross)
+                      // 1. HERO ANIMATED BADGE (Clean 80px Badge, Zero pixelation/banding, perfectly zoomed out)
                       ScaleTransition(
                         scale: _checkScaleAnim,
                         child: AnimatedBuilder(
@@ -481,65 +478,51 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                                 ? const Color(0xFFEF4444)
                                 : const Color(0xFF10B981);
 
-                            return Container(
-                              width: 142 * scale,
-                              height: 142 * scale,
-                              decoration: BoxDecoration(
-                                color: haloColor.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: haloColor.withValues(alpha: 0.22),
-                                    blurRadius: 32 * scale,
-                                    offset: const Offset(0, 8),
+                            return Transform.scale(
+                              scale: 0.97 + (0.03 * scale),
+                              child: Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: isFailed
+                                        ? const [Color(0xFFEF4444), Color(0xFFDC2626)]
+                                        : const [Color(0xFF10B981), Color(0xFF059669)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Container(
-                                  width: 106,
-                                  height: 106,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: isFailed
-                                          ? const [Color(0xFFEF4444), Color(0xFFDC2626)]
-                                          : const [Color(0xFF10B981), Color(0xFF059669)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: haloColor.withValues(alpha: 0.28),
+                                      blurRadius: 18,
+                                      offset: const Offset(0, 6),
                                     ),
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: haloColor.withValues(alpha: 0.38),
-                                        blurRadius: 22,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: AnimatedBuilder(
-                                      animation: _checkDrawController,
-                                      builder: (context, _) {
-                                        if (isFailed) {
-                                          return CustomPaint(
-                                            painter: _AnimatedCrossPainter(
-                                              progress: _checkDrawController.value,
-                                              color: Colors.white,
-                                              strokeWidth: 5.5,
-                                            ),
-                                            size: const Size(50, 50),
-                                          );
-                                        }
+                                  ],
+                                ),
+                                child: Center(
+                                  child: AnimatedBuilder(
+                                    animation: _checkDrawController,
+                                    builder: (context, _) {
+                                      if (isFailed) {
                                         return CustomPaint(
-                                          painter: _AnimatedCheckmarkPainter(
+                                          painter: _AnimatedCrossPainter(
                                             progress: _checkDrawController.value,
                                             color: Colors.white,
-                                            strokeWidth: 5.5,
+                                            strokeWidth: 4.2,
                                           ),
-                                          size: const Size(52, 52),
+                                          size: const Size(38, 38),
                                         );
-                                      },
-                                    ),
+                                      }
+                                      return CustomPaint(
+                                        painter: _AnimatedCheckmarkPainter(
+                                          progress: _checkDrawController.value,
+                                          color: Colors.white,
+                                          strokeWidth: 4.2,
+                                        ),
+                                        size: const Size(40, 40),
+                                      );
+                                    },
                                   ),
                                 ),
                               ),
@@ -548,9 +531,9 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                         ),
                       ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
 
-                      // 2. HERO TITLE & ANIMATED WORDS (Clean & Reassuring)
+                      // 2. HERO TITLE & ANIMATED WORDS (Zoomed out, Clean & Reassuring)
                       FadeTransition(
                         opacity: _heroFadeAnim,
                         child: SlideTransition(
@@ -561,13 +544,13 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                                 isFailed ? 'Payment Failed' : 'Order Placed Successfully! 🛒',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.outfit(
-                                  fontSize: Responsive.scaledFontSize(context, 26),
+                                  fontSize: Responsive.scaledFontSize(context, 22),
                                   fontWeight: FontWeight.w900,
                                   color: isFailed ? const Color(0xFFDC2626) : slateDark,
-                                  letterSpacing: -0.4,
+                                  letterSpacing: -0.3,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Text(
                                 isFailed
                                     ? (widget.failureReason ??
@@ -575,7 +558,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                                     : 'Your order is confirmed & store has started packing',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 14),
+                                  fontSize: Responsive.scaledFontSize(context, 13),
                                   fontWeight: FontWeight.w500,
                                   color: isFailed ? const Color(0xFF991B1B) : slateMuted,
                                   height: 1.35,
@@ -586,7 +569,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
                         ),
                       ),
 
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 14),
 
                       // 3. SLEEK SINGLE-LINE METADATA CHIP
                       FadeTransition(
