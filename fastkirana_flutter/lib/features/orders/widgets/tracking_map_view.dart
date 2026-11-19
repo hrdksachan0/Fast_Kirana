@@ -33,6 +33,7 @@ class TrackingMapView extends StatelessWidget {
   final Order? order;
   final Set<Marker> markers;
   final Set<Polyline> polylines;
+  final Set<Circle> circles;
   final OutletLocation? primaryOutlet;
   final OutletLocation? restaurantOutlet;
   final void Function(GoogleMapController controller)? onMapCreated;
@@ -47,6 +48,7 @@ class TrackingMapView extends StatelessWidget {
     required this.order,
     required this.markers,
     required this.polylines,
+    this.circles = const {},
     this.primaryOutlet,
     this.restaurantOutlet,
     this.onMapCreated,
@@ -140,6 +142,7 @@ class TrackingMapView extends StatelessWidget {
                   ),
                   markers: markers,
                   polylines: polylines,
+                  circles: circles,
                   myLocationEnabled: false,
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,

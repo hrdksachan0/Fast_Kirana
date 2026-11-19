@@ -74,6 +74,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
+  final Set<Circle> _circles = {};
   LatLng? _riderPosition;
   LatLng? _customerPosition;
   LatLng? _storePosition;
@@ -1085,8 +1086,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           Polyline(
             polylineId: const PolylineId('delivery_route_covered'),
             points: _coveredPolylinePoints,
-            color: const Color(0xFF94A3B8), // Slate 400 for covered path
-            width: 3,
+            color: const Color(0xFFCBD5E1), // Swiggy/Zomato muted slate for covered path
+            width: 4,
             jointType: JointType.round,
             startCap: Cap.roundCap,
             endCap: Cap.roundCap,
@@ -1102,8 +1103,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: remainingPoints,
-          color: const Color(0xFF2563EB),
-          width: 4,
+          color: const Color(0xFF00A344), // Swiggy/Zomato vibrant emerald active line
+          width: 5,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
@@ -1117,8 +1118,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Polyline(
           polylineId: const PolylineId('delivery_route_shadow'),
           points: remainingPoints,
-          color: const Color(0xFF2563EB).withValues(alpha: 0.20),
-          width: 8,
+          color: const Color(0xFF00A344).withValues(alpha: 0.22),
+          width: 9,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
@@ -1365,6 +1366,20 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       }
     }
 
+    final circles = <Circle>{};
+    if (_customerPosition != null) {
+      circles.add(
+        Circle(
+          circleId: const CircleId('customer_drop_halo'),
+          center: _customerPosition!,
+          radius: 65,
+          fillColor: const Color(0xFF10B981).withValues(alpha: 0.12),
+          strokeColor: const Color(0xFF10B981).withValues(alpha: 0.45),
+          strokeWidth: 1.5,
+        ),
+      );
+    }
+
     final polylines = <Polyline>{};
     if (polylineCoords.length >= 2) {
       if (_coveredPolylinePoints.length >= 2) {
@@ -1372,21 +1387,21 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           Polyline(
             polylineId: const PolylineId('delivery_route_covered'),
             points: _coveredPolylinePoints,
-            color: const Color(0xFF94A3B8),
-            width: 3,
+            color: const Color(0xFFCBD5E1),
+            width: 4,
             jointType: JointType.round,
             startCap: Cap.roundCap,
             endCap: Cap.roundCap,
           ),
         );
       }
-      // Main route line
+      // Main route line (Swiggy / Zomato vibrant emerald line)
       polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: polylineCoords,
-          color: const Color(0xFF2563EB),
-          width: 4,
+          color: const Color(0xFF00A344),
+          width: 5,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
@@ -1398,8 +1413,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Polyline(
           polylineId: const PolylineId('delivery_route_shadow'),
           points: polylineCoords,
-          color: const Color(0xFF2563EB).withValues(alpha: 0.20),
-          width: 8,
+          color: const Color(0xFF00A344).withValues(alpha: 0.22),
+          width: 9,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
@@ -1412,6 +1427,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       _markers.addAll(markers);
       _polylines.clear();
       _polylines.addAll(polylines);
+      _circles.clear();
+      _circles.addAll(circles);
     });
   }
 
@@ -1913,6 +1930,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                               order: _order,
                               markers: _markers,
                               polylines: _polylines,
+                              circles: _circles,
                               primaryOutlet: _primaryOutlet,
                               restaurantOutlet: _restaurantOutlet,
                               onMapCreated: (controller) {
