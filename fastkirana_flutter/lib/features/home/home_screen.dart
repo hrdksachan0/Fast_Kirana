@@ -198,6 +198,7 @@ import '../orders/orders_screen.dart';
 
 
 import '../../widgets/unserviceable_location_banner.dart';
+import '../../widgets/offline_banner.dart';
 
 
 
@@ -2799,21 +2800,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
                   const SliverToBoxAdapter(
-
-
-
-
-
-
-
                     child: HomeTopHeader(showSearch: false),
+                  ),
 
-
-
-
-
-
-
+                  // Reactive Offline State Banner
+                  const SliverToBoxAdapter(
+                    child: OfflineBanner(),
                   ),
 
 

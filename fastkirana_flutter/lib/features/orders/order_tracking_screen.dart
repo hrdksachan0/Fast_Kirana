@@ -35,6 +35,7 @@ import '../../providers/banner_provider.dart';
 import 'orders_screen.dart';
 import '../../widgets/sponsored_ad_card.dart';
 import '../../widgets/offline_banner.dart';
+import '../../widgets/shimmer_box.dart';
 import 'widgets/tracking_map_view.dart';
 import 'widgets/tracking_status_stepper.dart';
 import 'widgets/tracking_rider_card.dart';
@@ -1659,7 +1660,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       body: Stack(
         children: [
           _isLoading
-              ? const Center(child: CircularProgressIndicator(color: brandGreen))
+              ? _buildTrackingSkeleton(context)
               : ResponsiveContainer(
                   maxWidth: Responsive.defaultMaxContentWidth,
                   fillHeight: true,
@@ -2310,4 +2311,107 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
+  Widget _buildTrackingSkeleton(BuildContext context) {
+    final hPad = Responsive.horizontalPadding(context).clamp(12.0, 20.0);
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(hPad, 10, hPad, 36),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. Hero Live Status Card Skeleton
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppDesignSystem.shadowCard,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ShimmerBox(width: 140, height: 20, borderRadius: BorderRadius.circular(6)),
+                    ShimmerBox(width: 80, height: 22, borderRadius: BorderRadius.circular(12)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ShimmerBox(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 16),
+                // Stepper 4 progress pills skeleton
+                Row(
+                  children: List.generate(4, (index) => Expanded(
+                    child: Container(
+                      height: 6,
+                      margin: EdgeInsets.only(right: index < 3 ? 6 : 0),
+                      child: ShimmerBox(width: double.infinity, height: 6, borderRadius: BorderRadius.circular(3)),
+                    ),
+                  )),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 2. Map / Animation View Skeleton
+          Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppDesignSystem.shadowCard,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: const ShimmerBox(width: double.infinity, height: 180, borderRadius: BorderRadius.zero),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 3. Order Items & Receipt Skeleton Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppDesignSystem.shadowCard,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerBox(width: 120, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    const ShimmerBox(width: 48, height: 48, borderRadius: BorderRadius.all(Radius.circular(10))),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ShimmerBox(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+                          const SizedBox(height: 6),
+                          ShimmerBox(width: 80, height: 12, borderRadius: BorderRadius.circular(4)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ShimmerBox(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                    ShimmerBox(width: 70, height: 16, borderRadius: BorderRadius.circular(4)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

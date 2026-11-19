@@ -21,6 +21,8 @@ import '../../widgets/floating_cart_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../products/product_detail_screen.dart';
 import '../bakery/bakery_store_screen.dart';
+import '../../core/widgets/loading_widgets.dart';
+import '../../widgets/offline_banner.dart';
 
 class _SubcatItem {
   final String id;
@@ -294,8 +296,12 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
       ),
       body: Stack(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Column(
+            children: [
+              const OfflineBanner(),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 2. Left Subcategory Rail (Reference Replica with Soft Lavender Active Pill)
               if (subcats.length > 1)
@@ -516,9 +522,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                       ),
                     );
                   },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppDesignSystem.primary),
-                  ),
+                  loading: () => const ProductGridShimmer(count: 6),
                   error: (_, __) => Center(
                     child: ElevatedButton(
                       onPressed: () {
@@ -533,6 +537,9 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
               ),
             ],
           ),
+        ),
+      ],
+    ),
 
           // 4. Exact Reference Floating Bottom Cart Bar (Single Universal Widget)
           FloatingCartBar(bottomOffset: MediaQuery.of(context).padding.bottom + 10),

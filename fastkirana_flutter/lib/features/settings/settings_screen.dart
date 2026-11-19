@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/design_system.dart';
-import '../../core/utils/app_confirmation_dialog.dart';
+import '../../widgets/app_confirmation_dialog.dart';
 import '../../providers/auth_provider.dart';
 import 'privacy_policy_screen.dart';
 

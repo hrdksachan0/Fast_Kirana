@@ -7,6 +7,8 @@ import '../../providers/restaurant_provider.dart';
 import '../../widgets/restaurant_card.dart';
 import '../../widgets/floating_cart_bar.dart';
 import '../../widgets/unserviceable_location_banner.dart';
+import '../../widgets/offline_banner.dart';
+import '../../widgets/shimmer_box.dart';
 
 class RestaurantsListScreen extends ConsumerStatefulWidget {
   const RestaurantsListScreen({super.key});
@@ -223,6 +225,9 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
               ),
               const Divider(height: 1, color: AppDesignSystem.surfaceMuted),
 
+              // Reactive Offline State Banner
+              const OfflineBanner(),
+
               // 4. Restaurant Listing View
               Expanded(
                 child: restaurantsAsync.when(
@@ -265,8 +270,12 @@ class _RestaurantsListScreenState extends ConsumerState<RestaurantsListScreen> {
                       },
                     );
                   },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppDesignSystem.orange600),
+                  loading: () => ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 4,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (_, __) => const RestaurantCardSkeleton(),
                   ),
                   error: (err, _) => Center(
                     child: Column(

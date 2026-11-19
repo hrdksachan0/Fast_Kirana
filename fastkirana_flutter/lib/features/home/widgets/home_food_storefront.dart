@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/design_system.dart';
 import '../../../../providers/restaurant_provider.dart';
 import '../../../../widgets/restaurant_card.dart';
+import '../../../../widgets/shimmer_box.dart';
 import '../../../../providers/store_hub_provider.dart';
 
 class HomeFoodStorefront extends ConsumerWidget {
@@ -136,11 +137,12 @@ class HomeFoodStorefront extends ConsumerWidget {
               itemBuilder: (context, index) => RestaurantCard(restaurant: restaurants[index]),
             );
           },
-          loading: () => const Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(
-              child: CircularProgressIndicator(color: AppDesignSystem.cafeAccent),
-            ),
+          loading: () => ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: 2,
+            itemBuilder: (_, __) => const RestaurantCardSkeleton(),
           ),
           error: (_, __) => const SizedBox.shrink(),
         ),
