@@ -111,14 +111,20 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
 
       // Hub-scoped admin topic (all active admins receive exactly this 1 broadcast)
       const adminTopic = storeId ? `admin_orders_${storeId}` : 'admin_orders'
-      await sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
+      const fcmDispatchPromises: Promise<any>[] = []
+
+      fcmDispatchPromises.push(
+        sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
+      )
 
       // Also broadcast to global admin_orders topic if a specific hub topic was used
       if (storeId) {
-        sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+        fcmDispatchPromises.push(
+          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+        )
       }
 
-      // DIRECT FCM PUSH to registered Admin device token (Only Admin 7054470303)
+      // DIRECT FCM PUSH to registered Admin device token (Guaranteed Instant Delivery)
       try {
         const adminTokens = await prisma.fcmToken.findMany({
           where: {
@@ -133,14 +139,19 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         for (const t of adminTokens) {
           if (!sentFcmTokensThisCheckout.has(t.token)) {
             sentFcmTokensThisCheckout.add(t.token)
-            fcmMessaging.send({ token: t.token, ...staffPayload }).catch((err: any) =>
-              console.error('Direct admin FCM send failed:', err)
+            fcmDispatchPromises.push(
+              fcmMessaging.send({ token: t.token, ...staffPayload }).catch((err: any) =>
+                console.error('Direct admin FCM send failed:', err)
+              )
             )
           }
         }
       } catch (directFcmErr) {
         console.error('Error fetching admin FCM tokens:', directFcmErr)
       }
+
+      // STRICT AWAIT: Guarantees FCM packets reach Google before serverless runtime freezes
+      await Promise.allSettled(fcmDispatchPromises)
     }
   } catch (fcmErr) {
     console.error('Unified admin FCM error:', fcmErr)

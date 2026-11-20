@@ -1991,17 +1991,19 @@ export async function POST(request: NextRequest) {
         // Note: Unpaid online orders stay safely in Admin's "Payment Pending" section without prematurely dispatching riders
         const isAwaitingOnlinePayment = isOnlineRequested && !isOnlinePaid
         if (!isAwaitingOnlinePayment) {
-          dispatchOrderNotifications({
-            createdOrders,
-            isOnlinePaid,
-            notificationTitle: isOnlinePaid ? '💳 Order Confirmed & Paid!' : 'New Order Received 📦',
-            adminPhones,
-            origin,
-            userPhone: body.phone || body.customerPhone || address?.phone,
-            settingsMap,
-          }).catch((notifErr) => {
+          try {
+            await dispatchOrderNotifications({
+              createdOrders,
+              isOnlinePaid,
+              notificationTitle: isOnlinePaid ? '💳 Order Confirmed & Paid!' : 'New Order Received 📦',
+              adminPhones,
+              origin,
+              userPhone: body.phone || body.customerPhone || address?.phone,
+              settingsMap,
+            })
+          } catch (notifErr) {
             console.error('Failed to dispatch order notifications:', notifErr)
-          })
+          }
         }
       } catch (sseErr) {
         console.error('Failed to emit SSE/notifications for new orders:', sseErr)
