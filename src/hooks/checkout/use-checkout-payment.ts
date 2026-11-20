@@ -452,11 +452,20 @@ export function useCheckoutPayment({
                     })
 
                     const orderData = await orderRes.json()
+                    const finalOrderId = orderData?.id || orderData?.orderId || orderData?.order?.id || orderData?.orders?.[0]?.id || rzpOrderId
+                    const finalReadableId = orderData?.readableId || orderData?.order?.readableId || orderData?.orders?.[0]?.readableId || finalOrderId
+
                     if (orderRes.ok) {
-                      setOverlayState('success')
                       triggerHaptic('success')
-                      clearCart()
-                      router.push(`/order-success/${orderData.id || orderData.readableId}`)
+                      if (finalReadableId) {
+                        setOrderReadableId(finalReadableId)
+                      }
+                      setOverlayState('success')
+                      toast.success('🎉 Payment Verified & Order Placed!')
+                      setTimeout(() => {
+                        clearCart()
+                        window.location.replace(`/order/${finalOrderId}/success`)
+                      }, 600)
                     } else {
                       toast.error('Order creation failed after payment. Please contact support.')
                       setIsPlacingOrder(false)
