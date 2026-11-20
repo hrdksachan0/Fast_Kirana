@@ -446,6 +446,20 @@ async def dispatch_isolated_order_fcm_notifications(
             await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
             await send_fcm_topic_notification("admin_orders_all", admin_title, admin_body, admin_data)
             await send_fcm_topic_notification("admin_orders_ghatampur", admin_title, admin_body, admin_data)
+            # Direct FCM push to registered Admin device tokens (Guaranteed buzzer delivery)
+            try:
+                from database import AsyncSessionLocal
+                async with AsyncSessionLocal() as s:
+                    adm_res = await s.execute(
+                        select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
+                            or_(User.role == Role.ADMIN, User.phone.like("%7054470303%"))
+                        )
+                    )
+                    adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
+                    if adm_toks:
+                        await send_fcm_notification(tokens=adm_toks, title=admin_title, body=admin_body, data=admin_data)
+            except Exception as direct_err:
+                logger.error(f"Failed direct FCM push to admin tokens: {direct_err}")
             return  # Stop here! Do not notify restaurant/picker/rider until approved
 
         # ── CASE 2: AUTO-APPROVED / CONFIRMED ──
@@ -3099,6 +3113,19 @@ async def create_order(
                 admin_topics.add(f"admin_orders_{cust_order_for_notif.storeId}")
             for t in admin_topics:
                 background_tasks.add_task(send_fcm_topic_notification, t, admin_title, admin_body, admin_data)
+
+            # Direct FCM push to registered Admin device tokens (Guaranteed buzzer delivery)
+            try:
+                adm_res = await db.execute(
+                    select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
+                        or_(User.role == Role.ADMIN, User.phone.like("%7054470303%"))
+                    )
+                )
+                adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
+                if adm_toks:
+                    background_tasks.add_task(send_fcm_notification, adm_toks, admin_title, admin_body, admin_data)
+            except Exception as direct_err:
+                logger.error(f"Failed direct FCM push to admin tokens on order place: {direct_err}")
         else:
             # Auto-approved order: dispatch isolated outlet alerts to Darkstore pickers and Restaurant chefs
             for order in created_orders:
