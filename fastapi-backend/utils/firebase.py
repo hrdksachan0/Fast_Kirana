@@ -144,14 +144,24 @@ def is_order_status_update(title: str, body: str, data: Optional[Dict[str, Any]]
     d = data or {}
     status_val = str(d.get("status", "")).upper()
     msg_type = str(d.get("type", "")).upper()
+    role = str(d.get("role", "")).upper()
+    screen = str(d.get("screen", "")).lower()
     t_lower = str(title).lower()
     b_lower = str(body).lower()
+
     if status_val in ["CANCELLED", "REJECTED", "FAILED", "REFUNDED"] or "cancel" in t_lower or "cancel" in b_lower:
         return False
+
+    if is_order_buzzer_alert(title, body, data):
+        return False
+
+    if role == "CUSTOMER" or screen == "order-tracking" or d.get("isLiveTracking") or (d.get("orderId") and role not in ["ADMIN", "STAFF", "DELIVERY", "PICKER"]):
+        return True
+
     return (
-        status_val in ["OUT_FOR_DELIVERY", "DISPATCHED", "DELIVERED", "CONFIRMED", "PREPARING", "COOKING", "PACKED", "SHIPPED"] or
-        msg_type == "ORDER_STATUS_UPDATE" or
-        "out for delivery" in t_lower or "dispatched" in t_lower or "delivered" in t_lower or "on the way" in t_lower
+        status_val in ["OUT_FOR_DELIVERY", "DISPATCHED", "DELIVERED", "CONFIRMED", "PREPARING", "COOKING", "PACKED", "SHIPPED", "PENDING", "ADMIN_PENDING", "PLACED"] or
+        msg_type in ["ORDER_STATUS_UPDATE", "ORDER_PLACED"] or
+        "order placed" in t_lower or "out for delivery" in t_lower or "dispatched" in t_lower or "delivered" in t_lower or "on the way" in t_lower
     )
 
 

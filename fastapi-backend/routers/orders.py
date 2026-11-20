@@ -3083,7 +3083,10 @@ async def create_order(
                 "orderId": cust_order_for_notif.id,
                 "readableId": base_readable,
                 "status": cust_order_for_notif.status.value,
-                "type": "ORDER_PLACED"
+                "type": "ORDER_PLACED",
+                "role": "CUSTOMER",
+                "screen": "order-tracking",
+                "isLiveTracking": "true",
             },
             None,
             address.phone if address else None
@@ -4661,7 +4664,9 @@ async def update_order(
             "readableId": order.readableId,
             "status": order.status.value,
             "type": "ORDER_STATUS_UPDATE",
-            "screen": "order-tracking"
+            "screen": "order-tracking",
+            "role": "CUSTOMER",
+            "isLiveTracking": "true",
         },
         db,
         cust_phone

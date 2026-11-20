@@ -982,7 +982,10 @@ async def update_rider_live_location(
                                         "orderId": target_order.id,
                                         "readableId": str(target_order.readableId or ""),
                                         "status": "ARRIVING_SOON",
-                                        "type": "ORDER_STATUS_UPDATE"
+                                        "type": "ORDER_STATUS_UPDATE",
+                                        "role": "CUSTOMER",
+                                        "screen": "order-tracking",
+                                        "isLiveTracking": "true",
                                     },
                                     None,
                                     cust_addr.phone if cust_addr else None

@@ -61,13 +61,13 @@ class CustomerSoundService {
         });
       }
 
-      // 2. Audio Chime Playback: Swiggy/Zomato Eb-Major signature sparkle chime
+      // 2. Audio Chime Playback: Swiggy/Zomato Eb-Major signature sparkle chime (calm, subtle, non-intrusive)
       await _initPlayer();
       if (_player != null) {
         await _player!.stop();
         await _player!.play(
           AssetSource('sounds/order_placed_celebrate.wav'),
-          volume: isOnline ? 0.95 : 0.90,
+          volume: isOnline ? 0.60 : 0.55,
           mode: PlayerMode.lowLatency,
         );
       } else {

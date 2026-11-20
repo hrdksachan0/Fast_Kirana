@@ -102,18 +102,31 @@ export function buildOrderFcmPayload(
       title.includes('💳') ||
       title.includes('👨‍🍳'))
 
+  const isCustomerTracking =
+    !isOrderAlert &&
+    (data.role === 'CUSTOMER' ||
+      data.screen === 'order-tracking' ||
+      data.isLiveTracking === 'true' ||
+      Boolean(data.readableId || data.orderId))
+
+  const channelId = isOrderAlert
+    ? 'fastminute_order_alarm_v3'
+    : isCustomerTracking
+      ? 'fastkirana_live_tracking_v1'
+      : 'fastkirana_alerts'
+
   return {
     notification: { title, body },
     data,
     android: {
-      priority: isOrderAlert ? ('high' as const) : ('normal' as const),
+      priority: 'high' as const,
       ttl: ttlSeconds,
       ...(collapseId ? { collapseKey: collapseId } : {}),
       notification: {
-        channelId: isOrderAlert ? 'fastminute_order_alarm_v3' : 'fastkirana_alerts',
-        sound: isOrderAlert ? 'order_chime' : 'default',
-        defaultSound: !isOrderAlert,
-        defaultVibrateTimings: !isOrderAlert,
+        channelId,
+        sound: isOrderAlert ? 'order_chime' : undefined,
+        defaultSound: !isOrderAlert && !isCustomerTracking,
+        defaultVibrateTimings: !isOrderAlert && !isCustomerTracking,
         ...(isOrderAlert ? { vibrateTimingsMillis: [0, 1000, 500, 1000, 500, 1000, 500, 1000] } : {}),
         visibility: 'PUBLIC' as const,
         priority: isOrderAlert ? ('MAX' as const) : ('HIGH' as const),
