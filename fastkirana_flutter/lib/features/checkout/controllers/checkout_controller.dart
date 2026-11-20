@@ -835,6 +835,11 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     if (state.deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
       state = state.copyWith(isPlacingOrder: false);
       if (context.mounted) {
+        final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
+        final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
+        final errorMsg = tier.distanceKm > 0.0
+            ? 'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected location is ${tier.distanceKm.toStringAsFixed(1)} km away)'
+            : 'Please tap CHANGE on your delivery address to set your location on the map.';
         AppToast.showError(
           context,
           'Delivery Unavailable',
@@ -1159,6 +1164,11 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     if (effectiveDeliveryMethod == 'DELIVERY' && !tier.isServiceable) {
       state = state.copyWith(isPlacingOrder: false);
       if (context != null && context.mounted) {
+        final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
+        final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
+        final errorMsg = tier.distanceKm > 0.0
+            ? 'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)'
+            : 'Please tap CHANGE on your delivery address to set your location on the map.';
         AppToast.showError(
           context,
           'Delivery Unavailable',

@@ -458,10 +458,10 @@ async def _get_or_create_razorpay_doorstep_qr(
         log.warning(f"Invalid amount for doorstep QR: {total_amount}")
         return {}
 
-    cache_key = f"rzp_doorstep_qr:{order_id}:{amount_paise}"
+    cache_key = f"rzp_doorstep_qr_sq:{order_id}:{amount_paise}"
     try:
         cached = await get_cache(cache_key)
-        if cached and isinstance(cached, dict) and cached.get("image_url"):
+        if cached and isinstance(cached, dict) and cached.get("image_url") and "rzp.io" not in cached.get("image_url", ""):
             return cached
     except Exception:
         pass
@@ -493,9 +493,19 @@ async def _get_or_create_razorpay_doorstep_qr(
             )
             if resp.status_code in (200, 201):
                 data = resp.json()
+                qr_id = str(data.get("id") or "")
+                standee_url = data.get("image_url") or ""
+
+                # Build clean, high-resolution square QR code image URL for seamless scanner reading
+                short_id = qr_id.replace("qr_", "")
+                clean_upi_uri = f"upi://pay?am={total_amount:.2f}&cu=INR&mc=5811&mode=22&pa=fastkirana781706.rzp@rxairtel&pn=Fastkirana&tn=Payment%20To%20Fastkirana&tr={short_id}qrv2"
+                clean_square_qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(clean_upi_uri)}"
+
                 qr_info = {
-                    "id": data.get("id"),
-                    "image_url": data.get("image_url"),
+                    "id": qr_id,
+                    "image_url": clean_square_qr_url,
+                    "standee_url": standee_url,
+                    "upi_uri": clean_upi_uri,
                     "status": data.get("status")
                 }
                 log.info(f"✅ Created Razorpay Doorstep QR {data.get('id')} for Order #{base_display} (₹{total_amount})")
@@ -664,7 +674,7 @@ async def get_doorstep_qr(
         "directUpiQrUrl": direct_upi_qr_url,
         "cashfreeQrUrl": razorpay_qr_url,
         "upiVpa": upi_vpa,
-        "upiUri": upi_uri,
+        "upiUri": rzp_qr_info.get("upi_uri") or upi_uri,
         "paymentStatus": order.paymentStatus.value,
         "paymentMethod": order.paymentMethod.value,
         "gateway": "razorpay" if razorpay_qr_url else "direct_upi"
