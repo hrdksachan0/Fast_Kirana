@@ -169,7 +169,7 @@ async def send_fcm_notification(
         is_status = is_order_status_update(title, body, data)
 
         if is_buzzer:
-            channel_id = "fastkirana_order_buzzer_v2"
+            channel_id = "fastminute_order_alarm_v3"
             sound = "order_chime"
             priority = "max"
             default_sound = False
@@ -287,7 +287,7 @@ async def send_fcm_topic_notification(
         is_status = is_order_status_update(title, body, data)
 
         if is_buzzer:
-            channel_id = "fastkirana_order_buzzer_v2"
+            channel_id = "fastminute_order_alarm_v3"
             sound = "order_chime"
             priority = "max"
             default_sound = False

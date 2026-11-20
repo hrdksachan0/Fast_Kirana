@@ -67,6 +67,25 @@ class OrderAlarmService {
     }
   }
 
+  /// Start continuous buzzer for order alert by ID/readableId (from FCM push or background)
+  Future<void> startOrderBuzzer({
+    String? orderId,
+  }) async {
+    if (_isMuted) return;
+    _activeOrderId = orderId;
+    _isPlaying = true;
+    await _playChime();
+
+    _alarmLoopTimer?.cancel();
+    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3200), (_) async {
+      if (!_isPlaying || _isMuted) {
+        _alarmLoopTimer?.cancel();
+        return;
+      }
+      await _playChime();
+    });
+  }
+
   /// Start the continuous loud alarm loop for a new order
   Future<void> startAlarm({
     required Order order,

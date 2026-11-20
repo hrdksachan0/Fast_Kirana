@@ -14,6 +14,7 @@ import '../routes/app_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/order.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'order_alarm_service.dart';
 
 final logger = Logger();
 
@@ -266,7 +267,7 @@ title.toString().contains('🛵') ||
     // Android OS FCM client displays notification directly in system tray for routine customer notifications.
     // Suppress localNotifications.show here to avoid showing 2 duplicate notifications for customer.
     // BUT for isOrderAlert (Admin buzzers, Kitchen buzzers, Rider alarms), NEVER return early!
-    // We MUST execute localNotifications.show with fastkirana_order_buzzer_v2, fullScreenIntent, and alarm chime!
+    // We MUST execute localNotifications.show with fastminute_order_alarm_v3, fullScreenIntent, and alarm chime!
     debugPrint('NotificationService: Suppressing duplicate routine FCM notification in background.');
     return;
   }
@@ -306,13 +307,13 @@ title.toString().contains('🛵') ||
       // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
       // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
       final channelId = isOrderAlert
-          ? 'fastkirana_order_buzzer_v2'
+          ? 'fastminute_order_alarm_v3'
           : (isOrderStatusUpdate ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
       final channelName = isOrderAlert
-          ? 'Kitchen & Order Buzz Alerts'
+          ? 'Store & Order Buzz Alerts'
           : (isOrderStatusUpdate ? 'Live Order Status & Dynamic Tracking' : 'FastMinute Alerts');
       final channelDesc = isOrderAlert
-          ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
+          ? 'Loud alarm for store, admin, kitchen orders even when phone is locked.'
           : (isOrderStatusUpdate
               ? 'Persistent lock-screen live activity with real-time delivery progress.'
               : 'Notifications for order updates and tracking.');
@@ -642,16 +643,20 @@ class NotificationService {
 
   static AudioPlayer? _buzzerPlayer;
 
-  /// Play loud order chime in-app for foreground alerts
-  static Future<void> playOrderChime() async {
+  /// Play loud order chime in-app for foreground alerts via OrderAlarmService (Alarm Audio Stream)
+  static Future<void> playOrderChime({String? orderId, bool continuous = false}) async {
     if (kIsWeb) return;
     try {
-      _buzzerPlayer ??= AudioPlayer();
-      await _buzzerPlayer!.stop();
-      await _buzzerPlayer!.setVolume(1.0);
-      await _buzzerPlayer!.play(AssetSource('sounds/order_chime.mp3'));
+      if (continuous) {
+        await OrderAlarmService.instance.startOrderBuzzer(orderId: orderId);
+      } else {
+        await OrderAlarmService.instance.playChime();
+      }
     } catch (e) {
       debugPrint('NotificationService: In-app chime play error: $e');
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (_) {}
     }
   }
 
@@ -693,9 +698,9 @@ class NotificationService {
       );
 
       final AndroidNotificationChannel kitchenChannel = AndroidNotificationChannel(
-        'fastkirana_order_buzzer_v2',
-        'Kitchen & Order Buzz Alerts',
-        description: 'Loud alarm for kitchen orders even when phone is locked.',
+        'fastminute_order_alarm_v3',
+        'Store & Order Buzz Alerts',
+        description: 'Loud alarm for store, admin, and kitchen orders even when phone is locked.',
         importance: Importance.max,
         playSound: true,
         sound: const RawResourceAndroidNotificationSound('order_chime'),
@@ -730,6 +735,13 @@ class NotificationService {
 
       final androidPlugin = _localNotifications
           ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      // Force delete stale cached channel so Android OS binds fresh order_chime alarm
+      try {
+        await androidPlugin?.deleteNotificationChannel('fastkirana_order_buzzer_v2');
+        await androidPlugin?.deleteNotificationChannel('fastkirana_order_buzzer');
+      } catch (_) {}
+
       await androidPlugin?.createNotificationChannel(channel);
       await androidPlugin?.createNotificationChannel(kitchenChannel);
       await androidPlugin?.createNotificationChannel(orderStatusChannel);
@@ -773,6 +785,7 @@ class NotificationService {
 
       // 6. Handle App Opened from Background Notification Tap
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        OrderAlarmService.instance.stopAlarm();
         logger.d("App opened from notification: ${message.data}");
         final url = _resolveNotificationRoute(Map<String, dynamic>.from(message.data));
         if (url != null && url.toString().trim().isNotEmpty) {
@@ -784,6 +797,7 @@ class NotificationService {
       try {
         final initialMsg = await _fcm?.getInitialMessage();
         if (initialMsg != null) {
+          OrderAlarmService.instance.stopAlarm();
           final url = _resolveNotificationRoute(Map<String, dynamic>.from(initialMsg.data));
           if (url != null && url.toString().trim().isNotEmpty) {
             final cleanTarget = url.toString().trim();
@@ -1120,17 +1134,17 @@ title.toString().contains('🛵') ||
     // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
     // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
     if (isOrderAlert) {
-      unawaited(playOrderChime());
+      unawaited(playOrderChime(orderId: cleanOrderId, continuous: true));
     }
 
     final channelId = isOrderAlert
-        ? 'fastkirana_order_buzzer_v2'
+        ? 'fastminute_order_alarm_v3'
         : (isOrderStatusUpdate ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
     final channelName = isOrderAlert
-        ? 'Kitchen & Order Buzz Alerts'
+        ? 'Store & Order Buzz Alerts'
         : (isOrderStatusUpdate ? 'Live Order Status & Dynamic Tracking' : 'FastMinute Alerts');
     final channelDesc = isOrderAlert
-        ? 'Loud alarm for kitchen, admin, and staff orders even when phone is locked.'
+        ? 'Loud alarm for store, admin, and kitchen orders even when phone is locked.'
         : (isOrderStatusUpdate
             ? 'Persistent lock-screen live activity with real-time delivery progress.'
             : 'Notifications for order updates and tracking.');

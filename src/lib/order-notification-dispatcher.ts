@@ -647,7 +647,7 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
                   priority: 'high',
                   notification: {
                     sound: 'order_chime',
-                    channelId: 'fastkirana_order_buzzer_v2',
+                    channelId: 'fastminute_order_alarm_v3',
                   },
                 },
               }).catch(() => {})
