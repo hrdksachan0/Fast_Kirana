@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, time, timezone
 import urllib.parse
 import math
+import re
 from pydantic import BaseModel, Field
 
 from database import get_db, AsyncSessionLocal
@@ -430,7 +431,9 @@ async def _get_or_create_razorpay_doorstep_qr(
     base_display: str,
     total_amount: float,
     combined_id: Optional[str],
-    sub_order_ids: List[str]
+    sub_order_ids: List[str],
+    key_id: Optional[str] = None,
+    key_secret: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Creates or reuses cached single-use Razorpay Dynamic UPI QR code with locked order amount.
@@ -443,10 +446,10 @@ async def _get_or_create_razorpay_doorstep_qr(
 
     log = logging.getLogger("delivery")
 
-    key_id = (os.getenv("RAZORPAY_KEY_ID") or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
-    key_secret = (os.getenv("RAZORPAY_KEY_SECRET") or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
+    resolved_key_id = (key_id or os.getenv("RAZORPAY_KEY_ID") or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
+    resolved_key_secret = (key_secret or os.getenv("RAZORPAY_KEY_SECRET") or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
 
-    if not key_id or not key_secret:
+    if not resolved_key_id or not resolved_key_secret:
         log.warning("Razorpay credentials missing for doorstep QR")
         return {}
 
@@ -463,7 +466,7 @@ async def _get_or_create_razorpay_doorstep_qr(
     except Exception:
         pass
 
-    auth = (key_id, key_secret)
+    auth = (resolved_key_id, resolved_key_secret)
     headers = {"Content-Type": "application/json"}
     payload = {
         "type": "upi_qr",
@@ -522,7 +525,7 @@ async def get_doorstep_qr(
     """
     require_delivery_or_admin(current_user)
 
-    stmt = select(Order).where(Order.id == id)
+    stmt = select(Order).where(or_(Order.id == id, Order.readableId == id))
     res = await db.execute(stmt)
     order = res.scalars().first()
 
@@ -556,15 +559,21 @@ async def get_doorstep_qr(
     orders_to_charge = unpaid_orders if unpaid_orders else all_orders
     total_amount = sum(float(o.total or 0.0) for o in orders_to_charge)
 
-    # Resolve store-scoped UPI VPA, falling back to global store_upi_vpa
+    # Resolve store-scoped UPI VPA and Razorpay credentials from DB StoreSetting
     store_prefix = f"store:{order.storeId}:" if order.storeId else ""
-    upi_vpa_keys = [f"{store_prefix}store_upi_vpa", "store_upi_vpa"] if store_prefix else ["store_upi_vpa"]
-    s_stmt = select(StoreSetting).where(StoreSetting.key.in_(upi_vpa_keys))
+    setting_keys = [
+        f"{store_prefix}store_upi_vpa", "store_upi_vpa",
+        "razorpay_key_id", "razorpay_key_secret"
+    ]
+    s_stmt = select(StoreSetting).where(StoreSetting.key.in_(setting_keys))
     s_res = await db.execute(s_stmt)
     s_map = {s.key: s.value for s in s_res.scalars().all()}
     upi_vpa = (s_map.get(f"{store_prefix}store_upi_vpa") or s_map.get("store_upi_vpa") or "").strip()
     if not upi_vpa:
         upi_vpa = "7054470303-2@ibl"
+
+    db_rzp_key = (s_map.get("razorpay_key_id") or "").strip()
+    db_rzp_sec = (s_map.get("razorpay_key_secret") or "").strip()
 
     base_display = str(order.readableId or "").split("-")[0] or order.readableId or order.id[:8]
     payee_name = urllib.parse.quote("FastMinute")
@@ -583,7 +592,9 @@ async def get_doorstep_qr(
         base_display=str(base_display),
         total_amount=total_amount,
         combined_id=order.combinedId,
-        sub_order_ids=sub_order_ids
+        sub_order_ids=sub_order_ids,
+        key_id=db_rzp_key,
+        key_secret=db_rzp_sec
     )
 
     # 3. Active In-Flight Verification: If order is still UNPAID, check if Razorpay QR was paid!
@@ -593,8 +604,8 @@ async def get_doorstep_qr(
             import os
             import httpx
             from config import settings
-            rzp_key = (os.getenv("RAZORPAY_KEY_ID") or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
-            rzp_sec = (os.getenv("RAZORPAY_KEY_SECRET") or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
+            rzp_key = (os.getenv("RAZORPAY_KEY_ID") or db_rzp_key or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
+            rzp_sec = (os.getenv("RAZORPAY_KEY_SECRET") or db_rzp_sec or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
             if not rzp_key or not rzp_sec:
                 return rzp_qr_info
             auth = (rzp_key, rzp_sec)

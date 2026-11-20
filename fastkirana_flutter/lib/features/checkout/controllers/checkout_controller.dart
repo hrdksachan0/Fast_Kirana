@@ -36,6 +36,7 @@ import '../../orders/orders_screen.dart';
 import '../order_success_screen.dart';
 import '../widgets/payment_failed_cod_sheet.dart';
 import '../widgets/checkout_delivery_instructions.dart';
+import '../../../core/utils/app_toast.dart';
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -316,18 +317,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
   void cancelPlacingOrder(BuildContext? context) {
     state = state.copyWith(isPlacingOrder: false);
     if (context != null && context.mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppDesignSystem.slate800,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Text(
-            'Order placement cancelled. Items are safely saved in your cart.',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
+      AppToast.showInfo(
+        context,
+        'Order Cancelled',
+        subtitle: 'Items are safely saved in your cart.',
       );
     }
   }
@@ -419,18 +412,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       );
 
       if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.slate800,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              'Payment was cancelled or not completed. Your items are saved in your cart.',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
-            ),
-            duration: const Duration(seconds: 3),
-          ),
+        AppToast.showInfo(
+          context,
+          'Payment Incomplete',
+          subtitle: 'Your items are safely saved in your cart.',
         );
       }
       return;
@@ -512,18 +497,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     if (isUserBackout) {
       debugPrint('ℹ️ User dropped or cancelled Cashfree payment ($cfOrderId). Returning cleanly to checkout.');
       if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.slate800,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              'Payment was cancelled. Your cart items are saved.',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
+        AppToast.showInfo(
+          context,
+          'Payment Cancelled',
+          subtitle: 'Your cart items are safely preserved.',
         );
       }
       return;
@@ -557,16 +534,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             pendingCart: null,
           );
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: AppDesignSystem.rose600,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                content: Text(
-                  'Payment attempt was not completed. Your items are saved in your cart.',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-              ),
+            AppToast.showInfo(
+              context,
+              'Payment Cancelled',
+              subtitle: 'Your items are safely saved in your cart.',
             );
           }
         },
@@ -584,28 +555,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           ? errorMsg
           : 'Payment cancelled or could not be completed. Please retry or choose Cash on Delivery (COD).';
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppDesignSystem.warning,
-          content: Row(
-            children: [
-              const Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  displayMsg,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    fontSize: Responsive.scaledFontSize(context, 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      AppToast.showWarning(
+        context,
+        'Payment Notice',
+        subtitle: displayMsg,
       );
     }
   }
@@ -659,10 +612,11 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     if (!context.mounted || (!hasActiveTransport && !connectivity.isOnline)) {
       state = state.copyWith(isPlacingOrder: false);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'Connect to the internet to confirm prices and place your order.'),
-        ));
+        AppToast.showError(
+          context,
+          'No Internet Connection',
+          subtitle: 'Connect to the internet to confirm prices and place your order.',
+        );
       }
       return;
     }
@@ -846,17 +800,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     if (state.deliveryMethod != 'PICKUP' && selectedAddress == null) {
       state = state.copyWith(isPlacingOrder: false);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.rose600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: const Text(
-              'Please select or add a delivery address to place your order.',
-              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
+        AppToast.showWarning(
+          context,
+          'Address Required',
+          subtitle: 'Please select or add a delivery address to place your order.',
         );
       }
       return;
@@ -888,22 +835,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     if (state.deliveryMethod == 'DELIVERY' && !tier.isServiceable) {
       state = state.copyWith(isPlacingOrder: false);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
-        final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
-        final errorMsg = tier.distanceKm > 0.0
-            ? 'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected location is ${tier.distanceKm.toStringAsFixed(1)} km away)'
-            : 'Please tap CHANGE on your delivery address to set your location on the map.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.red600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              errorMsg,
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
+        AppToast.showError(
+          context,
+          'Delivery Unavailable',
+          subtitle: errorMsg,
         );
       }
       return;
@@ -953,12 +888,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       if (grandTotal < 1.0) {
         state = state.copyWith(isPlacingOrder: false);
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.primary,
-              content: Text('Minimum amount for online payment is ₹1.00', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-              behavior: SnackBarBehavior.floating,
-            ),
+          AppToast.showWarning(
+            context,
+            'Amount Too Low',
+            subtitle: 'Minimum amount for online payment is ₹1.00',
           );
         }
         return;
@@ -1088,16 +1021,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
                   pendingCart: null,
                 );
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: AppDesignSystem.rose600,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      content: Text(
-                        'Order was cancelled. No amount was debited.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
-                    ),
+                  AppToast.showInfo(
+                    context,
+                    'Order Cancelled',
+                    subtitle: 'No amount was debited from your account.',
                   );
                 }
               },
@@ -1120,15 +1047,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
       if (context.mounted) {
         state = state.copyWith(isPlacingOrder: false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.primary,
-            content: Text(
-              'Online payment is supported on the mobile app. Please select Cash on Delivery.',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppToast.showInfo(
+          context,
+          'Online Payment',
+          subtitle: 'Supported on mobile app. Please select Cash on Delivery.',
         );
       }
       return;
@@ -1184,15 +1106,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       if ((paymentId == null || paymentId.trim().isEmpty) && !isFreePromo) {
         state = state.copyWith(isPlacingOrder: false);
         if (context != null && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.primary,
-              content: Text(
-                'Payment verification failed. Your order has not been placed. Please retry or choose Cash on Delivery.',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-              ),
-              behavior: SnackBarBehavior.floating,
-            ),
+          AppToast.showError(
+            context,
+            'Payment Verification Failed',
+            subtitle: 'Order not placed. Please retry or choose Cash on Delivery.',
           );
         }
         return;
@@ -1208,17 +1125,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     if (effectiveDeliveryMethod != 'PICKUP' && selectedAddress == null) {
       state = state.copyWith(isPlacingOrder: false);
       if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.rose600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: const Text(
-              'Please select or add a delivery address to complete your order.',
-              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
+        AppToast.showWarning(
+          context,
+          'Address Required',
+          subtitle: 'Please select or add a delivery address to complete your order.',
         );
       }
       return;
@@ -1249,22 +1159,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     if (effectiveDeliveryMethod == 'DELIVERY' && !tier.isServiceable) {
       state = state.copyWith(isPlacingOrder: false);
       if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        final originLabel = cartRestaurant != null ? cartRestaurant.name : 'our central hub';
-        final maxRad = (cartRestaurant?.deliveryRadiusKm ?? 5.0).toStringAsFixed(1);
-        final errorMsg = tier.distanceKm > 0.0
-            ? 'Delivery is currently limited to a maximum of $maxRad km from $originLabel. (Selected address is ${tier.distanceKm.toStringAsFixed(1)} km away)'
-            : 'Please tap CHANGE on your delivery address to set your location on the map.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.red600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            content: Text(
-              errorMsg,
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
+        AppToast.showError(
+          context,
+          'Delivery Unavailable',
+          subtitle: errorMsg,
         );
       }
       return;
@@ -1709,17 +1607,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
               errorMsg = serverErr;
             }
           }
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.red600,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                errorMsg,
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-            ),
+          AppToast.showError(
+            context,
+            'Order Placement Failed',
+            subtitle: errorMsg,
           );
         }
         return;
@@ -1975,16 +1866,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           pendingCart: null,
         );
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.rose600,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: const Text(
-                'Payment verification failed or was cancelled. You may try again or select Cash on Delivery.',
-                style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-            ),
+          AppToast.showError(
+            context,
+            'Payment Incomplete',
+            subtitle: 'Payment verification failed or was cancelled. Please try again or select Cash on Delivery.',
           );
         }
       } else {
@@ -1994,16 +1879,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           pendingCashfreeOrderId: cfOrderId,
         );
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.amber800,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: Text(
-                verification.message ?? 'Payment confirmation is still pending with your bank. We will continue checking.',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-            ),
+          AppToast.showWarning(
+            context,
+            'Payment Pending',
+            subtitle: verification.message ?? 'Confirmation is still pending with your bank. We will continue checking.',
           );
         }
       }
@@ -2013,11 +1892,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         pendingCashfreeOrderId: cfOrderId,
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppDesignSystem.amber800,
-            content: Text('Could not reach payment gateway: $e. Recovery retained.'),
-          ),
+        AppToast.showWarning(
+          context,
+          'Network Warning',
+          subtitle: 'Could not reach payment gateway: $e. Recovery retained.',
         );
       }
     }
@@ -2096,39 +1974,19 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
       // Immediately launch a fresh payment attempt if cart has items!
       if (context.mounted && activeCart.items.isNotEmpty) {
-        final messenger = ScaffoldMessenger.maybeOf(context);
-        if (messenger != null) {
-          messenger.hideCurrentSnackBar();
-          messenger.showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.emerald600,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: const Text(
-                'Starting a fresh payment attempt...',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-              duration: const Duration(milliseconds: 1500),
-            ),
-          );
-        }
+        AppToast.showSuccess(
+          context,
+          'Payment Restarted',
+          subtitle: 'Starting a fresh payment attempt...',
+          duration: const Duration(milliseconds: 1500),
+        );
         await handlePlaceOrder(context, cart: activeCart);
       } else if (context.mounted) {
-        final messenger = ScaffoldMessenger.maybeOf(context);
-        if (messenger != null) {
-          messenger.hideCurrentSnackBar();
-          messenger.showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.slate800,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: const Text(
-                'Previous attempt cleared. You can now place your order.',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-          );
-        }
+        AppToast.showInfo(
+          context,
+          'Payment Cleared',
+          subtitle: 'Previous attempt cleared. You can now place your order.',
+        );
       }
     } catch (e) {
       await PaymentGatewayHandler.clearPendingPaymentRecovery();
@@ -2142,21 +2000,11 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         );
       }
       if (context.mounted) {
-        final messenger = ScaffoldMessenger.maybeOf(context);
-        if (messenger != null) {
-          messenger.hideCurrentSnackBar();
-          messenger.showSnackBar(
-            SnackBar(
-              backgroundColor: AppDesignSystem.slate800,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              content: const Text(
-                'Previous attempt cleared. You can now place your order.',
-                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-          );
-        }
+        AppToast.showInfo(
+          context,
+          'Payment Cleared',
+          subtitle: 'Previous attempt cleared. You can now place your order.',
+        );
       }
     } finally {
       _isHandlingPaymentDismissal = false;

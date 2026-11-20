@@ -32,6 +32,7 @@ import 'package:geolocator/geolocator.dart';
 import '../../widgets/address_selector_sheet.dart';
 import '../../data/models/address.dart';
 import 'widgets/proximity_delivery_guard_sheet.dart';
+import '../../core/utils/app_toast.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final double discountAmount;
@@ -829,17 +830,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       // 1. Serviceability Check against store delivery radius limit
                       if (selectedAddress != null && !tier.isServiceable) {
                         HapticFeedback.heavyImpact();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              tier.distanceKm > 0.0
-                                  ? 'âš ï¸ Selected address is outside our 5.0 km delivery zone ( km). Delivery unavailable.'
-                                  : 'âš ï¸ Selected address is not serviceable. Please change delivery address.',
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                            ),
-                            backgroundColor: AppDesignSystem.red600,
-                            behavior: SnackBarBehavior.floating,
-                          ),
+                        AppToast.showError(
+                          context,
+                          'Delivery Unavailable',
+                          subtitle: tier.distanceKm > 0.0
+                              ? 'Selected address is outside our 5.0 km delivery zone (' + tier.distanceKm.toStringAsFixed(1) + ' km away).'
+                              : 'Selected address is not serviceable. Please change delivery address.',
                         );
                         return;
                       }
