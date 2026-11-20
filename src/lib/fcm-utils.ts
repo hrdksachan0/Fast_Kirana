@@ -55,6 +55,21 @@ export async function cleanupInvalidTokens(
   return invalid
 }
 
+export function getUniversalOrderCollapseId(readableId?: string | null, orderId?: string | null): string {
+  for (const target of [readableId, orderId]) {
+    if (target) {
+      const s = String(target).trim()
+      if (!s.startsWith('cmq') && !s.startsWith('cl') && s.length < 16) {
+        const m = s.match(/(\d{3,6})/)
+        if (m) return `order_${m[1]}`
+      }
+    }
+  }
+  const raw = String(orderId || readableId || '').trim()
+  const clean = raw.replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase()
+  return clean ? `order_${clean}` : 'order_general'
+}
+
 /**
  * Build the standard FCM payload used across all order-status and broadcast routes.
  */
@@ -64,10 +79,7 @@ export function buildOrderFcmPayload(
   data: Record<string, string>,
   ttlSeconds = 600,
 ) {
-  const cleanOrderId = data.readableId
-    ? data.readableId.replace(/-[GR\d]+$/i, '')
-    : (data.orderId ? data.orderId.replace(/-[GR\d]+$/i, '') : undefined)
-  const collapseId = cleanOrderId ? `order_${cleanOrderId}` : undefined
+  const collapseId = getUniversalOrderCollapseId(data.readableId, data.orderId)
 
   const orderStatus = (data.status || data.orderStatus || '').toUpperCase()
   const isCancelledOrTerminal =

@@ -122,6 +122,24 @@ def is_order_buzzer_alert(title: str, body: str, data: Optional[Dict[str, Any]])
     )
 
 
+def get_universal_order_collapse_id(data: Optional[Dict[str, Any]]) -> str:
+    d = data or {}
+    readable_id = str(d.get("readableId") or "").strip()
+    order_id = str(d.get("orderId") or d.get("id") or "").strip()
+    
+    for target in [readable_id, order_id]:
+        if target:
+            s = str(target).strip()
+            if not s.startswith("cmq") and not s.startswith("cl") and len(s) < 16:
+                m = re.search(r'(\d{3,6})', s)
+                if m:
+                    return f"order_{m.group(1)}"
+    
+    raw = order_id or readable_id or ""
+    clean = re.sub(r'[^a-zA-Z0-9_-]', '', raw).lower()
+    return f"order_{clean}" if clean else "order_general"
+
+
 def is_order_status_update(title: str, body: str, data: Optional[Dict[str, Any]]) -> bool:
     d = data or {}
     status_val = str(d.get("status", "")).upper()
@@ -188,10 +206,8 @@ async def send_fcm_notification(
             default_sound = True
             default_vibrate = True
 
-        # Derive collapse_key and tag from order identifier to prevent duplicate cards on customer devices
-        raw_oid = str(data_str.get("readableId") or data_str.get("orderId") or "").strip().lstrip("#")
-        clean_oid = re.sub(r'-[GR\d]+$', '', raw_oid)
-        collapse_id = f"order_{clean_oid}" if clean_oid else None
+        # Derive universal collapse_key and tag from order identifier so Android updates exactly ONE single card
+        collapse_id = get_universal_order_collapse_id(data_str)
 
         message = messaging.MulticastMessage(
             tokens=clean_tokens,
@@ -307,10 +323,8 @@ async def send_fcm_topic_notification(
             default_sound = True
             default_vibrate = True
 
-        # Derive collapse_key and tag from order identifier to prevent duplicate cards on customer devices
-        raw_oid = str(data_str.get("readableId") or data_str.get("orderId") or "").strip().lstrip("#")
-        clean_oid = re.sub(r'-[GR\d]+$', '', raw_oid)
-        collapse_id = f"order_{clean_oid}" if clean_oid else None
+        # Derive universal collapse_key and tag from order identifier so Android updates exactly ONE single card
+        collapse_id = get_universal_order_collapse_id(data_str)
 
         message = messaging.Message(
             topic=clean_topic,
