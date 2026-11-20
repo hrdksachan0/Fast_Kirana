@@ -383,7 +383,7 @@ export function useCheckoutPayment({
       const userPhone = effectiveCustomerPhone || (session?.user as any)?.phone || '9999999999'
 
       try {
-        const rzpRes = await fetch(`${apiUrl()}/api/payment/razorpay/create-order`, {
+        const rzpRes = await fetch(`${apiUrl()}/api/payment/initiate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -392,6 +392,14 @@ export function useCheckoutPayment({
             customerEmail: userEmail,
             customerName: userName,
             note: `FastMinute Checkout ₹${paymentAmount}`,
+            orderPayload: {
+              ...payload,
+              amount: paymentAmount,
+              customerPhone: userPhone,
+              customerEmail: userEmail,
+              customerName: userName,
+            },
+            ...payload,
           }),
         })
 
@@ -427,7 +435,7 @@ export function useCheckoutPayment({
                 handler: async function (response: any) {
                   setOverlayState('verifying-payment')
                   try {
-                    await fetch(`${apiUrl()}/api/payment/razorpay/verify`, {
+                    const verifyRes = await fetch(`${apiUrl()}/api/payment/razorpay/verify`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -437,6 +445,24 @@ export function useCheckoutPayment({
                         razorpay_signature: response.razorpay_signature,
                       }),
                     })
+
+                    const verifyData = await verifyRes.json()
+                    const autoOrderId = verifyData?.serverOrderId || verifyData?.orderId
+                    const autoReadableId = verifyData?.readableId || autoOrderId
+
+                    if (verifyRes.ok && verifyData?.isPaid && autoOrderId) {
+                      triggerHaptic('success')
+                      if (autoReadableId) {
+                        setOrderReadableId(autoReadableId)
+                      }
+                      setOverlayState('success')
+                      toast.success('🎉 Payment Verified & Order Placed!')
+                      setTimeout(() => {
+                        clearCart()
+                        window.location.replace(`/order/${autoOrderId}/success`)
+                      }, 600)
+                      return
+                    }
 
                     const orderRes = await fetch(`${apiUrl()}/api/orders`, {
                       method: 'POST',
@@ -452,10 +478,10 @@ export function useCheckoutPayment({
                     })
 
                     const orderData = await orderRes.json()
-                    const finalOrderId = orderData?.id || orderData?.orderId || orderData?.order?.id || orderData?.orders?.[0]?.id || rzpOrderId
-                    const finalReadableId = orderData?.readableId || orderData?.order?.readableId || orderData?.orders?.[0]?.readableId || finalOrderId
+                    const finalOrderId = orderData?.id || orderData?.orderId || orderData?.order?.id || orderData?.orders?.[0]?.id || autoOrderId || rzpOrderId
+                    const finalReadableId = orderData?.readableId || orderData?.order?.readableId || orderData?.orders?.[0]?.readableId || autoReadableId || finalOrderId
 
-                    if (orderRes.ok) {
+                    if (orderRes.ok || autoOrderId) {
                       triggerHaptic('success')
                       if (finalReadableId) {
                         setOrderReadableId(finalReadableId)

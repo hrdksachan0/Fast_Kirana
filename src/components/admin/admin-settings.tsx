@@ -126,6 +126,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
     return curTotal >= oTotal || curTotal <= cTotal
   }, [restaurantAutoTiming, restaurantOpenTime, restaurantCloseTime])
   const [onlyCod, setOnlyCod] = useState(false)
+  const [activePaymentGateway, setActivePaymentGateway] = useState<'razorpay' | 'cashfree' | 'easebuzz' | 'phonepe'>('razorpay')
   const [deliveryRadius, setDeliveryRadius] = useState('5')
   const [restaurantEmails, setRestaurantEmails] = useState('')
   const [storeUpiVpa, setStoreUpiVpa] = useState('7054470303@paytm')
@@ -246,6 +247,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
         if (data.cafe_close_time) setCafeCloseTime(data.cafe_close_time)
         if (data.admin_auto_approve_orders !== undefined) setAdminAutoApproveOrders(data.admin_auto_approve_orders === 'true')
         if (data.only_cod !== undefined) setOnlyCod(data.only_cod === 'true')
+        if (data.active_payment_gateway) setActivePaymentGateway(data.active_payment_gateway as any)
         if (data.delivery_radius !== undefined) setDeliveryRadius(data.delivery_radius)
         if (data.store_upi_vpa) setStoreUpiVpa(data.store_upi_vpa)
         if (data.store_lat) setStoreLat(data.store_lat)
@@ -423,6 +425,7 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
           cafe_close_time: cafeCloseTime || '22:00',
           admin_auto_approve_orders: adminAutoApproveOrders ? 'true' : 'false',
           only_cod: onlyCod ? 'true' : 'false',
+          active_payment_gateway: activePaymentGateway,
           delivery_radius: deliveryRadius.trim(),
           store_upi_vpa: cleanStoreUpiVpa,
           store_lat: storeLat.trim(),
@@ -935,6 +938,8 @@ export function AdminSettings({ storeId, storeHubName, onSettingsSaved }: AdminS
                 combinedMiscFeeLabel={combinedMiscFeeLabel}
                 setCombinedMiscFeeLabel={setCombinedMiscFeeLabel}
                 storeUpiVpa={storeUpiVpa}
+                activePaymentGateway={activePaymentGateway}
+                setActivePaymentGateway={setActivePaymentGateway}
                 setStoreUpiVpa={setStoreUpiVpa}
                 storeHubName={storeHubName}
                 storeId={storeId}

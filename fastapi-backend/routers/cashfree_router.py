@@ -1850,11 +1850,17 @@ async def auto_recover_unplaced_cashfree_order(
                 reconcile_reasons.append("One or more items not found in database catalog")
             if has_invalid_quantity:
                 reconcile_reasons.append("Invalid or non-positive item quantity")
+            is_rzp_ref = str(cf_ref).startswith("pay_") or str(cf_order_id).startswith("order_")
+            pg_name = "Razorpay" if is_rzp_ref else "Cashfree"
+            pg_tag = f"[RZP_ORDER:{cf_order_id}]" if is_rzp_ref else f"[CF_ORDER:{cf_order_id}]"
             order_status = OrderStatus.ADMIN_PENDING
-            order_notes = f"[RECONCILIATION_REQUIRED] {'; '.join(reconcile_reasons)} | [CF_ORDER:{cf_order_id}] Cashfree PG Paid (Ref: {cf_ref})"
+            order_notes = f"[RECONCILIATION_REQUIRED] {'; '.join(reconcile_reasons)} | {pg_tag} {pg_name} PG Paid (Ref: {cf_ref})"
         else:
-            order_status = OrderStatus.ADMIN_PENDING
-            order_notes = f"[CF_ORDER:{cf_order_id}] | Cashfree PG Paid (Ref: {cf_ref}) | Auto-Recovered (Awaiting Admin Confirmation)"
+            is_rzp_ref = str(cf_ref).startswith("pay_") or str(cf_order_id).startswith("order_")
+            pg_name = "Razorpay" if is_rzp_ref else "Cashfree"
+            pg_tag = f"[RZP_ORDER:{cf_order_id}]" if is_rzp_ref else f"[CF_ORDER:{cf_order_id}]"
+            order_status = OrderStatus.PENDING
+            order_notes = f"{pg_tag} | {pg_name} PG Paid (Ref: {cf_ref}) | Auto-Recovered"
 
         # 7. Create Orders (Split into Grocery + Restaurant if mixed cart)
         combined_id = f"combined_{uuid.uuid4().hex[:9]}_{int(time.time())}" if is_split else None
@@ -2295,18 +2301,18 @@ async def auto_recover_unplaced_cashfree_order(
         # 11. Async Alerts: WhatsApp & FCM & WebSockets
         try:
             from routers.orders import send_whatsapp_alert
-            if order_status == OrderStatus.CONFIRMED:
+            if order_status in [OrderStatus.CONFIRMED, OrderStatus.PENDING]:
                 admin_msg = (
                     f"🚨 *AUTO-RECONCILED ONLINE ORDER* {readable_summary}\n"
                     f"Customer: {customer_name} ({clean_phone})\n"
-                    f"Total: ₹{order_amount:.0f} (PAID via Cashfree)\n"
-                    f"Client dropped before sync — Order recovered and dispatched automatically! ✅"
+                    f"Total: ₹{order_amount:.0f} (PAID via {pg_name})\n"
+                    f"Order recovered and placed automatically! ✅"
                 )
             else:
                 admin_msg = (
                     f"⚠️ *RECONCILIATION REQUIRED ONLINE ORDER* {readable_summary}\n"
                     f"Customer: {customer_name} ({clean_phone})\n"
-                    f"Paid: ₹{order_amount:.0f} (PAID via Cashfree) | Status: ADMIN_PENDING\n"
+                    f"Paid: ₹{order_amount:.0f} (PAID via {pg_name}) | Status: ADMIN_PENDING\n"
                     f"Reason: {order_notes}\n"
                     f"Review required before dispatch! ⚠️"
                 )

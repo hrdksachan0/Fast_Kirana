@@ -64,7 +64,9 @@ interface FinanceSettingsSectionProps {
 
   // Store metadata
   storeHubName?: string
-  storeId?: string
+  // Gateway Switcher
+  activePaymentGateway?: string
+  setActivePaymentGateway?: (v: string) => void
 }
 
 export function FinanceSettingsSection({
@@ -102,6 +104,8 @@ export function FinanceSettingsSection({
   setStoreUpiVpa,
   storeHubName,
   storeId,
+  activePaymentGateway = 'razorpay',
+  setActivePaymentGateway,
 }: FinanceSettingsSectionProps) {
   // Live Test Rate Simulator state
   const [testDistanceKm, setTestDistanceKm] = useState<string>('2.5')
@@ -647,6 +651,124 @@ export function FinanceSettingsSection({
             </div>
           </div>
 
+        </div>
+      </div>
+
+      {/* ── SECTION 4: Live Payment Gateway Switcher (Cloud Instant Routing) ── */}
+      <div className="bg-card border border-border/80 p-5 rounded-3xl shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-emerald-500" />
+            <div>
+              <h4 className="text-xs font-black text-text-primary uppercase tracking-wider">
+                Active Payment Gateway Switcher (Cloud Real-Time)
+              </h4>
+              <p className="text-[10px] text-text-secondary">
+                Change active payment gateway across Web & Mobile App instantly without rebuilding or updating APK.
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            Live Failover Engine
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Razorpay Option */}
+          <div
+            onClick={() => setActivePaymentGateway && setActivePaymentGateway('razorpay')}
+            className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer relative ${
+              activePaymentGateway === 'razorpay'
+                ? 'border-emerald-500 bg-emerald-500/5 shadow-xs'
+                : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-text-primary">Razorpay PG</span>
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                activePaymentGateway === 'razorpay'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-emerald-500/10 text-emerald-600'
+              }`}>
+                {activePaymentGateway === 'razorpay' ? 'ACTIVE' : 'READY'}
+              </span>
+            </div>
+            <p className="text-[10px] text-text-secondary mt-1 font-medium">
+              Instant UPI Intent, Cards, Netbanking. Zero failure auto-recovery.
+            </p>
+            <div className="mt-2 text-[9px] font-mono text-emerald-600 font-bold">
+              rzp_live_TRvyzlqHiRGWbr
+            </div>
+          </div>
+
+          {/* Cashfree Option */}
+          <div
+            onClick={() => setActivePaymentGateway && setActivePaymentGateway('cashfree')}
+            className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer relative ${
+              activePaymentGateway === 'cashfree'
+                ? 'border-emerald-500 bg-emerald-500/5 shadow-xs'
+                : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-text-primary">Cashfree PG</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600">
+                FSSAI STAGE 2
+              </span>
+            </div>
+            <p className="text-[10px] text-text-secondary mt-1 font-medium">
+              Seamless Web & Mobile checkout. Activates automatically upon compliance clearance.
+            </p>
+            <div className="mt-2 text-[9px] font-mono text-text-muted">
+              CF Production Session
+            </div>
+          </div>
+
+          {/* Easebuzz Option */}
+          <div
+            onClick={() => setActivePaymentGateway && setActivePaymentGateway('easebuzz')}
+            className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer relative ${
+              activePaymentGateway === 'easebuzz'
+                ? 'border-emerald-500 bg-emerald-500/5 shadow-xs'
+                : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-text-primary">Easebuzz</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-sky-500/10 text-sky-600">
+                RECOMMENDED
+              </span>
+            </div>
+            <p className="text-[10px] text-text-secondary mt-1 font-medium">
+              Ultra-fast 24-hr approval for D2C/Quick delivery. Zero setup fee backup.
+            </p>
+            <div className="mt-2 text-[9px] font-mono text-text-muted">
+              Pre-Configured Switch
+            </div>
+          </div>
+
+          {/* PhonePe Option */}
+          <div
+            onClick={() => setActivePaymentGateway && setActivePaymentGateway('phonepe')}
+            className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer relative ${
+              activePaymentGateway === 'phonepe'
+                ? 'border-emerald-500 bg-emerald-500/5 shadow-xs'
+                : 'border-border/60 bg-muted/20 hover:border-border hover:bg-muted/40'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-text-primary">PhonePe PG</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600">
+                IN REVIEW (4-5D)
+              </span>
+            </div>
+            <p className="text-[10px] text-text-secondary mt-1 font-medium">
+              Direct PhonePe consumer ecosystem access. Pending MID & Salt Key approval.
+            </p>
+            <div className="mt-2 text-[9px] font-mono text-text-muted">
+              MID Pending
+            </div>
+          </div>
         </div>
       </div>
 

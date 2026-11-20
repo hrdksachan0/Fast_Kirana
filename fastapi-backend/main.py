@@ -364,6 +364,7 @@ app.include_router(coupons.router, prefix="/api")
 app.include_router(cart.router, prefix="/api")
 app.include_router(addresses.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
+app.include_router(payments.unified_router, prefix="/api")
 app.include_router(restaurants.router, prefix="/api")
 app.include_router(restaurant.router)  # Already defines prefix="/api"
 app.include_router(restaurant.restaurant_router, prefix="/api")

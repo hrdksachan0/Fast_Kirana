@@ -93,6 +93,134 @@ class PaymentGatewayHandler {
     final phone10 = cleanPhone.length >= 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
     final hasValidEmail = customerEmail != null && customerEmail.contains('@') && customerEmail.contains('.');
 
+    // ── 0. Server-Driven Dynamic Gateway Selection ──
+    try {
+      final dynamicRes = await dio.post(
+        '/api/payment/initiate',
+        data: {
+          'amount': amount,
+          if (walletAmountUsed != null && walletAmountUsed > 0) ...{
+            'walletAmountUsed': walletAmountUsed,
+            'walletAmount': walletAmountUsed,
+          },
+          if (existingOrderId != null) 'orderId': existingOrderId,
+          'customerPhone': phone10.length == 10 ? phone10 : '9999999999',
+          if (hasValidEmail) 'customerEmail': customerEmail.trim(),
+          'customerName': customerName,
+          if (userId != null) 'userId': userId,
+          if (addressId != null) 'addressId': addressId,
+          if (items != null) 'items': items,
+          if (deliveryMethod != null) 'deliveryMethod': deliveryMethod,
+          if (storeId != null) 'storeId': storeId,
+          if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
+          if (discount != null) 'discount': discount,
+          if (tipAmount != null) 'tipAmount': tipAmount,
+          if (deliveryFee != null) 'deliveryFee': deliveryFee,
+          if (packagingFee != null) 'packagingFee': packagingFee,
+          if (packagingOption != null) 'packagingOption': packagingOption,
+        },
+        options: Options(sendTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)),
+      );
+
+      if (dynamicRes.data != null) {
+        final activeGw = (dynamicRes.data['gateway'] ?? '').toString().toUpperCase();
+
+        // 🟢 Server Selected Cashfree
+        if (activeGw == 'CASHFREE' && dynamicRes.data['paymentSessionId'] != null) {
+          final cfOrderId = dynamicRes.data['orderId']?.toString() ?? 'cf_${DateTime.now().millisecondsSinceEpoch}';
+          final sessionId = dynamicRes.data['paymentSessionId'].toString();
+
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('active_pending_cf_order_id', cfOrderId);
+            await prefs.setString('active_pending_cf_amount', amount.toString());
+          } catch (_) {}
+
+          if (onBeforeLaunch != null) {
+            try {
+              await onBeforeLaunch(cfOrderId);
+            } catch (e) {
+              debugPrint('PaymentGatewayHandler: Error in onBeforeLaunch draft callback: $e');
+              return null;
+            }
+          }
+
+          final envStr = dynamicRes.data['cfEnv']?.toString() ?? AppConfig.cashfreeEnv;
+          final cfEnv = envStr.toUpperCase() == 'TEST' || envStr.toUpperCase() == 'SANDBOX'
+              ? CFEnvironment.SANDBOX
+              : CFEnvironment.PRODUCTION;
+
+          final session = CFSessionBuilder()
+              .setEnvironment(cfEnv)
+              .setOrderId(cfOrderId)
+              .setPaymentSessionId(sessionId)
+              .build();
+
+          final theme = CFThemeBuilder()
+              .setNavigationBarBackgroundColorColor("#E20A22")
+              .setNavigationBarTextColor("#FFFFFF")
+              .setButtonBackgroundColor("#E20A22")
+              .setButtonTextColor("#FFFFFF")
+              .setPrimaryTextColor("#0F172A")
+              .setBackgroundColor("#FFFFFF")
+              .setPrimaryFont("Inter")
+              .build();
+
+          final cfPayment = CFWebCheckoutPaymentBuilder()
+              .setSession(session)
+              .setTheme(theme)
+              .build();
+
+          _cfService.doPayment(cfPayment);
+          return cfOrderId;
+        }
+
+        // 🟢 Server Selected Razorpay
+        if (activeGw == 'RAZORPAY' && dynamicRes.data['orderId'] != null) {
+          final rzpOrderId = dynamicRes.data['orderId'].toString();
+          _activeRazorpayOrderId = rzpOrderId;
+
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('active_pending_cf_order_id', rzpOrderId);
+            await prefs.setString('active_pending_cf_amount', amount.toString());
+          } catch (_) {}
+
+          if (onBeforeLaunch != null) {
+            try {
+              await onBeforeLaunch(rzpOrderId);
+            } catch (e) {
+              debugPrint('PaymentGatewayHandler: Error in onBeforeLaunch draft callback: $e');
+              return null;
+            }
+          }
+
+          final keyId = dynamicRes.data['keyId']?.toString() ?? AppConfig.razorpayKeyId;
+          final options = {
+            'key': (keyId.isNotEmpty && !keyId.contains('placeholder')) ? keyId : AppConfig.razorpayKeyId,
+            'amount': (amount * 100).toInt(),
+            'name': 'FastMinute',
+            'order_id': rzpOrderId,
+            'description': 'Fresh Grocery & Food Delivery',
+            'timeout': 180,
+            'prefill': {
+              'contact': phone10.length == 10 ? phone10 : '9999999999',
+              if (hasValidEmail) 'email': customerEmail.trim(),
+            },
+            'theme': {
+              'color': '#00A344',
+            },
+            'send_sms_hash': true,
+          };
+
+          _razorpay.open(options);
+          return rzpOrderId;
+        }
+      }
+    } catch (dynamicErr) {
+      debugPrint('PaymentGatewayHandler: Dynamic server gateway notice: $dynamicErr. Falling back to local handlers...');
+    }
+
     // ── 1. Attempt Razorpay First (Active Gateway) ──
     try {
       final rzpRes = await dio.post(
