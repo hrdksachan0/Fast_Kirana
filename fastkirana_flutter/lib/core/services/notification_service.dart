@@ -411,7 +411,7 @@ title.toString().contains('🛵') ||
       await localNotifications.show(
         notifId,
         cleanTitle,
-        cleanBody,
+        cleanBodyText,
         NotificationDetails(android: androidDetails),
         payload: (data['url'] ?? data['linkUrl'] ?? data['link'] ?? (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders')).toString(),
       );
