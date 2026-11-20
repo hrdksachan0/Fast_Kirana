@@ -46,7 +46,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final securePhone = await SecureStorage.read('user_phone') ?? '';
     final rawPhone = (prefPhone.isNotEmpty ? prefPhone : securePhone).replaceAll(RegExp(r'[^0-9]'), '');
     final cleanPhone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
-    final isAdminPhone = cleanPhone == '9450358388' || cleanPhone == '7054470303' || cleanPhone == '8115214721';
+    final isAdminPhone = cleanPhone == '7054470303';
 
     final isStaff = isAdminPhone ||
         userRole == 'ADMIN' ||
@@ -885,7 +885,7 @@ class NotificationService {
       final securePhone = await SecureStorage.read('user_phone') ?? '';
       final rawPhone = (prefPhone.isNotEmpty ? prefPhone : securePhone).replaceAll(RegExp(r'[^0-9]'), '');
       final cleanPhone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
-      final isAdminPhone = cleanPhone == '9450358388' || cleanPhone == '7054470303' || cleanPhone == '8115214721';
+      final isAdminPhone = cleanPhone == '7054470303';
 
       final isStaff = isAdminPhone ||
           userRole == 'ADMIN' ||
@@ -1646,7 +1646,7 @@ title.toString().contains('🛵') ||
       final savedUserRole = (prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? '').toUpperCase().trim();
       final cleanDigits = phone.replaceAll(RegExp(r'[^0-9]'), '');
       final tenDigit = cleanDigits.length > 10 ? cleanDigits.substring(cleanDigits.length - 10) : cleanDigits;
-      final isAdminPhone = tenDigit == '9450358388' || tenDigit == '7054470303' || tenDigit == '8115214721';
+      final isAdminPhone = tenDigit == '7054470303';
 
       final isMasterAdmin = isAdminPhone || savedUserRole == 'ADMIN' || savedUserRole == 'SUPER_ADMIN';
 

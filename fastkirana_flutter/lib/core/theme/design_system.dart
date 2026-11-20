@@ -280,6 +280,7 @@ class AppDesignSystem {
   static const Color emerald400 = Color(0xFF34D399);
   static const Color emerald600 = Color(0xFF059669);
   static const Color emerald700 = Color(0xFF047857);
+  static const Color emerald800 = Color(0xFF065F46);
   static const Color emerald900 = Color(0xFF064E3B);
   static const Color emeraldGreen = Color(0xFF00965E);
   static const Color emeraldBrand = Color(0xFF00965E);

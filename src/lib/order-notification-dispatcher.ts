@@ -118,15 +118,13 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
       }
 
-      // DIRECT FCM PUSH to all registered Admin device tokens and Store Owner phones
+      // DIRECT FCM PUSH to registered Admin device token (Only Admin 7054470303)
       try {
         const adminTokens = await prisma.fcmToken.findMany({
           where: {
             OR: [
               { user: { role: Role.ADMIN } },
-              { user: { phone: { contains: '9450358388' } } },
               { user: { phone: { contains: '7054470303' } } },
-              { user: { phone: { contains: '8115214721' } } },
             ],
           },
           select: { token: true },
