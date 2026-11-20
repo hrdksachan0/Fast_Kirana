@@ -7,6 +7,12 @@ import { toast } from 'sonner'
 import { logger } from '@/lib/logger'
 import { getAuthToken } from '@/lib/fastapi'
 import { parseDateInput } from '@/lib/date-helpers'
+import {
+  playSwiggyOrderBuzzer,
+  speakOrderAlert,
+  tryUnlockAudioContext,
+  isAudioContextSuspended,
+} from '@/lib/audio'
 
 interface UseAdminRealtimeProps {
   selectedHubId: string
@@ -104,41 +110,56 @@ export function useAdminRealtime({
     }
   }, [])
 
-  // Web Audio new order chime synthesizer
-  const playNewOrderChime = useCallback(() => {
-    if (isChimeMuted) return
-    try {
-      const ctx = getAudioContext()
-      if (!ctx) return
-      const now = ctx.currentTime
+  const [isAudioBlocked, setIsAudioBlocked] = useState(false)
 
-      const osc1 = ctx.createOscillator()
-      const gain1 = ctx.createGain()
-      osc1.type = 'triangle'
-      osc1.frequency.setValueAtTime(880, now)
-      gain1.gain.setValueAtTime(0, now)
-      gain1.gain.linearRampToValueAtTime(0.15, now + 0.05)
-      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.4)
-      osc1.connect(gain1)
-      gain1.connect(ctx.destination)
-      osc1.start(now)
-      osc1.stop(now + 0.4)
-
-      const osc2 = ctx.createOscillator()
-      const gain2 = ctx.createGain()
-      osc2.type = 'triangle'
-      osc2.frequency.setValueAtTime(659.25, now + 0.15)
-      gain2.gain.setValueAtTime(0, now)
-      gain2.gain.setValueAtTime(0.15, now + 0.15)
-      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.6)
-      osc2.connect(gain2)
-      gain2.connect(ctx.destination)
-      osc2.start(now + 0.15)
-      osc2.stop(now + 0.6)
-    } catch (err) {
-      console.warn('AudioContext failed to play new order chime:', err)
+  // Auto-detect browser autoplay policy and attach global user gesture unlockers
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (isAudioContextSuspended()) {
+      setIsAudioBlocked(true)
     }
-  }, [isChimeMuted])
+
+    const unlock = () => {
+      tryUnlockAudioContext().then((unlocked) => {
+        if (unlocked) setIsAudioBlocked(false)
+      })
+    }
+
+    window.addEventListener('click', unlock, { once: true })
+    window.addEventListener('touchstart', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+
+    return () => {
+      window.removeEventListener('click', unlock)
+      window.removeEventListener('touchstart', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
+  const handleUnblockAudio = useCallback(async () => {
+    const unlocked = await tryUnlockAudioContext()
+    if (unlocked) {
+      setIsAudioBlocked(false)
+      playSwiggyOrderBuzzer()
+      toast.success('🔔 Live Order Buzzer activated!')
+    }
+  }, [])
+
+  // Web Audio new order buzzer & alert announcer
+  const playNewOrderChime = useCallback(
+    (readableId?: string, itemCount = 1) => {
+      if (isChimeMuted) return
+      try {
+        playSwiggyOrderBuzzer()
+        if (readableId) {
+          speakOrderAlert(readableId, itemCount)
+        }
+      } catch (err) {
+        console.warn('Failed to play new order chime/buzzer:', err)
+      }
+    },
+    [isChimeMuted]
+  )
 
   const knownLiveOrderIds = useRef<Set<string>>(new Set())
 
@@ -157,17 +178,29 @@ export function useAdminRealtime({
           ? data
           : []
 
-        // If previously populated, detect any incoming new pending orders
+        // If previously populated, detect any incoming new pending/confirmed orders
         if (knownLiveOrderIds.current.size > 0) {
-          const newlyArrived = fetched.filter(
-            (o: any) =>
-              !knownLiveOrderIds.current.has(o.id) &&
-              (o.status === 'PENDING' || o.status === 'ADMIN_PENDING')
-          )
+          const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000
+          const newlyArrived = fetched.filter((o: any) => {
+            if (knownLiveOrderIds.current.has(o.id)) return false
+            if (o.status === 'PENDING' || o.status === 'ADMIN_PENDING') return true
+            if (o.status === 'CONFIRMED') {
+              const t = parseDateInput(o.createdAt)?.getTime() || 0
+              return t >= twentyFourHoursAgo
+            }
+            return false
+          })
           if (newlyArrived.length > 0) {
             const first = newlyArrived[0]
-            toast.success(`🛎️ New Order Received: #${(first.readableId || first.id).slice(0, 8)}`)
-            playNewOrderChime()
+            const readableId = (first.readableId || first.id).slice(0, 8)
+            const amt = first.total ? ` (₹${Math.round(first.total)})` : ''
+            const isPaid = first.paymentStatus === 'PAID' || first.status === 'CONFIRMED'
+            const msg = isPaid
+              ? `💳 Online Paid Order #${readableId}${amt}`
+              : `🛎️ New Order Received: #${readableId}${amt}`
+            toast.success(msg, { duration: 9000 })
+            playNewOrderChime(readableId, first.items?.length || 1)
+            showDesktopNotification('FastMinute New Order!', msg)
             setOrderRefreshKey((prev) => prev + 1)
           }
         }
@@ -200,14 +233,14 @@ export function useAdminRealtime({
         if (latest && latest.id) {
           if (lastKnownLatestOrderId.current && lastKnownLatestOrderId.current !== latest.id) {
             const readableId = (latest.readableId || latest.id).slice(0, 8)
-            const amt = latest.total ? `₹${Math.round(latest.total)}` : ''
-            const isPaid = latest.paymentStatus === 'PAID'
+            const amt = latest.total ? ` (₹${Math.round(latest.total)})` : ''
+            const isPaid = latest.paymentStatus === 'PAID' || latest.status === 'CONFIRMED'
             const msg = isPaid
-              ? `💳 Online Paid Order #${readableId} ${amt ? `(${amt})` : ''}`
-              : `🛎️ New Order #${readableId} ${amt ? `(${amt})` : ''}`
+              ? `💳 Online Paid Order #${readableId}${amt}`
+              : `🛎️ New Order #${readableId}${amt}`
 
             toast.success(msg, { duration: 9000 })
-            playNewOrderChime()
+            playNewOrderChime(readableId, 1)
             showDesktopNotification('FastMinute New Order!', msg)
 
             fetchLiveOrdersList()
@@ -239,7 +272,12 @@ export function useAdminRealtime({
       if (initialOrders && initialOrders.length > 0) {
         knownLiveOrderIds.current = new Set(initialOrders.map((o: any) => o.id))
         const first = initialOrders[0]
-        if (first && (first.status === 'PENDING' || first.status === 'ADMIN_PENDING')) {
+        if (
+          first &&
+          (first.status === 'PENDING' ||
+            first.status === 'ADMIN_PENDING' ||
+            first.status === 'CONFIRMED')
+        ) {
           lastKnownLatestOrderId.current = first.id
         }
       } else {
@@ -317,17 +355,29 @@ export function useAdminRealtime({
           }
 
           if (payload.eventType === 'INSERT') {
-            const isPaid = orderData?.paymentStatus === 'PAID'
-            toast.success(isPaid ? `💳 Online Paid Order: #${(orderData.readableId || orderData.id).slice(0, 8)}` : `🛎️ New Order Received: #${(orderData.readableId || orderData.id).slice(0, 8)}`)
-            playNewOrderChime()
+            const isPaid = orderData?.paymentStatus === 'PAID' || orderData?.status === 'CONFIRMED'
+            const rId = (orderData?.readableId || orderData?.id || '').slice(0, 8)
+            const amt = orderData?.total ? ` (₹${Math.round(orderData.total)})` : ''
+            const msg = isPaid
+              ? `💳 Online Paid Order: #${rId}${amt}`
+              : `🛎️ New Order Received: #${rId}${amt}`
+            toast.success(msg, { duration: 9000 })
+            playNewOrderChime(rId, 1)
+            showDesktopNotification('FastMinute New Order!', msg)
             onNewOrder?.(orderData)
             debouncedRefresh()
           } else if (payload.eventType === 'UPDATE') {
             const oldOrder = payload.old as any
-            const isNowPaid = orderData?.paymentStatus === 'PAID' && oldOrder?.paymentStatus !== 'PAID'
+            const isNowPaid =
+              (orderData?.paymentStatus === 'PAID' && oldOrder?.paymentStatus !== 'PAID') ||
+              (orderData?.status === 'CONFIRMED' && oldOrder?.status !== 'CONFIRMED')
             if (isNowPaid) {
-              toast.success(`💳 Online Paid Order: #${(orderData.readableId || orderData.id).slice(0, 8)}`)
-              playNewOrderChime()
+              const rId = (orderData?.readableId || orderData?.id || '').slice(0, 8)
+              const amt = orderData?.total ? ` (₹${Math.round(orderData.total)})` : ''
+              const msg = `💳 Online Paid Order: #${rId}${amt}`
+              toast.success(msg, { duration: 9000 })
+              playNewOrderChime(rId, 1)
+              showDesktopNotification('FastMinute New Order!', msg)
             }
             onOrderUpdated?.(orderData)
             debouncedRefresh()
@@ -350,17 +400,22 @@ export function useAdminRealtime({
         if (selectedHubId && selectedHubId !== 'all' && orderStoreId && orderStoreId !== selectedHubId) {
           return
         }
-        const isPaid = orderData?.paymentStatus === 'PAID'
-        toast.success(isPaid ? `💳 Online Paid Order: #${(orderData?.readableId || orderData?.id || '').slice(0, 8)}` : `🛎️ New Order Received: #${(orderData?.readableId || orderData?.id || '').slice(0, 8)}`)
-        playNewOrderChime()
+        const isPaid = orderData?.paymentStatus === 'PAID' || orderData?.status === 'CONFIRMED'
+        const rId = (orderData?.readableId || orderData?.id || '').slice(0, 8)
+        const amt = orderData?.total ? ` (₹${Math.round(orderData.total)})` : ''
+        const msg = isPaid ? `💳 Online Paid Order: #${rId}${amt}` : `🛎️ New Order Received: #${rId}${amt}`
+        toast.success(msg, { duration: 9000 })
+        playNewOrderChime(rId, 1)
+        showDesktopNotification('FastMinute New Order!', msg)
         debouncedRefresh()
       })
       .on('broadcast', { event: 'order-status-update' }, () => {
         debouncedRefresh()
       })
       .on('broadcast', { event: 'order-payment-updated' }, (payload) => {
-        toast.success(`💳 Order #${payload.payload?.orderId?.slice(0, 8)} marked PAID!`)
-        playNewOrderChime()
+        const rId = (payload.payload?.readableId || payload.payload?.orderId || '').slice(0, 8)
+        toast.success(`💳 Order #${rId} marked PAID!`)
+        playNewOrderChime(rId, 1)
         debouncedRefresh()
       })
       .subscribe()
@@ -404,10 +459,13 @@ export function useAdminRealtime({
               if (selectedHubId && selectedHubId !== 'all' && orderStoreId && orderStoreId !== selectedHubId) {
                 return
               }
-              const displayId = payload.readableId || payload.orderId || payload.order?.readableId || ''
-              const isPaid = payload.paymentStatus === 'PAID' || payload.isPaid
-              toast.success(isPaid ? `💳 Online Paid Order! ${displayId ? '#' + displayId.slice(0, 8) : ''}` : `🛎️ New Order Received! ${displayId ? '#' + displayId.slice(0, 8) : ''}`)
-              playNewOrderChime()
+              const displayId = (payload.readableId || payload.orderId || payload.order?.readableId || '').slice(0, 8)
+              const isPaid = payload.paymentStatus === 'PAID' || payload.isPaid || payload.status === 'CONFIRMED'
+              const amt = payload.total || payload.order?.total ? ` (₹${Math.round(payload.total || payload.order?.total)})` : ''
+              const msg = isPaid ? `💳 Online Paid Order! #${displayId}${amt}` : `🛎️ New Order Received! #${displayId}${amt}`
+              toast.success(msg, { duration: 9000 })
+              playNewOrderChime(displayId, 1)
+              showDesktopNotification('FastMinute New Order!', msg)
               debouncedRefresh()
             } else if (
               ev === 'PAYMENT_CONFIRMED' ||
@@ -419,9 +477,10 @@ export function useAdminRealtime({
               if (selectedHubId && selectedHubId !== 'all' && orderStoreId && orderStoreId !== selectedHubId) {
                 return
               }
-              const displayId = payload.readableId || payload.orderId || payload.order?.readableId || ''
-              toast.success(`💳 Online Payment Confirmed! ${displayId ? '#' + displayId.slice(0, 8) : ''}`)
-              playNewOrderChime()
+              const displayId = (payload.readableId || payload.orderId || payload.order?.readableId || '').slice(0, 8)
+              const msg = `💳 Online Payment Confirmed! #${displayId}`
+              toast.success(msg)
+              playNewOrderChime(displayId, 1)
               debouncedRefresh()
             } else if (
               ev === 'CART_UPDATE' ||
@@ -555,16 +614,37 @@ export function useAdminRealtime({
     }
   }, [activeTab, cartsRefreshKey, selectedHubId])
 
-  // Memoized live pending orders
+  // Memoized live pending/actionable orders (PENDING, ADMIN_PENDING, or recent CONFIRMED awaiting action)
   const livePendingOrders = useMemo(() => {
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000
     return (Array.isArray(liveOrders) ? liveOrders : [])
-      .filter((o: any) => o.status === 'PENDING')
+      .filter((o: any) => {
+        if (o.status === 'PENDING' || o.status === 'ADMIN_PENDING') return true
+        if (o.status === 'CONFIRMED') {
+          const t = parseDateInput(o.createdAt)?.getTime() || 0
+          return t >= twentyFourHoursAgo
+        }
+        return false
+      })
       .sort((a: any, b: any) => {
         const timeA = parseDateInput(a.createdAt)?.getTime() || 0
         const timeB = parseDateInput(b.createdAt)?.getTime() || 0
         return timeA - timeB
       })
   }, [liveOrders])
+
+  // Continuous Swiggy / Zomato order alarm buzzer: rings every 3.5s while unhandled orders exist
+  useEffect(() => {
+    if (isChimeMuted) return
+    if (!livePendingOrders || livePendingOrders.length === 0) return
+
+    playSwiggyOrderBuzzer()
+    const buzzerInterval = setInterval(() => {
+      playSwiggyOrderBuzzer()
+    }, 3500)
+
+    return () => clearInterval(buzzerInterval)
+  }, [livePendingOrders.length, isChimeMuted])
 
   // Filter delayed orders
   const delayedOrders = useMemo(() => {
@@ -654,6 +734,8 @@ export function useAdminRealtime({
     setCartsRefreshKey,
     playWarningChime,
     playNewOrderChime,
+    isAudioBlocked,
+    handleUnblockAudio,
     fetchLiveOrdersList,
   }
 }

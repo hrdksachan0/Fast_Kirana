@@ -3,11 +3,25 @@
  * dynamically in the browser, eliminating the need to load static audio files.
  */
 
+let sharedAudioContext: AudioContext | null = null
+
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
-  const AudioContextClass = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  const AudioContextClass =
+    (window as any).AudioContext || (window as any).webkitAudioContext
   if (!AudioContextClass) return null
-  return new AudioContextClass()
+  if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
+    try {
+      sharedAudioContext = new AudioContextClass()
+    } catch {
+      sharedAudioContext = null
+      return null
+    }
+  }
+  if (sharedAudioContext && sharedAudioContext.state === 'suspended') {
+    sharedAudioContext.resume().catch(() => {})
+  }
+  return sharedAudioContext
 }
 
 /**
@@ -135,6 +149,72 @@ export function tryUnlockAudioContext(): Promise<boolean> {
 export function isAudioContextSuspended(): boolean {
   const ctx = getAudioContext()
   return !!ctx && ctx.state === 'suspended'
+}
+
+/**
+ * Play a high-volume, unmistakable Swiggy/Zomato merchant buzzer alarm.
+ * Combines native HTML5 audio chime (/sounds/order_chime.mp3) with an intense
+ * dual-burst multi-tone Web Audio synthesizer (880Hz -> 1174Hz -> 1318Hz -> 1760Hz).
+ */
+export function playSwiggyOrderBuzzer() {
+  if (typeof window === 'undefined') return
+
+  // 1. Trigger HTML5 Audio element (/sounds/order_chime.mp3)
+  try {
+    const audio = new Audio('/sounds/order_chime.mp3')
+    audio.volume = 1.0
+    audio.play().catch(() => {})
+  } catch {}
+
+  // 2. High-urgency Web Audio dual-burst synthesizer
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  try {
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+
+    const startTime = ctx.currentTime
+
+    const playTone = (
+      freq: number,
+      delay: number,
+      duration: number,
+      volume: number,
+      type: OscillatorType = 'triangle'
+    ) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.type = type
+      osc.frequency.setValueAtTime(freq, startTime + delay)
+
+      gain.gain.setValueAtTime(0, startTime + delay)
+      gain.gain.linearRampToValueAtTime(volume, startTime + delay + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + delay + duration)
+
+      osc.start(startTime + delay)
+      osc.stop(startTime + delay + duration + 0.05)
+    }
+
+    // Burst 1: Rising alarm chime
+    playTone(880.0, 0.0, 0.12, 0.45, 'triangle')
+    playTone(1174.66, 0.1, 0.14, 0.5, 'triangle')
+    playTone(1318.51, 0.22, 0.16, 0.55, 'sine')
+    playTone(1760.0, 0.36, 0.22, 0.55, 'triangle')
+
+    // Burst 2: Second high-pitched repeat
+    playTone(880.0, 0.55, 0.12, 0.45, 'triangle')
+    playTone(1174.66, 0.65, 0.14, 0.5, 'triangle')
+    playTone(1318.51, 0.77, 0.16, 0.55, 'sine')
+    playTone(1760.0, 0.91, 0.35, 0.6, 'triangle')
+  } catch (err) {
+    console.warn('Web Audio Buzzer failed:', err)
+  }
 }
 
 /**

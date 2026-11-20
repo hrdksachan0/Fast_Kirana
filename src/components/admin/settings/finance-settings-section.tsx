@@ -64,9 +64,10 @@ interface FinanceSettingsSectionProps {
 
   // Store metadata
   storeHubName?: string
+  storeId?: string
   // Gateway Switcher
   activePaymentGateway?: string
-  setActivePaymentGateway?: (v: string) => void
+  setActivePaymentGateway?: (v: any) => void
 }
 
 export function FinanceSettingsSection({

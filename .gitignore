@@ -25,6 +25,7 @@
 *.pem
 .mcp.json
 *.jks
+fastapi-backend/backups/
 
 # debug
 debug.log

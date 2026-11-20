@@ -312,6 +312,8 @@ export function AdminDashboard({
     orderRefreshKey,
     setOrderRefreshKey,
     playNewOrderChime,
+    isAudioBlocked,
+    handleUnblockAudio,
   } = useAdminRealtime({
     selectedHubId,
     initialOrders,
@@ -933,18 +935,30 @@ export function AdminDashboard({
         }}
       />
 
+      {/* Browser Autoplay Sound Unblock Notice Banner */}
+      {isAudioBlocked && (
+        <button
+          type="button"
+          onClick={handleUnblockAudio}
+          className="w-full text-center text-xs font-black text-rose-600 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/25 py-3 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer animate-pulse shadow-xs"
+        >
+          <span>🔊</span>
+          <span>Browser has muted audio. <b>Click anywhere or tap here</b> to unlock Live Order Buzzer & Sound Alerts!</span>
+        </button>
+      )}
+
       {/* Live Orders Roller Alert Strip (Swiggy / Zomato Merchant Style) */}
       {livePendingOrders.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/15 via-amber-500/10 to-emerald-500/15 p-4 shadow-sm backdrop-blur-md animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="relative overflow-hidden rounded-2xl border border-rose-500/40 bg-gradient-to-r from-rose-500/15 via-amber-500/15 to-rose-500/15 p-4 shadow-sm backdrop-blur-md animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="relative flex h-3 w-3 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            <span className="relative flex h-3.5 w-3.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-600"></span>
             </span>
             <div>
-              <div className="text-xs font-black text-emerald-800 uppercase tracking-wider flex items-center gap-2">
-                <span>🛎️ {livePendingOrders.length} New Live {livePendingOrders.length === 1 ? 'Order' : 'Orders'} Awaiting Action</span>
-                <span className="text-[10px] bg-emerald-600/10 text-emerald-800 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">Fast-Pulse Active</span>
+              <div className="text-xs font-black text-rose-900 uppercase tracking-wider flex items-center gap-2">
+                <span>🚨 {livePendingOrders.length} New Live {livePendingOrders.length === 1 ? 'Order' : 'Orders'} Awaiting Action</span>
+                <span className="text-[10px] bg-rose-600/15 text-rose-800 border border-rose-500/30 px-2 py-0.5 rounded-full font-black animate-pulse">Buzzer Ringing</span>
               </div>
               <p className="text-[11px] text-text-secondary mt-0.5">
                 Latest order #{((livePendingOrders[0]?.readableId || livePendingOrders[0]?.id) as string).slice(0, 8)} • ₹{Math.round(livePendingOrders[0]?.total || 0)}
@@ -956,7 +970,7 @@ export function AdminDashboard({
               type="button"
               onClick={() => {
                 setActiveTab('orders')
-                orderHook.setOrderStatusFilter('PENDING')
+                orderHook.setOrderStatusFilter('ALL')
               }}
               className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs transition-all cursor-pointer"
             >
@@ -965,10 +979,14 @@ export function AdminDashboard({
             <button
               type="button"
               onClick={() => setIsChimeMuted(!isChimeMuted)}
-              className="px-2.5 py-1.5 rounded-xl border border-border/80 bg-card hover:bg-muted text-xs font-bold transition-all cursor-pointer text-text-primary"
-              title={isChimeMuted ? 'Unmute Roller Chime' : 'Mute Roller Chime'}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                isChimeMuted
+                  ? 'bg-zinc-500/10 border-zinc-500/20 text-zinc-600'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-600'
+              }`}
+              title={isChimeMuted ? 'Unmute Buzzer' : 'Mute Buzzer'}
             >
-              {isChimeMuted ? '🔕 Muted' : '🔔 Sound ON'}
+              {isChimeMuted ? '🔕 Buzzer Muted' : '🔔 Sound ON (Mute)'}
             </button>
           </div>
         </div>

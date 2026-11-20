@@ -52,35 +52,33 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         ? `Order #${baseDisplayId} Combined (${outletNames}, ₹${combinedTotal.toFixed(2)}) received. Tap to manage.`
         : `Order #${baseDisplayId} of ₹${combinedTotal.toFixed(2)} received (${outletNames}). Tap to manage.`)
 
-  // A. Exactly 1 Web Push Notification to Store Admin
-  if (hasAdminPending) {
-    try {
-      let targetAdmins = await prisma.user.findMany({
-        where: {
-          role: Role.ADMIN,
-          ...(storeId ? { assignedStoreId: storeId } : {}),
-        },
+  // A. Exactly 1 Web Push Notification to Store Admin (for ALL incoming orders)
+  try {
+    let targetAdmins = await prisma.user.findMany({
+      where: {
+        role: Role.ADMIN,
+        ...(storeId ? { assignedStoreId: storeId } : {}),
+      },
+      select: { id: true },
+    })
+
+    if (targetAdmins.length === 0) {
+      targetAdmins = await prisma.user.findMany({
+        where: { role: Role.ADMIN, assignedStoreId: null },
         select: { id: true },
       })
-
-      if (targetAdmins.length === 0) {
-        targetAdmins = await prisma.user.findMany({
-          where: { role: Role.ADMIN, assignedStoreId: null },
-          select: { id: true },
-        })
-      }
-
-      for (const adminUser of targetAdmins) {
-        sendPushNotification(adminUser.id, {
-          title: adminTitle,
-          body: adminBody,
-          tag: `order-approval-${baseDisplayId}`,
-          data: { orderId: primaryOrder.id, storeId },
-        }).catch((err: any) => console.error('Error sending push to admin:', err))
-      }
-    } catch (adminPushErr) {
-      console.error('Error querying hub admins for web push:', adminPushErr)
     }
+
+    for (const adminUser of targetAdmins) {
+      sendPushNotification(adminUser.id, {
+        title: adminTitle,
+        body: adminBody,
+        tag: `admin-order-${baseDisplayId}`,
+        data: { orderId: primaryOrder.id, storeId },
+      }).catch((err: any) => console.error('Error sending push to admin:', err))
+    }
+  } catch (adminPushErr) {
+    console.error('Error querying hub admins for web push:', adminPushErr)
   }
 
   // B. Exactly 1 FCM Push Alert to Admin (Hub Topic Broadcast with Collapse Key)

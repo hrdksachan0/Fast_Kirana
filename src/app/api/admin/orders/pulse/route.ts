@@ -18,12 +18,14 @@ export async function GET(request: Request) {
   const effectiveStoreId = getEffectiveStoreId(session, paramStoreId)
 
   try {
-    const where: any = {
-      status: { in: ['PENDING', 'ADMIN_PENDING'] },
-    }
-    if (effectiveStoreId) {
-      where.storeId = effectiveStoreId
-    }
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const statusCondition = [
+      { status: { in: ['PENDING', 'ADMIN_PENDING'] } },
+      { status: 'CONFIRMED', createdAt: { gte: twentyFourHoursAgo } },
+    ]
+    const where: any = effectiveStoreId
+      ? { storeId: effectiveStoreId, OR: statusCondition }
+      : { OR: statusCondition }
 
     // Ultra-lightweight: single indexed fetch for the latest pending order
     const [latestOrder, pendingCount] = await Promise.all([

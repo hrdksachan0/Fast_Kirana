@@ -387,6 +387,7 @@ export function useCheckoutPayment({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            ...payload,
             amount: paymentAmount,
             customerPhone: userPhone,
             customerEmail: userEmail,
@@ -399,7 +400,6 @@ export function useCheckoutPayment({
               customerEmail: userEmail,
               customerName: userName,
             },
-            ...payload,
           }),
         })
 
