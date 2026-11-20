@@ -143,7 +143,7 @@ class TrackingStatusStepper extends StatelessWidget {
 
     final steps = [
       {
-        'title': 'Admin & Store Verification',
+        'title': 'Store Verification',
         'subtitle': 'Store checking inventory freshness & stock',
         'icon': Icons.fact_check_outlined,
       },
@@ -169,8 +169,14 @@ class TrackingStatusStepper extends StatelessWidget {
       },
     ];
 
+    // Calculate progress fraction for the top micro-progress bar
+    final progressFraction = actuallyDelivered
+        ? 1.0
+        : (statusStep >= 0 && statusStep < steps.length
+            ? ((statusStep + 0.4) / (steps.length)).clamp(0.12, 0.95)
+            : 0.15);
+
     return Container(
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -181,275 +187,365 @@ class TrackingStatusStepper extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 16,
+            blurRadius: 18,
             offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: badgeFg.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Live Order Status',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 15), fontWeight: FontWeight.w900, color: slateDark),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (!isDelivered && order?.status == OrderStatus.shipped && (etaText.isNotEmpty || distanceText.isNotEmpty))
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          [
-                            if (etaText.isNotEmpty) (etaText == 'Arriving now' ? etaText : 'Estimated: $etaText'),
-                            if (distanceText.isNotEmpty) distanceText,
-                          ].join(' • '),
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11),
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF16A34A),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  badgeText,
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10),
-                    fontWeight: FontWeight.w900,
-                    color: badgeFg,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (order?.isCombined == true && order?.subOrders != null && order!.subOrders!.length > 1) ...[
-            Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          // ── Top Gradient Progress Track ──
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+            child: SizedBox(
+              height: 4,
+              child: Stack(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.hub_rounded, size: 13, color: Color(0xFF64748B)),
-                      const SizedBox(width: 5),
-                      Text(
-                        'COMBINED MULTI-OUTLET ORDER',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9.5),
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF64748B),
-                          letterSpacing: 0.3,
+                  Container(color: const Color(0xFFF1F5F9)),
+                  FractionallySizedBox(
+                    widthFactor: progressFraction,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: statusStep == 0
+                              ? const [Color(0xFFF59E0B), Color(0xFFD97706)]
+                              : const [Color(0xFF10B981), Color(0xFF059669)],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  ...order!.subOrders!.map((sub) {
-                    final isRest = sub.restaurantId != null || (sub.readableId != null && sub.readableId!.toUpperCase().endsWith('-R'));
-
-                    // Guarantee sub-order status never lags behind the main order milestone
-                    final effectiveSubStatus = () {
-                      if (isDelivered || order!.status == OrderStatus.delivered || statusStep >= 4) {
-                        return OrderStatus.delivered;
-                      }
-                      if (isCancelled || order!.status == OrderStatus.cancelled || statusStep == -1) {
-                        return OrderStatus.cancelled;
-                      }
-                      if (statusStep >= 3 && (sub.status == OrderStatus.adminPending || sub.status == OrderStatus.pending)) {
-                        return OrderStatus.shipped;
-                      }
-                      if (statusStep >= 1 && sub.status == OrderStatus.adminPending) {
-                        return OrderStatus.confirmed;
-                      }
-                      return sub.status;
-                    }();
-
-                    final Color badgeTextColor;
-                    final Color badgeBgColor;
-
-                    switch (effectiveSubStatus) {
-                      case OrderStatus.delivered:
-                        badgeTextColor = const Color(0xFF16A34A);
-                        badgeBgColor = const Color(0xFFDCFCE7);
-                        break;
-                      case OrderStatus.shipped:
-                        badgeTextColor = const Color(0xFF15803D);
-                        badgeBgColor = const Color(0xFFDCFCE7);
-                        break;
-                      case OrderStatus.packed:
-                        badgeTextColor = const Color(0xFF6B21A8);
-                        badgeBgColor = const Color(0xFFF3E8FF);
-                        break;
-                      case OrderStatus.confirmed:
-                        badgeTextColor = const Color(0xFF1D4ED8);
-                        badgeBgColor = const Color(0xFFEFF6FF);
-                        break;
-                      case OrderStatus.cancelled:
-                        badgeTextColor = const Color(0xFFDC2626);
-                        badgeBgColor = const Color(0xFFFEE2E2);
-                        break;
-                      case OrderStatus.adminPending:
-                      case OrderStatus.pending:
-                        badgeTextColor = const Color(0xFFC2410C);
-                        badgeBgColor = const Color(0xFFFFF7ED);
-                        break;
-                    }
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2.5),
-                      child: Row(
-                        children: [
-                          Text(
-                            isRest ? '🍽️' : '🏪',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              sub.shopName ?? (isRest ? 'Restaurant' : 'FastMinute Darkstore'),
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11.5),
-                                fontWeight: FontWeight.w600,
-                                color: slateDark,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: badgeBgColor,
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              effectiveSubStatus.displayName,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 10),
-                                fontWeight: FontWeight.w800,
-                                color: badgeTextColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
                 ],
               ),
             ),
-          ],
-          ...List.generate(steps.length, (index) {
-            final item = steps[index];
-            final isCompleted = statusStep > index;
-            final isCurrent = statusStep == index;
-            final isLast = index == steps.length - 1;
+          ),
 
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => HapticFeedback.selectionClick(),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    children: [
-                      AnimatedStepNode(
-                        isCompleted: isCompleted,
-                        isCurrent: isCurrent,
-                        icon: item['icon'] as IconData,
-                        activeColor: index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344),
-                        completedColor: const Color(0xFF00A344),
-                      ),
-                      if (!isLast)
-                        Container(
-                          width: 2,
-                          height: 28,
-                          color: isCompleted ? const Color(0xFF00A344) : const Color(0xFFE2E8F0),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Text(
-                                item['title'] as String,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13),
-                                  fontWeight: (isCurrent || isCompleted) ? FontWeight.w800 : FontWeight.w500,
-                                  color: isCurrent
-                                      ? (index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344))
-                                      : (isCompleted ? slateDark : slateMuted),
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: badgeFg,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: badgeFg.withValues(alpha: 0.5),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              if (isCurrent) ...[
-                                const SizedBox(width: 8),
+                              const SizedBox(width: 7),
+                              Text(
+                                'Live Order Status',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 14.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: slateDark,
+                                  letterSpacing: -0.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                          if (!isDelivered && order?.status == OrderStatus.shipped && (etaText.isNotEmpty || distanceText.isNotEmpty))
+                            Padding(
+                              padding: const EdgeInsets.only(top: 3, left: 14),
+                              child: Text(
+                                [
+                                  if (etaText.isNotEmpty) (etaText == 'Arriving now' ? etaText : 'Estimated: $etaText'),
+                                  if (distanceText.isNotEmpty) distanceText,
+                                ].join(' • '),
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 11),
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF16A34A),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: badgeFg.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        badgeText,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                          fontWeight: FontWeight.w900,
+                          color: badgeFg,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (order?.isCombined == true && order?.subOrders != null && order!.subOrders!.length > 1) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.hub_rounded, size: 13, color: Color(0xFF64748B)),
+                            const SizedBox(width: 5),
+                            Text(
+                              'COMBINED MULTI-OUTLET ORDER',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 9.5),
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF64748B),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ...order!.subOrders!.map((sub) {
+                          final isRest = sub.restaurantId != null || (sub.readableId != null && sub.readableId!.toUpperCase().endsWith('-R'));
+
+                          final effectiveSubStatus = () {
+                            if (isDelivered || order!.status == OrderStatus.delivered || statusStep >= 4) {
+                              return OrderStatus.delivered;
+                            }
+                            if (isCancelled || order!.status == OrderStatus.cancelled || statusStep == -1) {
+                              return OrderStatus.cancelled;
+                            }
+                            if (statusStep >= 3 && (sub.status == OrderStatus.adminPending || sub.status == OrderStatus.pending)) {
+                              return OrderStatus.shipped;
+                            }
+                            if (statusStep >= 1 && sub.status == OrderStatus.adminPending) {
+                              return OrderStatus.confirmed;
+                            }
+                            return sub.status;
+                          }();
+
+                          final Color badgeTextColor;
+                          final Color badgeBgColor;
+
+                          switch (effectiveSubStatus) {
+                            case OrderStatus.delivered:
+                              badgeTextColor = const Color(0xFF16A34A);
+                              badgeBgColor = const Color(0xFFDCFCE7);
+                              break;
+                            case OrderStatus.shipped:
+                              badgeTextColor = const Color(0xFF15803D);
+                              badgeBgColor = const Color(0xFFDCFCE7);
+                              break;
+                            case OrderStatus.packed:
+                              badgeTextColor = const Color(0xFF6B21A8);
+                              badgeBgColor = const Color(0xFFF3E8FF);
+                              break;
+                            case OrderStatus.confirmed:
+                              badgeTextColor = const Color(0xFF1D4ED8);
+                              badgeBgColor = const Color(0xFFEFF6FF);
+                              break;
+                            case OrderStatus.cancelled:
+                              badgeTextColor = const Color(0xFFDC2626);
+                              badgeBgColor = const Color(0xFFFEE2E2);
+                              break;
+                            case OrderStatus.adminPending:
+                            case OrderStatus.pending:
+                              badgeTextColor = const Color(0xFFC2410C);
+                              badgeBgColor = const Color(0xFFFFF7ED);
+                              break;
+                          }
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2.5),
+                            child: Row(
+                              children: [
+                                Text(
+                                  isRest ? '🍽️' : '🏪',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    sub.shopName ?? (isRest ? 'Restaurant' : 'FastMinute Darkstore'),
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                      fontWeight: FontWeight.w600,
+                                      color: slateDark,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: index == 0 ? const Color(0xFFFFF7ED) : const Color(0xFFDCFCE7),
-                                    borderRadius: BorderRadius.circular(4),
+                                    color: badgeBgColor,
+                                    borderRadius: BorderRadius.circular(5),
                                   ),
                                   child: Text(
-                                    index == 0 ? 'VERIFYING' : 'NOW',
+                                    effectiveSubStatus.displayName,
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 8.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: index == 0 ? const Color(0xFFC2410C) : const Color(0xFF15803D),
+                                      fontSize: Responsive.scaledFontSize(context, 10),
+                                      fontWeight: FontWeight.w800,
+                                      color: badgeTextColor,
                                     ),
                                   ),
                                 ),
                               ],
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item['subtitle'] as String,
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
-                              fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                              color: isCurrent ? const Color(0xFF475569) : slateMuted,
                             ),
-                          ),
-                        ],
-                      ),
+                          );
+                        }),
+                      ],
                     ),
                   ),
                 ],
-              ),
-            );
-          }),
+                ...List.generate(steps.length, (index) {
+                  final item = steps[index];
+                  final isCompleted = statusStep > index;
+                  final isCurrent = statusStep == index;
+                  final isLast = index == steps.length - 1;
+
+                  final activeColor = index == 0 ? const Color(0xFFD97706) : const Color(0xFF00A344);
+
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => HapticFeedback.selectionClick(),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Column(
+                          children: [
+                            AnimatedStepNode(
+                              isCompleted: isCompleted,
+                              isCurrent: isCurrent,
+                              icon: item['icon'] as IconData,
+                              activeColor: activeColor,
+                              completedColor: const Color(0xFF00A344),
+                            ),
+                            if (!isLast)
+                              Container(
+                                width: 2.5,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(2),
+                                  color: isCompleted
+                                      ? const Color(0xFF00A344)
+                                      : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(width: 13),
+                        Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: isCurrent
+                                ? const EdgeInsets.symmetric(horizontal: 10, vertical: 7)
+                                : const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            decoration: isCurrent
+                                ? BoxDecoration(
+                                    color: (index == 0 ? const Color(0xFFFFFBEB) : const Color(0xFFF0FDF4)),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: (index == 0 ? const Color(0xFFFDE68A) : const Color(0xFFBBF7D0)),
+                                      width: 1,
+                                    ),
+                                  )
+                                : null,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      item['title'] as String,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 12.8),
+                                        fontWeight: (isCurrent || isCompleted) ? FontWeight.w800 : FontWeight.w500,
+                                        color: isCurrent
+                                            ? (index == 0 ? const Color(0xFFB45309) : const Color(0xFF15803D))
+                                            : (isCompleted ? slateDark : slateMuted),
+                                      ),
+                                    ),
+                                    if (isCurrent) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: index == 0 ? const Color(0xFFFDE68A) : const Color(0xFFDCFCE7),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          index == 0 ? 'VERIFYING' : 'CURRENT',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 8.0),
+                                            fontWeight: FontWeight.w900,
+                                            color: index == 0 ? const Color(0xFF92400E) : const Color(0xFF166534),
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  item['subtitle'] as String,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.8),
+                                    fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                                    color: isCurrent
+                                        ? (index == 0 ? const Color(0xFF78350F) : const Color(0xFF14532D))
+                                        : slateMuted,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -533,8 +629,8 @@ class _AnimatedStepNodeState extends State<AnimatedStepNode>
         ),
         child: Center(
           child: Icon(
-            widget.icon,
-            size: 14,
+            widget.isCompleted ? Icons.check_rounded : widget.icon,
+            size: widget.isCompleted ? 15 : 13,
             color: widget.isCompleted ? Colors.white : const Color(0xFF64748B),
           ),
         ),

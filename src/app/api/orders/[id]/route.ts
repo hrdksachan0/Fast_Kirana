@@ -910,17 +910,11 @@ export async function PATCH(
       if (!isOwner && !isAdmin && !isPicker && !isRestaurantStaff && !isDelivery) {
         return NextResponse.json({ error: 'Unauthorized to cancel this order' }, { status: 403 })
       }
-      // Customers can ONLY cancel before the order is confirmed (PENDING or ADMIN_PENDING) and within 5 minutes
+      // Customers can freely cancel before the order is confirmed by store/admin (PENDING or ADMIN_PENDING)
       if (isOwner && !isAdmin && !isPicker && !isRestaurantStaff && !isDelivery) {
         if (existingOrder.status !== 'PENDING' && existingOrder.status !== 'ADMIN_PENDING') {
           return NextResponse.json({
-            error: 'Order cannot be cancelled after confirmation. The kitchen or store is already preparing your order.',
-          }, { status: 400 })
-        }
-        const orderAgeMinutes = (Date.now() - new Date(existingOrder.createdAt).getTime()) / 60000
-        if (orderAgeMinutes > 5.0) {
-          return NextResponse.json({
-            error: 'Free cancellation window (5 minutes) has expired. Please contact support.',
+            error: 'Order cannot be cancelled after confirmation. The store or kitchen has already verified and accepted your order.',
           }, { status: 400 })
         }
       }

@@ -435,16 +435,26 @@ async def _get_or_create_razorpay_doorstep_qr(
     """
     Creates or reuses cached single-use Razorpay Dynamic UPI QR code with locked order amount.
     """
+    import os
+    import httpx
+    import logging
     from config import settings
     from utils.cache import get_cache, set_cache
-    import httpx
-    import time
-    import logging
 
-    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+    log = logging.getLogger("delivery")
+
+    key_id = (os.getenv("RAZORPAY_KEY_ID") or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
+    key_secret = (os.getenv("RAZORPAY_KEY_SECRET") or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
+
+    if not key_id or not key_secret:
+        log.warning("Razorpay credentials missing for doorstep QR")
         return {}
 
     amount_paise = int(round(total_amount * 100))
+    if amount_paise <= 0:
+        log.warning(f"Invalid amount for doorstep QR: {total_amount}")
+        return {}
+
     cache_key = f"rzp_doorstep_qr:{order_id}:{amount_paise}"
     try:
         cached = await get_cache(cache_key)
@@ -453,7 +463,7 @@ async def _get_or_create_razorpay_doorstep_qr(
     except Exception:
         pass
 
-    auth = (settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+    auth = (key_id, key_secret)
     headers = {"Content-Type": "application/json"}
     payload = {
         "type": "upi_qr",
@@ -463,13 +473,11 @@ async def _get_or_create_razorpay_doorstep_qr(
         "payment_amount": amount_paise,
         "description": f"FastMinute Order #{base_display}",
         "notes": {
-            "order_id": order_id,
-            "readable_id": str(base_display),
-            "combined_id": str(combined_id or ""),
-            "sub_order_ids": ",".join(sub_order_ids),
+            "order_id": str(order_id)[:40],
+            "readable_id": str(base_display)[:40],
+            "combined_id": str(combined_id or "")[:40],
             "purpose": "doorstep_delivery"
-        },
-        "close_by": int(time.time()) + 1800  # 30 minutes validity
+        }
     }
 
     try:
@@ -487,15 +495,16 @@ async def _get_or_create_razorpay_doorstep_qr(
                     "image_url": data.get("image_url"),
                     "status": data.get("status")
                 }
+                log.info(f"✅ Created Razorpay Doorstep QR {data.get('id')} for Order #{base_display} (₹{total_amount})")
                 try:
                     await set_cache(cache_key, qr_info, ttl=1800)
                 except Exception:
                     pass
                 return qr_info
             else:
-                logging.getLogger("delivery").warning(f"Razorpay QR API non-200: {resp.status_code} - {resp.text}")
+                log.warning(f"Razorpay QR API non-200: {resp.status_code} - {resp.text}")
     except Exception as e:
-        logging.getLogger("delivery").warning(f"Error creating Razorpay doorstep QR: {e}")
+        log.warning(f"Error creating Razorpay doorstep QR: {e}")
 
     return {}
 
@@ -581,9 +590,14 @@ async def get_doorstep_qr(
     if order.paymentStatus != PaymentStatus.PAID and rzp_qr_info.get("id"):
         qr_id = rzp_qr_info.get("id")
         try:
+            import os
             import httpx
             from config import settings
-            auth = (settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+            rzp_key = (os.getenv("RAZORPAY_KEY_ID") or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
+            rzp_sec = (os.getenv("RAZORPAY_KEY_SECRET") or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
+            if not rzp_key or not rzp_sec:
+                return rzp_qr_info
+            auth = (rzp_key, rzp_sec)
             async with httpx.AsyncClient(timeout=4.0) as client:
                 chk_resp = await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}", auth=auth)
                 if chk_resp.status_code == 200:
@@ -635,9 +649,9 @@ async def get_doorstep_qr(
         "subOrderIds": sub_order_ids,
         "razorpayQrUrl": razorpay_qr_url,
         "razorpayQrId": razorpay_qr_id,
-        "qrImageUrl": active_qr_url,
+        "qrImageUrl": razorpay_qr_url if razorpay_qr_url else direct_upi_qr_url,
         "directUpiQrUrl": direct_upi_qr_url,
-        "cashfreeQrUrl": razorpay_qr_url or direct_upi_qr_url,
+        "cashfreeQrUrl": razorpay_qr_url,
         "upiVpa": upi_vpa,
         "upiUri": upi_uri,
         "paymentStatus": order.paymentStatus.value,

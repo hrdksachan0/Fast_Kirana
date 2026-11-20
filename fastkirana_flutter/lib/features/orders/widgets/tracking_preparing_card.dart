@@ -133,15 +133,6 @@ class TrackingCancelBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     const primaryRed = Color(0xFFE11D48);
 
-    final remainingText = () {
-      if (createdAt == null) return 'Cancel for free before store begins preparation';
-      final elapsedSec = DateTime.now().difference(createdAt!).inSeconds;
-      final remainingSec = (300 - elapsedSec).clamp(0, 300);
-      final mins = remainingSec ~/ 60;
-      final secs = (remainingSec % 60).toString().padLeft(2, '0');
-      return 'Free cancellation ($mins:$secs mins left)';
-    }();
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -151,7 +142,14 @@ class TrackingCancelBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded, color: primaryRed, size: 18),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFEE2E2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.cancel_outlined, color: primaryRed, size: 16),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -159,7 +157,7 @@ class TrackingCancelBanner extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Change of plans?',
+                  'Need to cancel?',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 12),
                     fontWeight: FontWeight.w800,
@@ -167,7 +165,7 @@ class TrackingCancelBanner extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  remainingText,
+                  'Free cancellation available before store confirmation',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w600,
@@ -181,9 +179,10 @@ class TrackingCancelBanner extends StatelessWidget {
           OutlinedButton(
             onPressed: isCancelling ? null : onCancel,
             style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               side: const BorderSide(color: primaryRed, width: 1.2),
+              backgroundColor: Colors.white,
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
@@ -194,7 +193,7 @@ class TrackingCancelBanner extends StatelessWidget {
                     child: CircularProgressIndicator(color: primaryRed, strokeWidth: 2),
                   )
                 : Text(
-                    'Cancel',
+                    'Cancel Order',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w800,

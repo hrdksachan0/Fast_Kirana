@@ -44,6 +44,7 @@ import 'widgets/tracking_receipt_card.dart';
 import 'widgets/tracking_preparing_card.dart';
 import 'widgets/tracking_cancel_card.dart';
 import 'widgets/tracking_review_card.dart';
+import 'widgets/swiggy_cancel_bottom_sheet.dart';
 import '../../widgets/app_confirmation_dialog.dart';
 import 'utils/geo_math_utils.dart';
 import 'utils/map_marker_generator.dart';
@@ -570,42 +571,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         ? (cleanRaw.startsWith('FK-') ? '#$cleanRaw' : '#FK-$cleanRaw')
         : '#ORDER';
 
-    final shouldCancel = await AppConfirmationDialog.showDestructive(
+    final cancelReason = await SwiggyCancelBottomSheet.show(
       context: context,
-      title: 'Cancel Order?',
-      message: 'Are you sure you want to cancel $cleanDisplayId? This action cannot be undone.',
-      confirmLabel: 'Yes, Cancel',
-      icon: Icons.cancel_outlined,
-      contentWidget: isPaid
-          ? Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.currency_rupee_rounded, size: 18, color: brandGreen),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '₹${totalAmount.toStringAsFixed(0)} will be refunded back to your original payment method within 2-4 business days.',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF166534),
-                        height: 1.25,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : null,
+      displayId: cleanDisplayId,
+      isPaid: isPaid,
+      totalAmount: totalAmount,
     );
 
-    if (shouldCancel != true) return;
+    if (cancelReason == null) return;
 
     HapticFeedback.mediumImpact();
     setState(() => _isCancelling = true);
@@ -617,6 +590,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
       await dio.patch('/api/orders/$cleanId', data: {
         'status': 'CANCELLED',
+        'cancelReason': cancelReason,
       });
 
       await NotificationService().clearLiveOrderActivity(
@@ -629,17 +603,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: slateDark,
+            backgroundColor: const Color(0xFF0F172A),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             content: Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
+                const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 19),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Order cancelled successfully.',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13),
                   ),
                 ),
               ],
@@ -661,12 +637,32 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: primaryRed,
+            backgroundColor: const Color(0xFF0F172A),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            content: Text(
-              errorMsg,
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            elevation: 6,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: Color(0xFF334155), width: 1),
+            ),
+            content: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF451A1A),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.error_outline_rounded, color: Color(0xFFF87171), size: 16),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    errorMsg,
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFFF1F5F9), fontSize: 12),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -1544,12 +1540,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final cleanDisplayId = cleanRaw.isNotEmpty
         ? (cleanRaw.startsWith('FK-') ? '#$cleanRaw' : '#FK-$cleanRaw')
         : '#ORDER';
-    final createdAt = _order?.createdAt;
-    final elapsedSeconds = createdAt != null ? DateTime.now().difference(createdAt).inSeconds : 0;
-    final isWithin5Min = elapsedSeconds <= 300;
     final isPreConfirmation = (_order?.status == OrderStatus.pending || _order?.status == OrderStatus.adminPending);
+    // User requested rule: Can freely cancel as long as admin/store has not verified/accepted order
     final canCancel = isPreConfirmation &&
-        isWithin5Min &&
         !isCancelled &&
         !isDelivered &&
         (_order?.subOrders?.every((s) => s.status == OrderStatus.pending || s.status == OrderStatus.adminPending) ?? true);
@@ -1794,7 +1787,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                   heroIcon = Icons.fact_check_outlined;
                                   statusBadgeText = 'VERIFYING';
                                   heroTitle = 'Store Verification';
-                                  heroSubtitle = 'Ghatampur Hub is checking inventory & freshness';
+                                  final rawShop = _order?.shopName?.trim();
+                                  final storeName = (rawShop != null && rawShop.isNotEmpty)
+                                      ? rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute')
+                                      : 'Ghatampur Hub';
+                                  heroSubtitle = '$storeName is verifying stock & freshness';
                                 }
 
                                 return Container(
@@ -1953,7 +1950,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                               },
                             ),
                             const SizedBox(height: 11),
-                          ] else if (!isDelivered) ...[
+                          ] else if (!isDelivered && statusStep > 0) ...[
                             TrackingPreparingCard(order: _order),
                             const SizedBox(height: 11),
                           ],

@@ -107,8 +107,10 @@ export default function UpiQrModal({
   const isCombined = Boolean(qrData?.isCombined || order.companionOrder || order.combinedId)
 
   // Select QR according to active mode
-  const dynamicRzpQr = qrData?.razorpayQrUrl || qrData?.qrImageUrl || qrData?.directUpiQrUrl || ''
-  const activeQrSrc = qrMode === 'razorpay' ? dynamicRzpQr : (qrData?.directUpiQrUrl || dynamicRzpQr)
+  const hasRzpQr = Boolean(qrData?.razorpayQrUrl && qrData.razorpayQrUrl.startsWith('http'))
+  const activeQrSrc = qrMode === 'razorpay'
+    ? (hasRzpQr ? qrData?.razorpayQrUrl : '')
+    : (qrData?.directUpiQrUrl || qrData?.qrImageUrl || '')
   const customerPhone = qrData?.customerPhone || (order.address?.phone || order.user?.phone || '').replace(/\D/g, '').slice(-10)
 
   const handleShareWhatsApp = () => {
@@ -195,7 +197,7 @@ export default function UpiQrModal({
           ) : (
             /* Active Mode Selector & QR Code Display */
             <>
-              {/* Tab Selector: ⚡ Auto-Verify vs 🏦 Normal UPI (Fallback) */}
+              {/* Tab Selector: ⚡ Auto-Verify vs 🏦 Normal UPI */}
               <div className="grid grid-cols-2 gap-1 p-1 bg-muted/60 rounded-xl w-full text-[11px] font-black">
                 <button
                   type="button"
@@ -206,8 +208,8 @@ export default function UpiQrModal({
                       : 'text-text-muted hover:text-text-primary'
                   }`}
                 >
-                  <Zap className="h-3 w-3 fill-emerald-500 text-emerald-500" />
-                  <span>Auto-Verify (Fraud-Proof)</span>
+                  <Zap className="h-3 w-3 fill-emerald-500 text-emerald-500 shrink-0" />
+                  <span className="truncate">Auto-Verify ⚡</span>
                 </button>
                 <button
                   type="button"
@@ -218,8 +220,8 @@ export default function UpiQrModal({
                       : 'text-text-muted hover:text-text-primary'
                   }`}
                 >
-                  <Landmark className="h-3 w-3 text-slate-500" />
-                  <span>Normal UPI (Fallback)</span>
+                  <Landmark className="h-3 w-3 text-slate-500 shrink-0" />
+                  <span className="truncate">Normal UPI 🏦</span>
                 </button>
               </div>
 
@@ -229,6 +231,19 @@ export default function UpiQrModal({
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
                     <span className="text-[10px] font-bold text-slate-500">Generating Secure Razorpay QR...</span>
+                  </div>
+                ) : qrMode === 'razorpay' && !hasRzpQr ? (
+                  <div className="flex flex-col items-center text-center p-3 gap-1.5">
+                    <QrCode className="h-10 w-10 text-amber-500" />
+                    <span className="text-xs font-black text-slate-800">Auto-Verify QR Unavailable</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Please switch to Normal UPI tab to accept payment</span>
+                    <button
+                      type="button"
+                      onClick={() => setQrMode('direct_upi')}
+                      className="mt-2 text-[10px] font-black bg-slate-900 text-white px-3 py-1 rounded-lg"
+                    >
+                      Switch to Normal UPI 🏦
+                    </button>
                   </div>
                 ) : (
                   <>

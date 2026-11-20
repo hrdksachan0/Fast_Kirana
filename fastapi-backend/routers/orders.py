@@ -3970,11 +3970,11 @@ async def update_order(
     # Strict Role Assignment for Status Transitions
     if target_status == OrderStatus.CANCELLED:
         if is_owner and not is_admin:
-            # Customers can only cancel ADMIN_PENDING orders before confirmation
-            if order.status != OrderStatus.ADMIN_PENDING:
+            # Customers can freely cancel orders before store confirmation (ADMIN_PENDING or PENDING)
+            if order.status not in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
                 raise HTTPException(
                     status_code=400,
-                    detail="Order cannot be cancelled after it has been confirmed. Please contact support."
+                    detail="Order cannot be cancelled after it has been confirmed by the store. Please contact support."
                 )
         elif not (is_admin or is_picker or is_restaurant_staff or is_delivery):
             raise HTTPException(status_code=403, detail="Unauthorized to cancel this order")
