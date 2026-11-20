@@ -310,3 +310,38 @@ export function speakOrderAlert(readableId: number | string, itemCount: number) 
   }
 }
 
+/**
+ * Loud, unmistakable Paytm/PhonePe style voice announcement for Doorstep Delivery:
+ * "FastMinute par [Amount] rupaye prapt hue"
+ */
+export function speakDoorstepPaymentReceived(amount: number, readableId?: string | number) {
+  if (typeof window === 'undefined') return
+  try {
+    // 1. Play sweet dual-tone success chime
+    playSuccessChime()
+
+    // 2. Speak Hindi soundbox announcement
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      const rounded = Math.round(amount)
+      const text = `FastMinute par ${rounded} rupaye prapt hue. Order verified.`
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.rate = 0.95
+      utterance.pitch = 1.05
+      utterance.volume = 1.0
+      utterance.lang = 'hi-IN'
+
+      const voices = window.speechSynthesis.getVoices()
+      const indianVoice = voices.find(v => v.lang.includes('IN') || v.lang.includes('hi'))
+      if (indianVoice) {
+        utterance.voice = indianVoice
+      }
+
+      window.speechSynthesis.speak(utterance)
+    }
+  } catch (err) {
+    console.warn('Doorstep voice announcement failed:', err)
+  }
+}
+
+

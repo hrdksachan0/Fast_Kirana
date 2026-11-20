@@ -368,7 +368,75 @@ async def razorpay_webhook(
     try:
         event = json.loads(body.decode("utf-8"))
         event_name = event.get("event")
-        if event_name == "payment.captured":
+
+        # ── 1. Doorstep QR Event: qr_code.credited ──
+        if event_name == "qr_code.credited" or (event_name == "payment.captured" and (
+            event.get("payload", {}).get("qr_code") or
+            (event.get("payload", {}).get("payment", {}).get("entity", {}).get("notes", {}).get("purpose") == "doorstep_delivery")
+        )):
+            payment_entity = event.get("payload", {}).get("payment", {}).get("entity", {})
+            qr_entity = event.get("payload", {}).get("qr_code", {}).get("entity", {})
+            p_id = payment_entity.get("id") or "pay_doorstep_qr"
+            qr_id = qr_entity.get("id") or ""
+            amt = float(payment_entity.get("amount", 0)) / 100.0
+
+            combined_notes = {}
+            if isinstance(qr_entity.get("notes"), dict):
+                combined_notes.update(qr_entity["notes"])
+            if isinstance(payment_entity.get("notes"), dict):
+                combined_notes.update(payment_entity["notes"])
+
+            target_order_id = combined_notes.get("order_id")
+            sub_order_ids_str = combined_notes.get("sub_order_ids")
+            combined_id = combined_notes.get("combined_id")
+
+            target_ids = []
+            if sub_order_ids_str:
+                target_ids = [s.strip() for s in sub_order_ids_str.split(",") if s.strip()]
+            elif target_order_id:
+                target_ids = [target_order_id]
+
+            if target_ids or combined_id:
+                query = select(Order).where(
+                    or_(
+                        Order.id.in_(target_ids) if target_ids else False,
+                        (Order.combinedId == combined_id) if combined_id else False
+                    )
+                )
+                res = await db.execute(query)
+                matched_orders = res.scalars().all()
+
+                if matched_orders:
+                    ref_text = f"Doorstep Razorpay QR Paid ({p_id})"
+                    for o in matched_orders:
+                        o.paymentMethod = PaymentMethod.ONLINE
+                        o.paymentStatus = PaymentStatus.PAID
+                        o.notes = f"{o.notes} | {ref_text}" if o.notes else ref_text
+                        logger.info(f"🎉 [Razorpay Doorstep QR Webhook] Marked Order #{o.readableId} ({o.id}) as PAID for ₹{amt}")
+
+                    await db.commit()
+
+                    # Realtime Supabase Broadcast for Rider APK, Admin, and Customer Tracking
+                    try:
+                        from utils.supabase_broadcast import broadcast_supabase_realtime
+                        for o in matched_orders:
+                            await broadcast_supabase_realtime(
+                                topics=["orders", f"order:{o.id}"],
+                                event="PAYMENT_RECEIVED",
+                                payload={
+                                    "orderId": o.id,
+                                    "paymentStatus": "PAID",
+                                    "amount": amt,
+                                    "paymentId": p_id,
+                                    "isCombined": len(matched_orders) > 1,
+                                    "subOrderIds": [mo.id for mo in matched_orders]
+                                }
+                            )
+                    except Exception as b_err:
+                        logger.warning(f"Failed to broadcast doorstep payment: {b_err}")
+
+        # ── 2. Standard Web & App Payment: payment.captured ──
+        elif event_name == "payment.captured":
             payment_entity = event.get("payload", {}).get("payment", {}).get("entity", {})
             p_id = payment_entity.get("id")
             o_id = payment_entity.get("order_id")

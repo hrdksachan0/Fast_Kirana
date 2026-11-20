@@ -7,9 +7,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/services/customer_sound_service.dart';
 import '../../../providers/store_settings_provider.dart';
 
-/// Doorstep Cashfree Dynamic UPI QR Bottom Sheet with Live Auto-Detection
+/// Doorstep Dynamic UPI QR Bottom Sheet with Auto-Detection, Virtual Soundbox & Fallback Control
 class DoorstepCashfreeQrSheet extends ConsumerStatefulWidget {
   final Map<String, dynamic> order;
   final String orderId;
@@ -31,12 +32,16 @@ class DoorstepCashfreeQrSheet extends ConsumerStatefulWidget {
 }
 
 class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrSheet> {
+  int _selectedTab = 0; // 0: ⚡ Auto-Verify (Razorpay QR), 1: 🏦 Normal UPI (Fallback)
   bool _isLoading = true;
   bool _isPaid = false;
-  String _cashfreeQrUrl = '';
+  String _razorpayQrUrl = '';
   String _directUpiQrUrl = '';
   String _qrImageUrl = '';
   String _upiVpa = '';
+  bool _isCombined = false;
+  double _combinedTotal = 0.0;
+  String _displayId = '';
   Timer? _pollTimer;
   bool _isCompleting = false;
 
@@ -53,6 +58,9 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
     super.dispose();
   }
 
+  double get _effectiveTotal => _combinedTotal > 0 ? _combinedTotal : widget.total;
+  String get _effectiveDisplayId => _displayId.isNotEmpty ? _displayId : widget.orderNum;
+
   Future<void> _fetchQrData() async {
     try {
       final dio = ref.read(dioProvider);
@@ -61,10 +69,15 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
         final data = res.data;
         final status = data['paymentStatus']?.toString().toUpperCase();
         setState(() {
-          _cashfreeQrUrl = data['cashfreeQrUrl']?.toString() ?? '';
+          _razorpayQrUrl = data['razorpayQrUrl']?.toString() ?? data['cashfreeQrUrl']?.toString() ?? '';
           _directUpiQrUrl = data['directUpiQrUrl']?.toString() ?? '';
           _qrImageUrl = data['qrImageUrl']?.toString() ?? '';
           _upiVpa = data['upiVpa']?.toString() ?? '';
+          _isCombined = data['isCombined'] == true;
+          _combinedTotal = (data['combinedTotal'] as num?)?.toDouble() ??
+              (data['amount'] as num?)?.toDouble() ??
+              widget.total;
+          _displayId = data['readableId']?.toString() ?? widget.orderNum;
           _isLoading = false;
         });
 
@@ -92,7 +105,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
   }
 
   void _startPolling() {
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       if (!mounted || _isPaid) {
         timer.cancel();
         return;
@@ -112,7 +125,19 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
   }
 
   void _onPaymentReceived() {
-    HapticFeedback.heavyImpact();
+    // 1. Double Celebratory Vibration (Haptic Pulse)
+    try {
+      HapticFeedback.heavyImpact();
+      Future.delayed(const Duration(milliseconds: 140), () {
+        HapticFeedback.heavyImpact();
+      });
+    } catch (_) {}
+
+    // 2. Play Audio Alert / Soundbox Chime through phone speaker
+    try {
+      CustomerSoundService.instance.playOrderSuccessSound(isOnline: true);
+    } catch (_) {}
+
     if (mounted) {
       setState(() {
         _isPaid = true;
@@ -122,9 +147,11 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
 
   @override
   Widget build(BuildContext context) {
-    final activeQr = _cashfreeQrUrl.isNotEmpty
-        ? _cashfreeQrUrl
+    // Select active QR according to tab
+    final dynamicRzpQr = _razorpayQrUrl.isNotEmpty
+        ? _razorpayQrUrl
         : (_qrImageUrl.isNotEmpty ? _qrImageUrl : _directUpiQrUrl);
+    final activeQr = _selectedTab == 0 ? dynamicRzpQr : (_directUpiQrUrl.isNotEmpty ? _directUpiQrUrl : dynamicRzpQr);
 
     return Container(
       decoration: const BoxDecoration(
@@ -154,7 +181,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                     Row(
                       children: [
                         Text(
-                          _isPaid ? 'Payment Confirmed' : 'Doorstep QR Collection',
+                          _isPaid ? 'Payment Confirmed' : 'Doorstep Payment',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 16),
                             fontWeight: FontWeight.w900,
@@ -165,18 +192,18 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _isPaid ? AppDesignSystem.green100 : AppDesignSystem.blue50,
+                            color: _isPaid ? AppDesignSystem.green100 : AppDesignSystem.emerald50,
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: _isPaid ? AppDesignSystem.green200 : AppDesignSystem.blue200,
+                              color: _isPaid ? AppDesignSystem.green200 : AppDesignSystem.emerald200,
                             ),
                           ),
                           child: Text(
-                            _isPaid ? 'PAID ✅' : 'CASHFREE ⚡',
+                            _isPaid ? 'PAID ✅' : 'RAZORPAY ⚡',
                             style: GoogleFonts.inter(
                               fontSize: Responsive.scaledFontSize(context, 9.5),
                               fontWeight: FontWeight.w900,
-                              color: _isPaid ? AppDesignSystem.green700 : AppDesignSystem.blue700,
+                              color: _isPaid ? AppDesignSystem.green700 : AppDesignSystem.emerald700,
                             ),
                           ),
                         ),
@@ -184,11 +211,11 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Order #${widget.orderNum} • ₹${widget.total.toInt()}',
+                      'Order #$_effectiveDisplayId • ₹${_effectiveTotal.toStringAsFixed(0)}',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12.5),
-                        fontWeight: FontWeight.w600,
-                        color: AppDesignSystem.slate500,
+                        fontWeight: FontWeight.w700,
+                        color: AppDesignSystem.slate600,
                       ),
                     ),
                   ],
@@ -200,9 +227,39 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Display: PAID Screen OR QR Code
+          // Combined Order Highlight Banner
+          if (_isCombined) ...[
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.emerald50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppDesignSystem.emerald200),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.layers_rounded, size: 16, color: AppDesignSystem.emerald700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '📦 Combined Order (Grocery + Kitchen) • Collect ₹${_effectiveTotal.toStringAsFixed(0)} for Both',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontWeight: FontWeight.w900,
+                        color: AppDesignSystem.emerald800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Display: PAID Screen OR QR Code with Fallback Tabs
           if (_isPaid) ...[
             Container(
               width: double.infinity,
@@ -236,10 +293,10 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '₹${widget.total.toInt()} credited via Cashfree',
+                    '₹${_effectiveTotal.toStringAsFixed(0)} received via Razorpay',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 12.5),
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: AppDesignSystem.green700,
                     ),
                   ),
@@ -255,7 +312,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                       'Collect ₹0 Cash from Customer 🚀',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11.5),
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
                         color: AppDesignSystem.green800,
                       ),
                     ),
@@ -270,11 +327,11 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                   : () async {
                       setState(() => _isCompleting = true);
                       await widget.onConfirmPaid({
-                        'paymentMethod': 'UPI',
+                        'paymentMethod': 'ONLINE',
                         'paymentStatus': 'PAID',
                         'paymentCollectedBy': 'ONLINE',
                         'isRiderCash': false,
-                        'notes': 'Paid via Doorstep Cashfree QR',
+                        'notes': 'Paid via Doorstep Razorpay QR',
                       });
                     },
               style: ElevatedButton.styleFrom(
@@ -294,12 +351,90 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                     ),
             ),
           ] else ...[
+            // Tab Selector: ⚡ Auto-Verify vs 🏦 Normal UPI (Fallback)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AppDesignSystem.slate100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedTab = 0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _selectedTab == 0 ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(9),
+                          boxShadow: _selectedTab == 0
+                              ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 2))]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.flash_on_rounded, size: 15, color: AppDesignSystem.emerald600),
+                            const SizedBox(width: 4),
+                            Text(
+                              '⚡ Auto-Verify (Fraud-Proof)',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w800,
+                                color: _selectedTab == 0 ? AppDesignSystem.emerald800 : AppDesignSystem.slate600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedTab = 1),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _selectedTab == 1 ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(9),
+                          boxShadow: _selectedTab == 1
+                              ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 2))]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.account_balance_rounded, size: 13, color: AppDesignSystem.slate600),
+                            const SizedBox(width: 4),
+                            Text(
+                              '🏦 Normal UPI Fallback',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w700,
+                                color: _selectedTab == 1 ? AppDesignSystem.slate900 : AppDesignSystem.slate600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // QR Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppDesignSystem.slate50,
+                color: _selectedTab == 0 ? AppDesignSystem.emerald50.withOpacity(0.3) : AppDesignSystem.slate50,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppDesignSystem.slate200, width: 1.5),
+                border: Border.all(
+                  color: _selectedTab == 0 ? AppDesignSystem.emerald300 : AppDesignSystem.slate200,
+                  width: 1.5,
+                ),
               ),
               child: Column(
                 children: [
@@ -313,7 +448,10 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                           children: [
                             CircularProgressIndicator(color: AppDesignSystem.success),
                             SizedBox(height: 14),
-                            Text('Generating Cashfree QR...', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppDesignSystem.slate900)),
+                            Text(
+                              'Generating Secure Razorpay QR...',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppDesignSystem.slate900),
+                            ),
                           ],
                         ),
                       ),
@@ -340,22 +478,24 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                   ],
                   const SizedBox(height: 10),
                   Text(
-                    'Scan via Google Pay, PhonePe, Paytm, BHIM or Cred',
+                    _selectedTab == 0
+                        ? 'Amount ₹${_effectiveTotal.toStringAsFixed(0)} is pre-locked. Scan with GPay, PhonePe, Paytm or Cred'
+                        : 'Normal Store UPI: Customer manually enters ₹${_effectiveTotal.toStringAsFixed(0)}',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 11),
                       fontWeight: FontWeight.w600,
-                      color: AppDesignSystem.slate500,
+                      color: _selectedTab == 0 ? AppDesignSystem.emerald800 : AppDesignSystem.slate600,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  if (_upiVpa.isNotEmpty) ...[
+                  if (_selectedTab == 1 && _upiVpa.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
                       'Store VPA: $_upiVpa',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 10),
                         fontWeight: FontWeight.w700,
-                        color: AppDesignSystem.emerald600,
+                        color: AppDesignSystem.slate700,
                       ),
                     ),
                   ],
@@ -364,54 +504,58 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
             ),
             const SizedBox(height: 12),
 
-            // Live Checking Indicator
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppDesignSystem.green50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignSystem.green100),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.emerald600),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Auto-checking payment status every 3s...',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11),
-                      fontWeight: FontWeight.w700,
-                      color: AppDesignSystem.emerald700,
+            // Live Auto-Checking Indicator
+            if (_selectedTab == 0) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.green50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppDesignSystem.green100),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.emerald600),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      'Auto-checking Razorpay payment every 2s...',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w700,
+                        color: AppDesignSystem.emerald700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 14),
+            ],
 
-            // Manual confirmation button if needed
+            // Emergency Manual Confirm Button (Active on Normal Fallback or if required)
             ElevatedButton(
               onPressed: () async {
                 await widget.onConfirmPaid({
-                  'paymentMethod': 'UPI',
+                  'paymentMethod': _selectedTab == 0 ? 'ONLINE' : 'UPI',
                   'paymentStatus': 'PAID',
                   'paymentCollectedBy': 'ONLINE',
                   'isRiderCash': false,
-                  'notes': 'Paid via Doorstep Cashfree QR scan',
+                  'notes': _selectedTab == 0
+                      ? 'Paid via Doorstep Razorpay QR scan'
+                      : 'Paid via Doorstep Fallback Store UPI scan',
                 });
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppDesignSystem.success,
+                backgroundColor: _selectedTab == 0 ? AppDesignSystem.emerald600 : AppDesignSystem.slate800,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: Text(
-                'Confirm Customer Paid ₹${widget.total.toInt()} via QR',
+                'Confirm Customer Paid ₹${_effectiveTotal.toStringAsFixed(0)}',
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 13.5),
                   fontWeight: FontWeight.w800,

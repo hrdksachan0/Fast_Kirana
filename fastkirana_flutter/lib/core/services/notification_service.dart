@@ -13,6 +13,7 @@ import '../services/secure_storage_service.dart';
 import '../routes/app_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/order.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 final logger = Logger();
 
@@ -41,7 +42,14 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final secureRole = await SecureStorage.read('user_role');
     final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
 
-    final isStaff = userRole == 'ADMIN' ||
+    final prefPhone = prefs.getString('user_phone') ?? '';
+    final securePhone = await SecureStorage.read('user_phone') ?? '';
+    final rawPhone = (prefPhone.isNotEmpty ? prefPhone : securePhone).replaceAll(RegExp(r'[^0-9]'), '');
+    final cleanPhone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
+    final isAdminPhone = cleanPhone == '9450358388' || cleanPhone == '7054470303' || cleanPhone == '8115214721';
+
+    final isStaff = isAdminPhone ||
+        userRole == 'ADMIN' ||
         userRole == 'SUPER_ADMIN' ||
         userRole == 'STORE_MANAGER' ||
         userRole == 'STAFF' ||
@@ -632,6 +640,21 @@ class NotificationService {
   final _prefsController = StreamController<Map<String, bool>>.broadcast();
   Stream<Map<String, bool>> get prefsStream => _prefsController.stream;
 
+  static AudioPlayer? _buzzerPlayer;
+
+  /// Play loud order chime in-app for foreground alerts
+  static Future<void> playOrderChime() async {
+    if (kIsWeb) return;
+    try {
+      _buzzerPlayer ??= AudioPlayer();
+      await _buzzerPlayer!.stop();
+      await _buzzerPlayer!.setVolume(1.0);
+      await _buzzerPlayer!.play(AssetSource('sounds/order_chime.mp3'));
+    } catch (e) {
+      debugPrint('NotificationService: In-app chime play error: $e');
+    }
+  }
+
   Future<void> init() async {
     if (_initialized || kIsWeb) return;
 
@@ -858,7 +881,14 @@ class NotificationService {
       final secureRole = await SecureStorage.read('user_role');
       final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
 
-      final isStaff = userRole == 'ADMIN' ||
+      final prefPhone = prefs.getString('user_phone') ?? '';
+      final securePhone = await SecureStorage.read('user_phone') ?? '';
+      final rawPhone = (prefPhone.isNotEmpty ? prefPhone : securePhone).replaceAll(RegExp(r'[^0-9]'), '');
+      final cleanPhone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
+      final isAdminPhone = cleanPhone == '9450358388' || cleanPhone == '7054470303' || cleanPhone == '8115214721';
+
+      final isStaff = isAdminPhone ||
+          userRole == 'ADMIN' ||
           userRole == 'SUPER_ADMIN' ||
           userRole == 'STORE_MANAGER' ||
           userRole == 'STAFF' ||
@@ -1089,6 +1119,10 @@ title.toString().contains('🛵') ||
 
     // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
     // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
+    if (isOrderAlert) {
+      unawaited(playOrderChime());
+    }
+
     final channelId = isOrderAlert
         ? 'fastkirana_order_buzzer_v2'
         : (isOrderStatusUpdate ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
@@ -1610,9 +1644,13 @@ title.toString().contains('🛵') ||
       final rId = assignedRestaurantId ?? prefs.getString('assigned_restaurant_id') ?? (await SecureStorage.read('assigned_restaurant_id'));
 
       final savedUserRole = (prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? '').toUpperCase().trim();
-      final isMasterAdmin = savedUserRole == 'ADMIN' || savedUserRole == 'SUPER_ADMIN';
+      final cleanDigits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      final tenDigit = cleanDigits.length > 10 ? cleanDigits.substring(cleanDigits.length - 10) : cleanDigits;
+      final isAdminPhone = tenDigit == '9450358388' || tenDigit == '7054470303' || tenDigit == '8115214721';
 
-      // If user is logged in as Admin, never downgrade their device registration or topics to Picker/Delivery/Restaurant
+      final isMasterAdmin = isAdminPhone || savedUserRole == 'ADMIN' || savedUserRole == 'SUPER_ADMIN';
+
+      // If user is logged in as Admin or Admin Phone, never downgrade their device registration or topics to Picker/Delivery/Restaurant
       final effectiveRole = isMasterAdmin ? 'ADMIN' : resolvedRole;
 
       final isAdmin = effectiveRole == 'ADMIN' ||

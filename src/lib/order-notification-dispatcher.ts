@@ -112,6 +112,37 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
       // Hub-scoped admin topic (all active admins receive exactly this 1 broadcast)
       const adminTopic = storeId ? `admin_orders_${storeId}` : 'admin_orders'
       await sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
+
+      // Also broadcast to global admin_orders topic if a specific hub topic was used
+      if (storeId) {
+        sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+      }
+
+      // DIRECT FCM PUSH to all registered Admin device tokens and Store Owner phones
+      try {
+        const adminTokens = await prisma.fcmToken.findMany({
+          where: {
+            OR: [
+              { user: { role: Role.ADMIN } },
+              { user: { phone: { contains: '9450358388' } } },
+              { user: { phone: { contains: '7054470303' } } },
+              { user: { phone: { contains: '8115214721' } } },
+            ],
+          },
+          select: { token: true },
+        })
+
+        for (const t of adminTokens) {
+          if (!sentFcmTokensThisCheckout.has(t.token)) {
+            sentFcmTokensThisCheckout.add(t.token)
+            fcmMessaging.send({ token: t.token, ...staffPayload }).catch((err: any) =>
+              console.error('Direct admin FCM send failed:', err)
+            )
+          }
+        }
+      } catch (directFcmErr) {
+        console.error('Error fetching admin FCM tokens:', directFcmErr)
+      }
     }
   } catch (fcmErr) {
     console.error('Unified admin FCM error:', fcmErr)
