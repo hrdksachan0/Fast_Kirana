@@ -46,6 +46,7 @@ import 'widgets/tracking_cancel_card.dart';
 import 'widgets/tracking_review_card.dart';
 import 'widgets/swiggy_cancel_bottom_sheet.dart';
 import '../../widgets/app_confirmation_dialog.dart';
+import '../../core/utils/app_toast.dart';
 import 'utils/geo_math_utils.dart';
 import 'utils/map_marker_generator.dart';
 import 'services/route_polyline_service.dart';
@@ -213,16 +214,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         if (verifyRes.statusCode != 200 || verifyRes.data == null || (verifyRes.data['isPaid'] != true && verifyRes.data['paymentStatus'] != 'PAID')) {
           if (mounted) {
             setState(() => _isProcessingPayment = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: AppDesignSystem.warning,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                content: Text(
-                  'Payment was cancelled or could not be verified. Please retry or pay Cash on Delivery.',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-              ),
+            AppToast.showWarning(
+              context,
+              'Payment Incomplete',
+              subtitle: 'Payment was cancelled or could not be verified. Please retry or choose Cash on Delivery.',
             );
           }
           return;
@@ -232,24 +227,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       await _fetchLiveOrder();
       if (mounted) {
         setState(() => _isProcessingPayment = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: brandGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '🎉 Payment Received! Order #${_order?.readableId ?? widget.orderId} is now PAID.',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        AppToast.showSuccess(
+          context,
+          'Payment Received 🎉',
+          subtitle: 'Order #${_order?.readableId ?? widget.orderId} is now marked PAID.',
         );
       }
       return;
@@ -259,16 +240,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     if (mounted) {
       setState(() => _isProcessingPayment = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppDesignSystem.warning,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: Text(
-            'Payment was cancelled or could not be verified. Please retry or pay Cash on Delivery.',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-          ),
-        ),
+      AppToast.showWarning(
+        context,
+        'Payment Notice',
+        subtitle: 'Payment was cancelled or could not be verified. Please retry or choose Cash on Delivery.',
       );
     }
   }
@@ -290,16 +265,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     if (mounted) {
       setState(() => _isProcessingPayment = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: primaryRed,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: Text(
-            errorResponse.getMessage() ?? 'Payment was cancelled or could not be completed.',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
-          ),
-        ),
+      AppToast.showError(
+        context,
+        'Payment Failed',
+        subtitle: errorResponse.getMessage() ?? 'Payment was cancelled or could not be completed.',
       );
     }
   }
@@ -366,13 +335,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     if (mounted) {
       setState(() => _isProcessingPayment = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: primaryRed,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          content: const Text('Could not open payment gateway. Please retry.'),
-        ),
+      AppToast.showError(
+        context,
+        'Gateway Error',
+        subtitle: 'Could not open payment gateway. Please retry.',
       );
     }
   }
@@ -601,26 +567,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       ref.invalidate(ordersProvider(''));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF0F172A),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 19),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Order cancelled successfully.',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        AppToast.showSuccess(
+          context,
+          'Order Cancelled',
+          subtitle: 'Your order was successfully cancelled.',
         );
       }
 
@@ -635,36 +585,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         }
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF0F172A),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            elevation: 6,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: Color(0xFF334155), width: 1),
-            ),
-            content: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF451A1A),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.error_outline_rounded, color: Color(0xFFF87171), size: 16),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    errorMsg,
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFFF1F5F9), fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        AppToast.showError(
+          context,
+          'Cancellation Failed',
+          subtitle: errorMsg,
         );
       }
     } finally {
@@ -701,24 +625,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: brandGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Order payment switched to Cash on Delivery (COD)!',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        AppToast.showSuccess(
+          context,
+          'Switched to COD',
+          subtitle: 'Order payment switched to Cash on Delivery (COD)!',
         );
       }
 
@@ -726,16 +636,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     } catch (e) {
       LoggerService.error("Switch COD error", e);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: primaryRed,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            content: Text(
-              'Failed to switch to COD. Please try again.',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
-            ),
-          ),
+        AppToast.showError(
+          context,
+          'Switch Failed',
+          subtitle: 'Failed to switch to COD. Please try again.',
         );
       }
     } finally {
@@ -2255,17 +2159,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                   onTap: () {
                     HapticFeedback.lightImpact();
                     Clipboard.setData(ClipboardData(text: trackingUrl));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          '📋 Gift tracking link copied to clipboard!',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 12),
-                        ),
-                        backgroundColor: const Color(0xFFBE123C),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        duration: const Duration(seconds: 2),
-                      ),
+                    AppToast.showSuccess(
+                      context,
+                      'Link Copied 📋',
+                      subtitle: 'Gift tracking link copied to clipboard!',
+                      duration: const Duration(seconds: 2),
                     );
                   },
                   child: Container(
