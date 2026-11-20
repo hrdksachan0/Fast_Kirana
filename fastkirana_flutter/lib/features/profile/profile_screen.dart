@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -761,6 +761,15 @@ class ProfileScreen extends ConsumerWidget {
                               fontSize: Responsive.scaledFontSize(context, 10.5),
                               fontWeight: FontWeight.w600,
                               color: AppDesignSystem.slate300,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'FSSAI Central Lic. App: 10261014109187367',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10),
+                              fontWeight: FontWeight.w600,
+                              color: AppDesignSystem.slate400,
                             ),
                           ),
                         ],

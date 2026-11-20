@@ -1,4 +1,4 @@
-# FastKirana Flutter App — ProGuard / R8 Rules
+﻿# FastKirana Flutter App — ProGuard / R8 Rules
 # Generated for production release builds with full obfuscation
 
 # ──────────────────────────────────────────────
@@ -124,6 +124,15 @@
 # Keep application class for MainActivity reflection
 # ──────────────────────────────────────────────
 -keep class com.fastkirana.app.MainActivity { *; }
+
+# ──────────────────────────────────────────────
+# Razorpay Payment Gateway SDK
+# ──────────────────────────────────────────────
+-keepattributes *Annotation*
+-dontwarn com.razorpay.**
+-keep class com.razorpay.** { *; }
+-keepclassmembers class com.razorpay.** { *; }
+-optimizations !method/inlining/*
 
 # ──────────────────────────────────────────────
 # Suppress Notes

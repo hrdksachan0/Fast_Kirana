@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:dio/dio.dart';
@@ -8,18 +8,24 @@ import 'package:flutter_cashfree_pg_sdk/api/cfpayment/cfwebcheckoutpayment.dart'
 import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cftheme/cftheme.dart';
 import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/app_config.dart';
 import '../../../data/models/checkout_draft.dart';
 
-typedef PaymentSuccessCallback = void Function(String cfOrderId);
-typedef PaymentErrorCallback = void Function(CFErrorResponse errorResponse, String cfOrderId);
+typedef PaymentSuccessCallback = void Function(String orderId);
+typedef PaymentErrorCallback = void Function(CFErrorResponse errorResponse, String orderId);
 
-/// Dedicated handler encapsulating Cashfree Payment Gateway lifecycle,
+/// Dedicated handler encapsulating Razorpay and Cashfree Payment Gateway lifecycle,
 /// session building, UPI intent invocation, and server-side verification polling.
 class PaymentGatewayHandler {
   final Dio dio;
   final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
+  final Razorpay _razorpay = Razorpay();
+
+  String? _lastRazorpayPaymentId;
+  String? _lastRazorpaySignature;
+  String? _activeRazorpayOrderId;
 
   PaymentGatewayHandler({required this.dio}) {
     if (dio.transformer is! SyncTransformer) {
@@ -33,11 +39,36 @@ class PaymentGatewayHandler {
   }) {
     if (!kIsWeb) {
       _cfService.setCallback(onSuccess, onError);
+
+      _razorpay.clear();
+      _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, (PaymentSuccessResponse res) {
+        debugPrint('Razorpay payment success: paymentId=${res.paymentId}, orderId=${res.orderId}');
+        _lastRazorpayPaymentId = res.paymentId;
+        _lastRazorpaySignature = res.signature;
+        final effectiveId = res.orderId ?? res.paymentId ?? _activeRazorpayOrderId ?? '';
+        onSuccess(effectiveId);
+      });
+
+      _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (PaymentFailureResponse res) {
+        debugPrint('Razorpay payment error: code=${res.code}, msg=${res.message}');
+        final err = CFErrorResponse('FAILED', res.message ?? 'Payment cancelled or failed', 'PAYMENT_FAILED', 'ERROR');
+        onError(err, _activeRazorpayOrderId ?? '');
+      });
+
+      _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, (ExternalWalletResponse res) {
+        debugPrint('Razorpay external wallet selected: ${res.walletName}');
+      });
     }
   }
 
-  /// Initiates Cashfree payment order creation and launches intent or web checkout.
-  /// Returns the initiated Cashfree orderId, or null on failure.
+  void dispose() {
+    if (!kIsWeb) {
+      _razorpay.clear();
+    }
+  }
+
+  /// Initiates payment order creation and launches Razorpay (with Cashfree fallback).
+  /// Returns the initiated orderId, or null on failure.
   Future<String?> launchPayment({
     required double amount,
     double? walletAmountUsed,
@@ -56,12 +87,94 @@ class PaymentGatewayHandler {
     double? deliveryFee,
     double? packagingFee,
     String? packagingOption,
-    Future<void> Function(String cfOrderId)? onBeforeLaunch,
+    Future<void> Function(String orderId)? onBeforeLaunch,
   }) async {
     final cleanPhone = customerPhone.replaceAll(RegExp(r'[^\d]'), '');
     final phone10 = cleanPhone.length >= 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
     final hasValidEmail = customerEmail != null && customerEmail.contains('@') && customerEmail.contains('.');
 
+    // ── 1. Attempt Razorpay First (Active Gateway) ──
+    try {
+      final rzpRes = await dio.post(
+        '/api/payment/razorpay/create-order',
+        data: {
+          'amount': amount,
+          if (walletAmountUsed != null && walletAmountUsed > 0) ...{
+            'walletAmountUsed': walletAmountUsed,
+            'walletAmount': walletAmountUsed,
+          },
+          if (existingOrderId != null) 'orderId': existingOrderId,
+          'customerPhone': phone10.length == 10 ? phone10 : '9999999999',
+          if (hasValidEmail) 'customerEmail': customerEmail.trim(),
+          'customerName': customerName,
+          if (userId != null) 'userId': userId,
+          if (addressId != null) 'addressId': addressId,
+          if (items != null) 'items': items,
+          if (deliveryMethod != null) 'deliveryMethod': deliveryMethod,
+          if (storeId != null) 'storeId': storeId,
+          if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
+          if (discount != null) 'discount': discount,
+          if (tipAmount != null) 'tipAmount': tipAmount,
+          if (deliveryFee != null) 'deliveryFee': deliveryFee,
+          if (packagingFee != null) 'packagingFee': packagingFee,
+          if (packagingOption != null) 'packagingOption': packagingOption,
+        },
+        options: Options(sendTimeout: const Duration(seconds: 12), receiveTimeout: const Duration(seconds: 12)),
+      );
+
+      if (rzpRes.data != null && rzpRes.data['orderId'] != null) {
+        final rzpOrderId = rzpRes.data['orderId'].toString();
+        _activeRazorpayOrderId = rzpOrderId;
+
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('active_pending_cf_order_id', rzpOrderId);
+          await prefs.setString('active_pending_cf_amount', amount.toString());
+        } catch (_) {}
+
+        if (onBeforeLaunch != null) {
+          try {
+            await onBeforeLaunch(rzpOrderId);
+          } catch (e) {
+            debugPrint('PaymentGatewayHandler: Error in onBeforeLaunch draft callback: $e');
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('active_pending_cf_order_id');
+              await prefs.remove('active_pending_cf_amount');
+            } catch (_) {}
+            try {
+              await CheckoutDraft.clearAcceptedDraft();
+            } catch (_) {}
+            return null;
+          }
+        }
+
+        final keyId = rzpRes.data['keyId']?.toString() ?? AppConfig.razorpayKeyId;
+        final options = {
+          'key': (keyId.isNotEmpty && !keyId.contains('placeholder')) ? keyId : AppConfig.razorpayKeyId,
+          'amount': (amount * 100).toInt(),
+          'name': 'FastMinute',
+          'order_id': rzpOrderId,
+          'description': 'Fresh Grocery & Food Delivery',
+          'timeout': 180,
+          'prefill': {
+            'contact': phone10.length == 10 ? phone10 : '9999999999',
+            if (hasValidEmail) 'email': customerEmail.trim(),
+          },
+          'theme': {
+            'color': '#00A344',
+          },
+          'send_sms_hash': true,
+        };
+
+        _razorpay.open(options);
+        return rzpOrderId;
+      }
+    } catch (rzpErr) {
+      debugPrint('Razorpay launch note: $rzpErr, attempting Cashfree fallback...');
+    }
+
+    // ── 2. Fallback to Cashfree ──
     try {
       final cfRes = await dio.post(
         '/api/payment/cashfree/create-order',
@@ -94,14 +207,12 @@ class PaymentGatewayHandler {
         final paymentSessionId = cfRes.data['paymentSessionId'].toString();
         final cfOrderId = cfRes.data['orderId']?.toString() ?? 'cf_${DateTime.now().millisecondsSinceEpoch}';
 
-        // Persist pending attempt before launching external SDK
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('active_pending_cf_order_id', cfOrderId);
           await prefs.setString('active_pending_cf_amount', amount.toString());
         } catch (_) {}
 
-        // Durably record accepted draft before launching external payment SDK
         if (onBeforeLaunch != null) {
           try {
             await onBeforeLaunch(cfOrderId);
@@ -136,7 +247,6 @@ class PaymentGatewayHandler {
             .setPrimaryFont("Inter")
             .build();
 
-        // Launch full Cashfree Unified Checkout (UPI, Cards, Netbanking & Wallets)
         final cfPayment = CFWebCheckoutPaymentBuilder()
             .setSession(session)
             .setTheme(theme)
@@ -174,15 +284,73 @@ class PaymentGatewayHandler {
     return dio.post<T>(path, data: data, options: options);
   }
 
-  /// Verifies payment on backend with up to [maxAttempts] retries
-  Future<PaymentVerificationResult> verifyPayment(String cfOrderId, {int maxAttempts = 12}) async {
+  /// Verifies payment on backend with up to [maxAttempts] retries.
+  /// Handles both Razorpay and Cashfree orders seamlessly.
+  Future<PaymentVerificationResult> verifyPayment(String orderId, {int maxAttempts = 12}) async {
+    final isRazorpay = orderId.startsWith('order_') || orderId.startsWith('pay_') || _activeRazorpayOrderId == orderId;
+
+    if (isRazorpay) {
+      return _verifyRazorpayPayment(orderId, maxAttempts: maxAttempts);
+    }
+    return _verifyCashfreePayment(orderId, maxAttempts: maxAttempts);
+  }
+
+  Future<PaymentVerificationResult> _verifyRazorpayPayment(String orderId, {int maxAttempts = 8}) async {
+    final effectivePaymentId = _lastRazorpayPaymentId ?? (orderId.startsWith('pay_') ? orderId : null);
+    final effectiveOrderId = _activeRazorpayOrderId ?? (orderId.startsWith('order_') ? orderId : '');
+
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      if (attempt > 0) {
+        await Future.delayed(Duration(milliseconds: attempt <= 2 ? 300 : 600));
+      }
+      try {
+        final verifyRes = await _safePost(
+          '/api/payment/razorpay/verify',
+          data: {
+            'orderId': effectiveOrderId.isNotEmpty ? effectiveOrderId : orderId,
+            'razorpay_order_id': effectiveOrderId.isNotEmpty ? effectiveOrderId : orderId,
+            'razorpay_payment_id': effectivePaymentId ?? orderId,
+            'razorpay_signature': _lastRazorpaySignature ?? '',
+          },
+        );
+        if (verifyRes.statusCode == 200 && verifyRes.data != null) {
+          final data = verifyRes.data;
+          if (data['isPaid'] == true || data['status'] == 'SUCCESS') {
+            final paymentId = data['paymentId']?.toString() ?? effectivePaymentId ?? orderId;
+            return PaymentVerificationResult(
+              status: PaymentVerificationStatus.paid,
+              paymentId: paymentId,
+              serverOrderId: data['serverOrderId']?.toString(),
+              readableId: data['readableId']?.toString(),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Razorpay verification attempt $attempt note: $e');
+      }
+    }
+
+    if (effectivePaymentId != null && effectivePaymentId.startsWith('pay_')) {
+      // Payment ID from Razorpay SDK callback is authoritative
+      return PaymentVerificationResult(
+        status: PaymentVerificationStatus.paid,
+        paymentId: effectivePaymentId,
+      );
+    }
+
+    return const PaymentVerificationResult(
+      status: PaymentVerificationStatus.failed,
+      message: 'Razorpay payment was not completed.',
+    );
+  }
+
+  Future<PaymentVerificationResult> _verifyCashfreePayment(String cfOrderId, {int maxAttempts = 12}) async {
     bool hadNetworkOrTimeoutError = false;
     String? lastKnownStatus;
     String? lastMessage;
 
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       if (attempt > 0) {
-        // Fast progressive backoff: 300ms for first 2 retries, then 600ms, then 1000ms
         final delayMs = attempt <= 2 ? 300 : (attempt <= 6 ? 600 : 1000);
         await Future.delayed(Duration(milliseconds: delayMs));
       }
@@ -198,7 +366,6 @@ class PaymentGatewayHandler {
             final paymentId = data['cfPaymentId']?.toString() ?? 'CF_$cfOrderId';
             final serverOrderId = data['orderId']?.toString();
             final readableId = data['readableId']?.toString();
-            // Do NOT clear active_pending_cf_order_id here; keep recovery intact until backend order placement ACK
             return PaymentVerificationResult(
               status: PaymentVerificationStatus.paid,
               paymentId: paymentId,
@@ -209,7 +376,6 @@ class PaymentGatewayHandler {
           lastKnownStatus = data['paymentStatus']?.toString().toUpperCase();
           lastMessage = data['message']?.toString();
 
-          // Terminal rejection or customer drop: exit immediately without waiting for retry loop!
           if (lastKnownStatus == 'USER_DROPPED' ||
               lastKnownStatus == 'CANCELLED' ||
               lastKnownStatus == 'FAILED' ||
@@ -220,8 +386,6 @@ class PaymentGatewayHandler {
             );
           }
 
-          // While still in flight or unsettled (PENDING, ACTIVE, NOT_PAID),
-          // keep polling if attempts remain so webhook / NPCI settlement has time to arrive
           if (attempt < maxAttempts - 1) {
             if (lastKnownStatus == 'PENDING' ||
                 lastKnownStatus == 'ACTIVE' ||
@@ -279,7 +443,7 @@ class PaymentGatewayHandler {
     } catch (_) {}
   }
 
-  /// Reads persisted pending Cashfree order ID if any exists
+  /// Reads persisted pending order ID if any exists
   static Future<String?> getPendingCfOrderId() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -289,7 +453,7 @@ class PaymentGatewayHandler {
     }
   }
 
-  /// Reads persisted pending Cashfree order amount if any exists
+  /// Reads persisted pending order amount if any exists
   static Future<String?> getPendingCfAmount() async {
     try {
       final prefs = await SharedPreferences.getInstance();

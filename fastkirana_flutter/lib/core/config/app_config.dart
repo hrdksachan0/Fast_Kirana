@@ -1,4 +1,4 @@
-// FastKirana App Configuration & Environment Variables
+﻿// FastKirana App Configuration & Environment Variables
 //
 // SECURITY: No production secrets are checked into source control.
 // Required secrets must be passed via --dart-define at build time:
@@ -70,6 +70,11 @@ class AppConfig {
   );
 
   // ─── Payment Gateways ───────────────────────────────────────────
+  static const String razorpayKeyId = String.fromEnvironment(
+    'RAZORPAY_KEY_ID',
+    defaultValue: 'rzp_live_TRvyzlqHiRGWbr',
+  );
+
   static const String cashfreeAppId = String.fromEnvironment(
     'CASHFREE_APP_ID',
     defaultValue: '14063870a97e08f92d03df853487836041',

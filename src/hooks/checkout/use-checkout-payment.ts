@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { apiUrl } from '@/lib/api-url';
 
 import { useState, useEffect } from 'react'
@@ -105,9 +105,24 @@ export function useCheckoutPayment({
   const [orderReadableId, setOrderReadableId] = useState<string | undefined>(undefined)
 
   // Preload Payment SDKs
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && (window as any).Razorpay) {
+        resolve(true)
+        return
+      }
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.async = true
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
+  }
+
   const loadCashfreeScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
-      if ((window as any).Cashfree) {
+      if (typeof window !== 'undefined' && (window as any).Cashfree) {
         resolve(true)
         return
       }
@@ -120,6 +135,7 @@ export function useCheckoutPayment({
   }
 
   useEffect(() => {
+    loadRazorpayScript()
     loadCashfreeScript()
   }, [])
 
@@ -360,11 +376,120 @@ export function useCheckoutPayment({
       }
 
       // ═══════════════════════════════════════════════════════════════════════
-      // PAY FIRST: Create Cashfree payment session with amount (no DB order)
+      // 1. ATTEMPT RAZORPAY CHECKOUT (Active Gateway)
       // ═══════════════════════════════════════════════════════════════════════
       const userName = (session?.user as any)?.name || 'FastKirana Customer'
       const userEmail = (session?.user as any)?.email || undefined
       const userPhone = effectiveCustomerPhone || (session?.user as any)?.phone || '9999999999'
+
+      try {
+        const rzpRes = await fetch(`${apiUrl()}/api/payment/razorpay/create-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: paymentAmount,
+            customerPhone: userPhone,
+            customerEmail: userEmail,
+            customerName: userName,
+            note: `FastMinute Checkout ₹${paymentAmount}`,
+          }),
+        })
+
+        if (rzpRes.ok) {
+          const rzpData = await rzpRes.json()
+          if (rzpData?.orderId) {
+            const loaded = await loadRazorpayScript()
+            if (loaded && typeof window !== 'undefined' && (window as any).Razorpay) {
+              const rzpOrderId = rzpData.orderId
+              const rzpTag = `[RZP_ORDER:${rzpOrderId}]`
+              const notesWithRzp = finalNotes ? `${finalNotes} | ${rzpTag}` : rzpTag
+              const pendingRzpPayload = {
+                ...payload,
+                storeId: effectiveStoreId || undefined,
+                notes: notesWithRzp,
+              }
+
+              const rzpOptions = {
+                key: rzpData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_TRvyzlqHiRGWbr',
+                amount: rzpData.amountPaise,
+                currency: 'INR',
+                name: 'FastMinute',
+                description: 'Fresh Grocery & Food Delivery',
+                order_id: rzpOrderId,
+                prefill: {
+                  name: userName,
+                  contact: userPhone,
+                  email: userEmail,
+                },
+                theme: {
+                  color: '#00A344',
+                },
+                handler: async function (response: any) {
+                  setOverlayState('verifying-payment')
+                  try {
+                    await fetch(`${apiUrl()}/api/payment/razorpay/verify`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        orderId: rzpOrderId,
+                        razorpay_order_id: response.razorpay_order_id || rzpOrderId,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                      }),
+                    })
+
+                    const orderRes = await fetch(`${apiUrl()}/api/orders`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        ...pendingRzpPayload,
+                        paymentMethod: 'UPI',
+                        paymentStatus: 'PAID',
+                        paymentId: response.razorpay_payment_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_order_id: response.razorpay_order_id || rzpOrderId,
+                      }),
+                    })
+
+                    const orderData = await orderRes.json()
+                    if (orderRes.ok) {
+                      setOverlayState('success')
+                      triggerHaptic('success')
+                      clearCart()
+                      router.push(`/order-success/${orderData.id || orderData.readableId}`)
+                    } else {
+                      toast.error('Order creation failed after payment. Please contact support.')
+                      setIsPlacingOrder(false)
+                      setOverlayState(null)
+                    }
+                  } catch (createErr) {
+                    toast.error('Error recording payment. Please contact support.')
+                    setIsPlacingOrder(false)
+                    setOverlayState(null)
+                  }
+                },
+                modal: {
+                  ondismiss: function () {
+                    setIsPlacingOrder(false)
+                    setOverlayState(null)
+                    toast.info('Payment was cancelled. Your items are saved in your cart.')
+                  },
+                },
+              }
+
+              const rzp = new (window as any).Razorpay(rzpOptions)
+              rzp.open()
+              return
+            }
+          }
+        }
+      } catch (rzpErr) {
+        console.warn('Razorpay checkout attempt note:', rzpErr)
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // 2. FALLBACK: Create Cashfree payment session with amount (no DB order)
+      // ═══════════════════════════════════════════════════════════════════════
 
       const cfRes = await fetch(`${apiUrl()}/api/payment/cashfree/create-order`, {
         method: 'POST',

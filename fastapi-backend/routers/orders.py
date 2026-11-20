@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks, Header, Request, Query
+﻿from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks, Header, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -2315,6 +2315,26 @@ async def create_order(
                     except Exception as cf_e:
                         logger.warning(f"Error checking Cashfree for new order: {cf_e}")
 
+            # 3. Check Razorpay payment verification
+            incoming_rzp_order_id = str(payload.get("razorpay_order_id") or payload.get("razorpayOrderId") or "").strip()
+            incoming_rzp_payment_id = str(payload.get("razorpay_payment_id") or payload.get("razorpayPaymentId") or (incoming_payment_id if incoming_payment_id.startswith("pay_") else "")).strip()
+            incoming_rzp_signature = str(payload.get("razorpay_signature") or payload.get("razorpaySignature") or "").strip()
+
+            if incoming_rzp_payment_id and not is_online_paid:
+                try:
+                    from utils.cache import get_cache
+                    cached_rzp = await get_cache(f"rzp_paid:{incoming_rzp_payment_id}") or (await get_cache(f"rzp_paid:{incoming_rzp_order_id}") if incoming_rzp_order_id else None)
+                    if cached_rzp:
+                        is_online_paid = True
+                    elif incoming_rzp_order_id and incoming_rzp_signature:
+                        from routers.razorpay_router import verify_razorpay_signature
+                        if verify_razorpay_signature(incoming_rzp_order_id, incoming_rzp_payment_id, incoming_rzp_signature):
+                            is_online_paid = True
+                    elif incoming_payment_status == "PAID" or incoming_rzp_payment_id.startswith("pay_"):
+                        is_online_paid = True
+                except Exception as rzp_e:
+                    logger.warning(f"Error checking Razorpay for new order: {rzp_e}")
+
         from decimal import Decimal
         actual_wallet_debit = Decimal("0.00")
         if payment_method == "WALLET":
@@ -2388,9 +2408,18 @@ async def create_order(
                 notes_parts.append(f"💳 Paid via Wallet: ₹{float(actual_wallet_debit):.2f}")
                 notes_parts.append(f"[WALLET_USED:{float(actual_wallet_debit):.2f}]")
 
-        if is_online_paid and not any("Cashfree PG Paid" in p for p in notes_parts):
-            cf_note_ref = f"Cashfree PG Paid (Ref: {incoming_payment_id})" if incoming_payment_id else "Cashfree PG Paid"
-            notes_parts.append(cf_note_ref)
+        if is_online_paid:
+            is_rzp = (
+                (incoming_payment_id and incoming_payment_id.startswith("pay_")) or
+                bool(payload.get("razorpay_payment_id")) or
+                bool(payload.get("razorpayPaymentId"))
+            )
+            if is_rzp:
+                rzp_ref = incoming_payment_id if (incoming_payment_id and incoming_payment_id.startswith("pay_")) else (str(payload.get("razorpay_payment_id") or payload.get("razorpayPaymentId") or ""))
+                notes_parts.append(f"Razorpay PG Paid (Ref: {rzp_ref})")
+            elif not any("Cashfree PG Paid" in p for p in notes_parts):
+                cf_note_ref = f"Cashfree PG Paid (Ref: {incoming_payment_id})" if incoming_payment_id else "Cashfree PG Paid"
+                notes_parts.append(cf_note_ref)
 
         if tip_amount > 0 and not any("Delivery Partner Tip" in p for p in notes_parts):
             notes_parts.append(f"💰 Delivery Partner Tip: ₹{tip_amount:.2f}")

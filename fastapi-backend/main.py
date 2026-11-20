@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends
+﻿from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, ORJSONResponse
 import os
@@ -385,7 +385,7 @@ app.include_router(paytm.router)   # Already defines prefix="/api/payment/paytm"
 app.include_router(fcm.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
 
-from routers import cashfree_router, kot, vendors, stores_service, wishlist, push, wallet, referral
+from routers import cashfree_router, razorpay_router, kot, vendors, stores_service, wishlist, push, wallet, referral
 app.include_router(vendors.vendors_router, prefix="/api")
 app.include_router(vendors.vendors_router, prefix="/api/admin")
 app.include_router(stores_service.router, prefix="/api")
@@ -394,6 +394,7 @@ app.include_router(push.router, prefix="/api")
 app.include_router(websockets.sse_router, prefix="/api")
 app.include_router(admin.superadmin_router, prefix="/api")
 app.include_router(cashfree_router.router, prefix="/api")
+app.include_router(razorpay_router.router, prefix="/api")
 app.include_router(kot.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(cron.router, prefix="/api")
