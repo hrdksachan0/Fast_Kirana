@@ -528,18 +528,20 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                             ),
                     ),
                   ],
-                  const SizedBox(height: 10),
-                  Text(
-                    _selectedTab == 0
-                        ? 'Amount ₹${_effectiveTotal.toStringAsFixed(0)} is pre-locked. Scan with GPay, PhonePe, Paytm or Cred'
-                        : 'Normal Store UPI: Customer manually enters ₹${_effectiveTotal.toStringAsFixed(0)}',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11),
-                      fontWeight: FontWeight.w600,
-                      color: _selectedTab == 0 ? AppDesignSystem.emerald800 : AppDesignSystem.slate600,
+                  if (_selectedTab == 1 || hasRzpQr) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      _selectedTab == 0
+                          ? 'Amount ₹${_effectiveTotal.toStringAsFixed(0)} is pre-locked. Scan with GPay, PhonePe, Paytm or Cred'
+                          : 'Normal Store UPI: Customer manually enters ₹${_effectiveTotal.toStringAsFixed(0)}',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w600,
+                        color: _selectedTab == 0 ? AppDesignSystem.emerald800 : AppDesignSystem.slate600,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+                  ],
                   if (_selectedTab == 1 && _upiVpa.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
@@ -556,8 +558,8 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
             ),
             const SizedBox(height: 12),
 
-            // Live Auto-Checking Indicator
-            if (_selectedTab == 0) ...[
+            // Live Auto-Checking Indicator (Only when dynamic QR is active)
+            if (_selectedTab == 0 && hasRzpQr) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
