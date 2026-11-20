@@ -363,7 +363,7 @@ title.toString().contains('🛵') ||
         channelName,
         channelDescription: channelDesc,
         icon: '@mipmap/ic_launcher',
-        importance: (isOrderAlert || isOrderStatusUpdate) ? Importance.max : Importance.high,
+        importance: isOrderAlert ? Importance.max : Importance.high,
         priority: Priority.high,
         tag: tag,
         fullScreenIntent: isOrderAlert,
@@ -373,13 +373,13 @@ title.toString().contains('🛵') ||
         maxProgress: 100,
         progress: progress ?? 0,
         subText: null, // STRICTLY NULL: prevents Android OS from appending truncated text ("Packe...") to header line!
-        playSound: true,
-        sound: (isOrderAlert || isOrderStatusUpdate) ? const RawResourceAndroidNotificationSound('order_chime') : null,
+        playSound: isOrderAlert,
+        sound: isOrderAlert ? const RawResourceAndroidNotificationSound('order_chime') : null,
         audioAttributesUsage: isOrderAlert ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
-        enableVibration: true,
+        enableVibration: isOrderAlert,
         vibrationPattern: isOrderAlert
             ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
-            : (isOrderStatusUpdate ? Int64List.fromList([0, 250, 200, 250]) : null),
+            : null,
         showWhen: true,
         when: DateTime.now().millisecondsSinceEpoch,
         styleInformation: BigTextStyleInformation(
@@ -1199,7 +1199,7 @@ title.toString().contains('🛵') ||
           channelName,
           channelDescription: channelDesc,
           icon: '@mipmap/ic_launcher',
-          importance: (isOrderAlert || isOrderStatusUpdate) ? Importance.max : Importance.high,
+          importance: isOrderAlert ? Importance.max : Importance.high,
           priority: Priority.high,
           tag: tag,
           showWhen: true,
@@ -1215,13 +1215,13 @@ title.toString().contains('🛵') ||
             contentTitle: cleanTitle,
             summaryText: isOrderStatusUpdate ? 'FastMinute Live' : null,
           ),
-          playSound: true,
-          sound: (isOrderAlert || isOrderStatusUpdate) ? const RawResourceAndroidNotificationSound('order_chime') : null,
+          playSound: isOrderAlert,
+          sound: isOrderAlert ? const RawResourceAndroidNotificationSound('order_chime') : null,
           audioAttributesUsage: isOrderAlert ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
-          enableVibration: true,
+          enableVibration: isOrderAlert,
           vibrationPattern: isOrderAlert
               ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
-              : (isOrderStatusUpdate ? Int64List.fromList([0, 250, 200, 250]) : null),
+              : null,
         ),
         iOS: const DarwinNotificationDetails(
           presentAlert: true,

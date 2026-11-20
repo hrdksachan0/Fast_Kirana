@@ -175,8 +175,9 @@ async def send_fcm_notification(
             default_sound = False
             default_vibrate = False
         elif is_status:
-            channel_id = "fastkirana_order_status"
-            sound = "order_chime"
+            # Customer live tracking must stay in the persistent silent Live Tracking channel
+            channel_id = "fastkirana_live_tracking_v1"
+            sound = None
             priority = "high"
             default_sound = False
             default_vibrate = False
@@ -293,8 +294,9 @@ async def send_fcm_topic_notification(
             default_sound = False
             default_vibrate = False
         elif is_status:
-            channel_id = "fastkirana_order_status"
-            sound = "order_chime"
+            # Customer live tracking must stay in the persistent silent Live Tracking channel
+            channel_id = "fastkirana_live_tracking_v1"
+            sound = None
             priority = "high"
             default_sound = False
             default_vibrate = False

@@ -498,22 +498,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   void _triggerStatusHaptic(OrderStatus? newStatus, OrderStatus? oldStatus) {
     if (newStatus == null || oldStatus == newStatus) return;
+    // Elegant, non-intrusive micro-haptic clicks (Swiggy/Zepto style: zero annoying continuous buzzing)
     switch (newStatus) {
       case OrderStatus.confirmed:
-        HapticFeedback.lightImpact();
-        _playStatusChime('sounds/status_step_tick.wav');
-        break;
       case OrderStatus.packed:
-        HapticFeedback.mediumImpact();
-        _playStatusChime('sounds/status_step_tick.wav');
-        break;
       case OrderStatus.shipped:
-        HapticFeedback.heavyImpact();
-        _playStatusChime('sounds/out_for_delivery_bell.wav');
+        HapticFeedback.lightImpact();
         break;
       case OrderStatus.delivered:
-        HapticFeedback.heavyImpact();
-        _playStatusChime('sounds/order_delivered_joy.wav');
+        HapticFeedback.mediumImpact();
         _confettiController.play();
         break;
       case OrderStatus.cancelled:
