@@ -18,10 +18,51 @@ class DeliveryHistoryTab extends StatelessWidget {
   static const Color slateDark = AppDesignSystem.slate900;
   static const Color slateMuted = AppDesignSystem.slate500;
 
+  /// Groups sub-orders of combined deliveries into 1 single unified delivery entity
+  List<Map<String, dynamic>> _groupCompletedOrders(List<Map<String, dynamic>> orders) {
+    final Map<String, Map<String, dynamic>> grouped = {};
+
+    for (final raw in orders) {
+      final combinedId = raw['combinedId']?.toString().trim();
+      final readableId = raw['readableId']?.toString().trim() ?? '';
+      String key;
+      if (combinedId != null && combinedId.isNotEmpty) {
+        key = 'combined_$combinedId';
+      } else if (readableId.contains('-G') || readableId.contains('-R')) {
+        final base = readableId.replaceAll(RegExp(r'-[GR\d]+$'), '');
+        key = base.isNotEmpty ? 'readable_$base' : 'order_${raw['id']}';
+      } else {
+        key = 'order_${raw['id']}';
+      }
+
+      if (grouped.containsKey(key)) {
+        final existing = grouped[key]!;
+        final existingTotal = (existing['total'] as num?)?.toDouble() ?? 0.0;
+        final newTotal = (raw['total'] as num?)?.toDouble() ?? 0.0;
+        existing['total'] = existingTotal + newTotal;
+        existing['isCombined'] = true;
+        existing['companionCount'] = ((existing['companionCount'] as int?) ?? 1) + 1;
+        final baseReadable = readableId.replaceAll(RegExp(r'-[GR\d]+$'), '');
+        if (baseReadable.isNotEmpty) {
+          existing['readableId'] = baseReadable;
+        }
+      } else {
+        final copy = Map<String, dynamic>.from(raw);
+        if (readableId.contains('-G') || readableId.contains('-R')) {
+          copy['isCombined'] = true;
+        }
+        grouped[key] = copy;
+      }
+    }
+
+    return grouped.values.toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    const dailyTarget = 5;
-    final totalCount = completed.length;
+    const dailyTarget = 10;
+    final unifiedCompleted = _groupCompletedOrders(completed);
+    final totalCount = unifiedCompleted.length;
 
     final safeBottom = MediaQuery.of(context).padding.bottom;
     return SingleChildScrollView(
@@ -157,7 +198,7 @@ class DeliveryHistoryTab extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          if (completed.isEmpty)
+          if (unifiedCompleted.isEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -174,11 +215,12 @@ class DeliveryHistoryTab extends StatelessWidget {
               ),
             )
           else
-            ...List.generate(completed.length, (idx) {
-              final item = completed[idx];
+            ...List.generate(unifiedCompleted.length, (idx) {
+              final item = unifiedCompleted[idx];
               final orderId = item['id']?.toString() ?? '';
               final orderNum = item['readableId'] ?? orderId.substring(0, math.min(6, orderId.length));
               final totalAmt = (item['total'] as num?)?.toInt() ?? 0;
+              final isCombined = item['isCombined'] == true;
               final rawPm = (item['paymentMethod'] ?? '').toString().toUpperCase().trim();
               final rawPs = (item['paymentStatus'] ?? '').toString().toUpperCase().trim();
               final isCod = rawPm == 'COD' || rawPm.isEmpty;
@@ -205,7 +247,7 @@ class DeliveryHistoryTab extends StatelessWidget {
                 }
               }
               if (addr.isEmpty) addr = 'Ghatampur, Kanpur Nagar';
-              final isLast = idx == completed.length - 1;
+              final isLast = idx == unifiedCompleted.length - 1;
 
               String timeStr = 'Today';
               if (item['deliveredAt'] != null || item['createdAt'] != null) {
@@ -270,6 +312,25 @@ class DeliveryHistoryTab extends StatelessWidget {
                                         color: slateDark,
                                       ),
                                     ),
+                                    if (isCombined) ...[
+                                      const SizedBox(width: 5),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: AppDesignSystem.emerald50,
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: AppDesignSystem.emerald200),
+                                        ),
+                                        child: Text(
+                                          '📦 Combined',
+                                          style: GoogleFonts.inter(
+                                            fontSize: Responsive.scaledFontSize(context, 8.5),
+                                            fontWeight: FontWeight.w900,
+                                            color: AppDesignSystem.emerald800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(width: 8),
                                     Row(
                                       children: [

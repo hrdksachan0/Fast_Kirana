@@ -15,7 +15,7 @@ export default function DeliveryHistoryView({
   todayDeliveries,
   deliveredOrders,
 }: DeliveryHistoryViewProps) {
-  const target = 5
+  const target = 10
   const progress = Math.min((todayDeliveries / target) * 100, 100)
   const radius = 32
   const circumference = 2 * Math.PI * radius
@@ -70,7 +70,7 @@ export default function DeliveryHistoryView({
               <span className="text-[10px] font-black uppercase tracking-wider text-text-muted">
                 Daily Goal
               </span>
-              {todayDeliveries >= 3 && todayDeliveries < target && (
+              {todayDeliveries >= 5 && todayDeliveries < target && (
                 <span className="bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Flame className="h-2.5 w-2.5" />
                   <span>Streak!</span>
@@ -82,16 +82,16 @@ export default function DeliveryHistoryView({
               <div className="space-y-0.5">
                 <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                   <Trophy className="h-3.5 w-3.5" />
-                  <span>Milestone Bonus Achieved!</span>
+                  <span>10 Orders Milestone Achieved!</span>
                 </p>
                 <p className="text-[11px] text-text-secondary font-medium">Great hustle today! 🎉</p>
               </div>
             ) : (
               <div className="space-y-0.5">
                 <p className="text-xs font-black text-text-primary">
-                  {target - todayDeliveries} more to reach daily bonus
+                  {target - todayDeliveries} more to reach 10-order daily goal
                 </p>
-                <p className="text-[10px] text-text-secondary font-medium">Keep delivering, you're almost there!</p>
+                <p className="text-[10px] text-text-secondary font-medium">Combined orders count as 1 trip • Keep going!</p>
               </div>
             )}
           </div>
