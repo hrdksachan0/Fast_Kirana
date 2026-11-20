@@ -1693,15 +1693,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           break;
 
         case 'bento_fresh_market':
-          if (_isGrocerySelected) {
-            slivers.add(
-              const SliverToBoxAdapter(
-                child: SingleCampaignBentoCard(
-                  type: CampaignCardType.freshMarket,
-                ),
-              ),
-            );
-          }
+          // Hidden by design (bloom card)
           break;
 
         case 'bento_seasonal':
@@ -1729,15 +1721,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           break;
 
         case 'bento_value_picks':
-          if (_isGrocerySelected) {
-            slivers.add(
-              const SliverToBoxAdapter(
-                child: SingleCampaignBentoCard(
-                  type: CampaignCardType.valuePicks,
-                ),
-              ),
-            );
-          }
+          // Hidden by design (value card)
           break;
 
         case 'campaign_bento':

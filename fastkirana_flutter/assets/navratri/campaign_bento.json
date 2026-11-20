@@ -36,7 +36,7 @@
       "accentColor": "#15803D",
       "textColor": "#0F172A",
       "heroImage": "bloom-panoramic-header.svg",
-      "enabled": true,
+      "enabled": false,
       "tabs": [
         { "id": "sabzi", "label": "Sabzi", "icon": "🍅" },
         { "id": "fruits", "label": "Fruits", "icon": "🥭" },
@@ -88,7 +88,7 @@
       "textColor": "#78350F",
       "heroImage": "pack-value-hero.webp",
       "specialRibbon": "Better value",
-      "enabled": true,
+      "enabled": false,
       "tabs": [],
       "items": [
         {
