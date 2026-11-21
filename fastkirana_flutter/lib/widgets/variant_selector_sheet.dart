@@ -373,129 +373,60 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                         ),
                         const SizedBox(height: 10),
 
-                        // 2-Column / 3-Column Adaptive Grid of Cards (Same as Zepto / Grocery)
+                        // 2-Column or Horizontal Carousel Slider
                         LayoutBuilder(
                           builder: (ctx, constraints) {
-                            final cols = variants.length == 3 ? 3 : 2;
-                            final spacing = cols == 3 ? 8.0 : 12.0;
-                            final cardWidth = (constraints.maxWidth - (cols - 1) * spacing) / cols;
+                            if (variants.length <= 2) {
+                              const spacing = 12.0;
+                              final cardWidth = variants.length == 1
+                                  ? (constraints.maxWidth - spacing) / 2
+                                  : (constraints.maxWidth - (variants.length - 1) * spacing) / variants.length;
 
-                            return Wrap(
-                              spacing: spacing,
-                              runSpacing: 10,
-                              children: List.generate(variants.length, (index) {
-                                final v = variants[index];
-                                final isSelected = index == _selectedVariantIndex;
-                                final isSoldOut = v.stock <= 0;
-                                final isCompact = cardWidth < 125;
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: List.generate(variants.length, (index) {
+                                  final v = variants[index];
+                                  final isSelected = index == _selectedVariantIndex;
+                                  final isSoldOut = v.stock <= 0;
+                                  final isCompact = cardWidth < 125;
 
-                                return SizedBox(
-                                  width: cardWidth,
-                                  child: InkWell(
-                                    onTap: isSoldOut
-                                        ? null
-                                        : () {
-                                            HapticFeedback.selectionClick();
-                                            setState(() {
-                                              _selectedVariantIndex = index;
-                                            });
-                                          },
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      padding: EdgeInsets.all(isCompact ? 8 : 12),
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? const Color(0xFFFFF9FA) : Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? const Color(0xFFE20A22)
-                                              : const Color(0xFFE2E8F0),
-                                          width: isSelected ? 1.8 : 1.0,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: isSelected
-                                                ? const Color(0x1AE20A22)
-                                                : const Color(0x06000000),
-                                            blurRadius: isSelected ? 6 : 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              _VegNonVegBadge(isVeg: isVeg, size: isCompact ? 13 : 15),
-                                              Container(
-                                                width: isCompact ? 16 : 18,
-                                                height: isCompact ? 16 : 18,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: isSoldOut
-                                                        ? const Color(0xFFE2E8F0)
-                                                        : (isSelected
-                                                            ? const Color(0xFFE20A22)
-                                                            : const Color(0xFF94A3B8)),
-                                                    width: isSelected ? 2 : 1.2,
-                                                  ),
-                                                ),
-                                                child: isSelected && !isSoldOut
-                                                    ? Center(
-                                                        child: Container(
-                                                          width: isCompact ? 8 : 9,
-                                                          height: isCompact ? 8 : 9,
-                                                          decoration: const BoxDecoration(
-                                                            color: Color(0xFFE20A22),
-                                                            shape: BoxShape.circle,
-                                                          ),
-                                                        ),
-                                                      )
-                                                    : null,
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            v.name,
-                                            style: GoogleFonts.inter(
-                                              fontSize: isCompact ? 12 : 13.5,
-                                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
-                                              color: isSoldOut
-                                                  ? const Color(0xFF9CA3AF)
-                                                  : const Color(0xFF0F172A),
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          if (isSoldOut)
-                                            Text(
-                                              'Sold Out',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                color: const Color(0xFFDC2626),
-                                              ),
-                                            )
-                                          else
-                                            Text(
-                                              '₹${v.price.toInt()}',
-                                              style: GoogleFonts.inter(
-                                                fontSize: isCompact ? 13.5 : 15,
-                                                fontWeight: FontWeight.w900,
-                                                color: const Color(0xFF0F172A),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
+                                  return Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(right: index < variants.length - 1 ? spacing : 0),
+                                      child: _buildFoodVariantItem(context, v, index, isSelected, isSoldOut, isCompact, isVeg),
                                     ),
-                                  ),
-                                );
-                              }),
+                                  );
+                                }),
+                              );
+                            }
+
+                            // 3+ variants: Horizontal Carousel / Slider with BIG cards
+                            final double cardWidth = (constraints.maxWidth * 0.44).clamp(145.0, 165.0);
+                            const double spacing = 10.0;
+
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: List.generate(variants.length, (index) {
+                                    final v = variants[index];
+                                    final isSelected = index == _selectedVariantIndex;
+                                    final isSoldOut = v.stock <= 0;
+                                    final isCompact = cardWidth < 125;
+
+                                    return Padding(
+                                      padding: EdgeInsets.only(right: index < variants.length - 1 ? spacing : 0),
+                                      child: SizedBox(
+                                        width: cardWidth,
+                                        child: _buildFoodVariantItem(context, v, index, isSelected, isSoldOut, isCompact, isVeg),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -814,6 +745,113 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
     );
   }
 
+  Widget _buildFoodVariantItem(
+    BuildContext context,
+    ProductVariant v,
+    int index,
+    bool isSelected,
+    bool isSoldOut,
+    bool isCompact,
+    bool isVeg,
+  ) {
+    return InkWell(
+      onTap: isSoldOut
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              setState(() {
+                _selectedVariantIndex = index;
+              });
+            },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: EdgeInsets.all(isCompact ? 8 : 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF9FA) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFE20A22) : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.8 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected ? const Color(0x1AE20A22) : const Color(0x06000000),
+              blurRadius: isSelected ? 6 : 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _VegNonVegBadge(isVeg: isVeg, size: isCompact ? 13 : 15),
+                Container(
+                  width: isCompact ? 16 : 18,
+                  height: isCompact ? 16 : 18,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSoldOut
+                          ? const Color(0xFFE2E8F0)
+                          : (isSelected ? const Color(0xFFE20A22) : const Color(0xFF94A3B8)),
+                      width: isSelected ? 2 : 1.2,
+                    ),
+                  ),
+                  child: isSelected && !isSoldOut
+                      ? Center(
+                          child: Container(
+                            width: isCompact ? 8 : 9,
+                            height: isCompact ? 8 : 9,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE20A22),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              v.name,
+              style: GoogleFonts.inter(
+                fontSize: isCompact ? 12 : 13.5,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                color: isSoldOut ? const Color(0xFF9CA3AF) : const Color(0xFF0F172A),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            if (isSoldOut)
+              Text(
+                'Sold Out',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFDC2626),
+                ),
+              )
+            else
+              Text(
+                '₹${v.price.toInt()}',
+                style: GoogleFonts.inter(
+                  fontSize: isCompact ? 13.5 : 15,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // =========================================================================
   // 2. GROCERY PACK SIZE SELECTOR SHEET (Zepto / Blinkit / Image 2 UI)
   // =========================================================================
@@ -952,29 +990,66 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 ),
               ),
 
-              // 2-Column or 3-Column Adaptive Cards Grid (Safe-side for 3+ variants)
+              // Adaptive Cards Layout:
+              // - 1 or 2 variants: 2 wide columns fitting the screen width
+              // - 3+ variants: Horizontal sliding carousel with BIG cards (~156px) so packshots and text stay large & bold
               Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: LayoutBuilder(
-                    builder: (ctx, constraints) {
-                      // Adaptive: If 3 variants, use 3 columns; otherwise 2 columns
-                      final cols = variants.length == 3 ? 3 : 2;
-                      final spacing = cols == 3 ? 8.0 : 12.0;
-                      final cardWidth = (constraints.maxWidth - (cols - 1) * spacing) / cols;
+                child: LayoutBuilder(
+                  builder: (ctx, constraints) {
+                    if (variants.length <= 2) {
+                      const spacing = 12.0;
+                      final availableWidth = constraints.maxWidth - 32;
+                      final cardWidth = variants.length == 1
+                          ? availableWidth * 0.52
+                          : (availableWidth - (variants.length - 1) * spacing) / variants.length;
 
-                      return Wrap(
-                        spacing: spacing,
-                        runSpacing: 12,
-                        children: variants.map((v) {
-                          return SizedBox(
-                            width: cardWidth,
-                            child: _buildZeptoVariantCard(context, v, isStoreOpen, cardWidth: cardWidth),
-                          );
-                        }).toList(),
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            for (int i = 0; i < variants.length; i++) ...[
+                              if (i > 0) const SizedBox(width: spacing),
+                              SizedBox(
+                                width: cardWidth,
+                                child: _buildZeptoVariantCard(context, variants[i], isStoreOpen, cardWidth: cardWidth),
+                              ),
+                            ],
+                          ],
+                        ),
                       );
-                    },
-                  ),
+                    }
+
+                    // 3+ variants: Horizontal sliding carousel with BIG, spacious cards
+                    // Card width ~156px allows 2 full cards + peeking 3rd card on 360-412px devices
+                    final double cardWidth = (constraints.maxWidth * 0.44).clamp(152.0, 168.0);
+                    const double spacing = 12.0;
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (int i = 0; i < variants.length; i++) ...[
+                              if (i > 0) const SizedBox(width: spacing),
+                              SizedBox(
+                                width: cardWidth,
+                                child: _buildZeptoVariantCard(
+                                  context,
+                                  variants[i],
+                                  isStoreOpen,
+                                  cardWidth: cardWidth,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
 

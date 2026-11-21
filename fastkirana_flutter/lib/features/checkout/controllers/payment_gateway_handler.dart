@@ -199,7 +199,7 @@ class PaymentGatewayHandler {
           final options = {
             'key': (keyId.isNotEmpty && !keyId.contains('placeholder')) ? keyId : AppConfig.razorpayKeyId,
             'amount': (amount * 100).toInt(),
-            'name': 'FastMinute',
+            'name': 'FastMinute Express',
             'order_id': rzpOrderId,
             'description': 'Fresh Grocery & Food Delivery',
             'timeout': 180,
@@ -208,7 +208,10 @@ class PaymentGatewayHandler {
               if (hasValidEmail) 'email': customerEmail.trim(),
             },
             'theme': {
-              'color': '#00A344',
+              'color': '#E20A22',
+            },
+            'modal': {
+              'confirm_close': true,
             },
             'send_sms_hash': true,
           };
@@ -281,7 +284,7 @@ class PaymentGatewayHandler {
         final options = {
           'key': (keyId.isNotEmpty && !keyId.contains('placeholder')) ? keyId : AppConfig.razorpayKeyId,
           'amount': (amount * 100).toInt(),
-          'name': 'FastMinute',
+          'name': 'FastMinute Express',
           'order_id': rzpOrderId,
           'description': 'Fresh Grocery & Food Delivery',
           'timeout': 180,
@@ -290,7 +293,10 @@ class PaymentGatewayHandler {
             if (hasValidEmail) 'email': customerEmail.trim(),
           },
           'theme': {
-            'color': '#00A344',
+            'color': '#E20A22',
+          },
+          'modal': {
+            'confirm_close': true,
           },
           'send_sms_hash': true,
         };

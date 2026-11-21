@@ -261,6 +261,40 @@ async def verify_razorpay_payment(
             except Exception as e:
                 logger.warning(f"Could not fetch payment {rzp_payment_id} via HTTP: {e}")
 
+    # 2b. Authoritative Fallback by rzp_order_id: If payment_id was not returned or not captured yet, query order's payments from Razorpay
+    if not is_valid and rzp_order_id and rzp_order_id.startswith("order_"):
+        if client:
+            try:
+                order_payments = client.order.payments(rzp_order_id)
+                items = order_payments.get("items") or []
+                for p in items:
+                    if p.get("status") in ("captured", "authorized"):
+                        is_valid = True
+                        rzp_payment_id = p.get("id")
+                        payment_amount = float(p.get("amount", 0)) / 100.0
+                        logger.info(f"✅ Verified payment for order {rzp_order_id} via order.payments fetch (paymentId={rzp_payment_id}, amount=₹{payment_amount})")
+                        break
+            except Exception as ord_p_err:
+                logger.warning(f"Could not fetch payments for order {rzp_order_id}: {ord_p_err}")
+        else:
+            import httpx
+            auth = (settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as http_client:
+                    resp = await http_client.get(f"https://api.razorpay.com/v1/orders/{rzp_order_id}/payments", auth=auth)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        items = data.get("items") or []
+                        for p in items:
+                            if p.get("status") in ("captured", "authorized"):
+                                is_valid = True
+                                rzp_payment_id = p.get("id")
+                                payment_amount = float(p.get("amount", 0)) / 100.0
+                                logger.info(f"✅ Verified payment for order {rzp_order_id} via HTTP order/payments (paymentId={rzp_payment_id})")
+                                break
+            except Exception as e:
+                logger.warning(f"Could not fetch payments for order {rzp_order_id} via HTTP: {e}")
+
     if not is_valid:
         logger.error(f"Razorpay verification failed for order '{rzp_order_id}', payment '{rzp_payment_id}'")
         raise HTTPException(status_code=400, detail="Razorpay payment was not completed or verification failed.")

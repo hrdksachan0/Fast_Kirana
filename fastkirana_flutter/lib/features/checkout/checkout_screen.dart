@@ -487,8 +487,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 0. Pending Payment Recovery Banner
-                      if (checkoutState.pendingCashfreeOrderId != null &&
+                      // 0. Pending Payment Recovery Banner (Hidden during active payment attempt)
+                      if (!checkoutState.isPlacingOrder &&
+                          checkoutState.pendingCashfreeOrderId != null &&
                           checkoutState.pendingCashfreeOrderId!.isNotEmpty &&
                           (checkoutState.pendingGrandTotal == null ||
                               (checkoutState.pendingGrandTotal! - grandTotal).abs() < 1.0)) ...[

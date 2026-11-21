@@ -225,7 +225,7 @@ class Order {
   }
 
   String get displayId {
-    if (readableId != null && readableId!.trim().isNotEmpty) {
+    if (readableId != null && readableId!.trim().isNotEmpty && !readableId!.startsWith('order_') && !readableId!.startsWith('cf_')) {
       final clean = readableId!.replaceAll('FK-', '').replaceAll('#', '').trim();
       if (clean.isNotEmpty) return clean;
     }
@@ -235,6 +235,12 @@ class Order {
       if (digits.length >= 4) return digits.substring(digits.length - 4);
       return clean;
     }
+    if (id.startsWith('order_') || id.startsWith('ord_') || id.startsWith('cf_')) {
+      final digits = id.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length >= 4) return digits.substring(digits.length - 4);
+    }
+    return id.length > 8 ? id.substring(id.length - 6).toUpperCase() : id;
+  }
     final digits = id.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.length >= 4) {
       return digits.substring(digits.length - 4);

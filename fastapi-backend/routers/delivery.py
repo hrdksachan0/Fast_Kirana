@@ -433,7 +433,9 @@ async def _get_or_create_razorpay_doorstep_qr(
     combined_id: Optional[str],
     sub_order_ids: List[str],
     key_id: Optional[str] = None,
-    key_secret: Optional[str] = None
+    key_secret: Optional[str] = None,
+    customer_name: Optional[str] = None,
+    customer_phone: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Creates or reuses cached single-use Razorpay Dynamic UPI QR code with locked order amount.
@@ -479,6 +481,8 @@ async def _get_or_create_razorpay_doorstep_qr(
             "order_id": str(order_id)[:40],
             "readable_id": str(base_display)[:40],
             "combined_id": str(combined_id or "")[:40],
+            "customer_name": str(customer_name or "")[:40],
+            "customer_phone": str(customer_phone or "")[:15],
             "purpose": "doorstep_delivery"
         }
     }
@@ -535,12 +539,26 @@ async def get_doorstep_qr(
     """
     require_delivery_or_admin(current_user)
 
-    stmt = select(Order).where(or_(Order.id == id, Order.readableId == id))
+    from sqlalchemy.orm import joinedload
+    stmt = (
+        select(Order)
+        .options(joinedload(Order.user), joinedload(Order.address))
+        .where(or_(Order.id == id, Order.readableId == id))
+    )
     res = await db.execute(stmt)
     order = res.scalars().first()
 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    cust_name = ""
+    cust_phone = ""
+    if order.user:
+        cust_name = str(order.user.name or "").strip()
+        cust_phone = str(order.user.phone or "").strip()
+    if not cust_phone and order.address:
+        cust_name = cust_name or str(order.address.name or "").strip()
+        cust_phone = str(order.address.phone or "").strip()
 
     # Detect companion orders if this is part of a combined order (e.g. Grocery + Restaurant)
     companions = []
@@ -604,7 +622,9 @@ async def get_doorstep_qr(
         combined_id=order.combinedId,
         sub_order_ids=sub_order_ids,
         key_id=db_rzp_key,
-        key_secret=db_rzp_sec
+        key_secret=db_rzp_sec,
+        customer_name=cust_name,
+        customer_phone=cust_phone
     )
 
     # 3. Active In-Flight Verification: If order is still UNPAID, check if Razorpay QR was paid!
