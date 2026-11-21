@@ -216,8 +216,12 @@ async def send_fcm_notification(
             default_sound = True
             default_vibrate = True
 
-        # Derive universal collapse_key and tag from order identifier so Android updates exactly ONE single card
-        collapse_id = get_universal_order_collapse_id(data_str)
+        # Blinkit/Zepto standard: All customer live tracking updates share the exact same tag
+        # so Android OS mutates a single persistent card in-place instead of stacking multiple cards.
+        if is_status:
+            collapse_id = "fastminute_live_tracking"
+        else:
+            collapse_id = get_universal_order_collapse_id(data_str)
 
         message = messaging.MulticastMessage(
             tokens=clean_tokens,
@@ -333,8 +337,12 @@ async def send_fcm_topic_notification(
             default_sound = True
             default_vibrate = True
 
-        # Derive universal collapse_key and tag from order identifier so Android updates exactly ONE single card
-        collapse_id = get_universal_order_collapse_id(data_str)
+        # Blinkit/Zepto standard: All customer live tracking updates share the exact same tag
+        # so Android OS mutates a single persistent card in-place instead of stacking multiple cards.
+        if is_status:
+            collapse_id = "fastminute_live_tracking"
+        else:
+            collapse_id = get_universal_order_collapse_id(data_str)
 
         message = messaging.Message(
             topic=clean_topic,

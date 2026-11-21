@@ -44,28 +44,30 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final prefRole = prefs.getString('user_role');
     final secureRole = await SecureStorage.read('user_role');
     final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
+    final isExplicitCustomer = userRole == 'CUSTOMER' || userRole == 'USER';
 
     final prefPhone = prefs.getString('user_phone') ?? '';
     final securePhone = await SecureStorage.read('user_phone') ?? '';
     final rawPhone = (prefPhone.isNotEmpty ? prefPhone : securePhone).replaceAll(RegExp(r'[^0-9]'), '');
     final cleanPhone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
-    final isAdminPhone = cleanPhone == '7054470303';
+    final isAdminPhone = cleanPhone == '7054470303' && !isExplicitCustomer;
 
     isStaff = isAdminPhone ||
-        userRole == 'ADMIN' ||
-        userRole == 'SUPER_ADMIN' ||
-        userRole == 'STORE_MANAGER' ||
-        userRole == 'STAFF' ||
-        userRole == 'RESTAURANT' ||
-        userRole == 'RESTAURANT_OWNER' ||
-        userRole == 'CHEF' ||
-        userRole == 'VENDOR' ||
-        userRole == 'STORE_OWNER' ||
-        userRole == 'DELIVERY' ||
-        userRole == 'PICKER' ||
-        userRole == 'RIDER' ||
-        userRole == 'DELIVERY_PARTNER' ||
-        userRole == 'DRIVER';
+        (!isExplicitCustomer && (
+            userRole == 'ADMIN' ||
+            userRole == 'SUPER_ADMIN' ||
+            userRole == 'STORE_MANAGER' ||
+            userRole == 'STAFF' ||
+            userRole == 'RESTAURANT' ||
+            userRole == 'RESTAURANT_OWNER' ||
+            userRole == 'CHEF' ||
+            userRole == 'VENDOR' ||
+            userRole == 'STORE_OWNER' ||
+            userRole == 'DELIVERY' ||
+            userRole == 'PICKER' ||
+            userRole == 'RIDER' ||
+            userRole == 'DELIVERY_PARTNER' ||
+            userRole == 'DRIVER'));
 
     final isStaffOrAdminMessage =
         data['screen'] == 'admin-orders' ||
@@ -189,6 +191,9 @@ title.toString().contains('🛵') ||
   // BEFORE checking `notification != null`, because Android OS displays `message.notification` directly.
   if (orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' || orderStatus == 'FAILED' || orderStatus == 'DELIVERED') {
     try {
+      final plugin = FlutterLocalNotificationsPlugin();
+      await plugin.cancel(NotificationService.LIVE_TRACKING_NOTIF_ID, tag: NotificationService.LIVE_TRACKING_TAG);
+      await plugin.cancel(NotificationService.LIVE_TRACKING_NOTIF_ID);
       final rawOid = (data['orderId'] ?? data['id'] ?? '').toString().trim();
       final rawRid = (data['readableId'] ?? '').toString().trim();
       if (rawOid.isNotEmpty || rawRid.isNotEmpty) {
@@ -202,13 +207,21 @@ title.toString().contains('🛵') ||
     } catch (_) {}
   }
 
-  final isDeliveryRiderAlert = isStaff && (data['type'] == 'DELIVERY_ASSIGNED' ||
+  // Explicit customer tracking notifications must NEVER trigger loud alarms or buzzers
+  final isCustomerNotification =
+      data['role'] == 'CUSTOMER' ||
+      data['screen'] == 'order-tracking' ||
+      data['isLiveTracking'] == 'true' ||
+      data['type'] == 'ORDER_PLACED' ||
+      data['type'] == 'ORDER_STATUS_UPDATE';
+
+  final isDeliveryRiderAlert = !isCustomerNotification && isStaff && (data['type'] == 'DELIVERY_ASSIGNED' ||
       title.toString().contains('🛵') ||
       title.toString().toLowerCase().contains('delivery assigned') ||
       ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
           (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED')));
 
-  final isOrderAlert = isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
+  final isOrderAlert = !isCustomerNotification && isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
       data['type'] == 'NEW_ORDER' ||
       data['type'] == 'VENDOR_NEW_ORDER' ||
       orderStatus == 'PENDING' ||
@@ -232,6 +245,7 @@ title.toString().contains('🛵') ||
       title.toString().toLowerCase().contains('awaiting approval'))));
 
   final isOrderStatusUpdate = !isCancelledOrTerminal && !isOrderAlert && (
+      isCustomerNotification ||
       !isStaff ||
       orderStatus == 'OUT_FOR_DELIVERY' ||
       orderStatus == 'DISPATCHED' ||
@@ -302,10 +316,15 @@ title.toString().contains('🛵') ||
       const InitializationSettings initSettings = InitializationSettings(android: androidInit);
       await localNotifications.initialize(initSettings);
 
-      final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-          ? NotificationService.getOrderNotifId(cleanOrderId)
-          : (message.messageId?.hashCode ?? message.hashCode);
-      final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null;
+      // Blinkit/Zepto Standard: Single dedicated slot for customer live tracking
+      final notifId = isOrderStatusUpdate
+          ? NotificationService.LIVE_TRACKING_NOTIF_ID
+          : ((cleanOrderId != null && cleanOrderId.isNotEmpty)
+              ? NotificationService.getOrderNotifId(cleanOrderId)
+              : (message.messageId?.hashCode ?? message.hashCode));
+      final tag = isOrderStatusUpdate
+          ? NotificationService.LIVE_TRACKING_TAG
+          : ((cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null);
 
       // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
       // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
@@ -426,6 +445,11 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
+  /// Blinkit / Zepto Standard: Fixed single notification ID & tag for Customer Live Tracking.
+  /// Guarantees Android OS will ONLY ever display ONE live order tracking card at any given time.
+  static const int LIVE_TRACKING_NOTIF_ID = 88888;
+  static const String LIVE_TRACKING_TAG = 'fastminute_live_tracking';
+
   /// Central check if current user is confirmed staff / admin / rider
   static Future<bool> isStaffUser() async {
     try {
@@ -433,6 +457,11 @@ class NotificationService {
       final prefRole = prefs.getString('user_role');
       final secureRole = await SecureStorage.read('user_role');
       final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
+
+      // If user is explicitly logged in as a customer/user, they are NOT staff!
+      if (userRole == 'CUSTOMER' || userRole == 'USER') {
+        return false;
+      }
 
       final prefPhone = prefs.getString('user_phone') ?? '';
       final securePhone = await SecureStorage.read('user_phone') ?? '';
@@ -954,28 +983,30 @@ class NotificationService {
       final prefRole = prefs.getString('user_role');
       final secureRole = await SecureStorage.read('user_role');
       final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
+      final isExplicitCustomer = userRole == 'CUSTOMER' || userRole == 'USER';
 
       final prefPhone = prefs.getString('user_phone') ?? '';
       final securePhone = await SecureStorage.read('user_phone') ?? '';
       final rawPhone = (prefPhone.isNotEmpty ? prefPhone : securePhone).replaceAll(RegExp(r'[^0-9]'), '');
       final cleanPhone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
-      final isAdminPhone = cleanPhone == '7054470303';
+      final isAdminPhone = cleanPhone == '7054470303' && !isExplicitCustomer;
 
       final isStaff = isAdminPhone ||
-          userRole == 'ADMIN' ||
-          userRole == 'SUPER_ADMIN' ||
-          userRole == 'STORE_MANAGER' ||
-          userRole == 'STAFF' ||
-          userRole == 'RESTAURANT' ||
-          userRole == 'RESTAURANT_OWNER' ||
-          userRole == 'CHEF' ||
-          userRole == 'VENDOR' ||
-          userRole == 'STORE_OWNER' ||
-          userRole == 'DELIVERY' ||
-          userRole == 'PICKER' ||
-          userRole == 'RIDER' ||
-          userRole == 'DELIVERY_PARTNER' ||
-          userRole == 'DRIVER';
+          (!isExplicitCustomer && (
+              userRole == 'ADMIN' ||
+              userRole == 'SUPER_ADMIN' ||
+              userRole == 'STORE_MANAGER' ||
+              userRole == 'STAFF' ||
+              userRole == 'RESTAURANT' ||
+              userRole == 'RESTAURANT_OWNER' ||
+              userRole == 'CHEF' ||
+              userRole == 'VENDOR' ||
+              userRole == 'STORE_OWNER' ||
+              userRole == 'DELIVERY' ||
+              userRole == 'PICKER' ||
+              userRole == 'RIDER' ||
+              userRole == 'DELIVERY_PARTNER' ||
+              userRole == 'DRIVER'));
 
       final isStaffOrAdminMessage =
           data['screen'] == 'admin-orders' ||
@@ -1156,13 +1187,21 @@ title.toString().contains('🛵') ||
       return;
     }
 
-    final isDeliveryRiderAlert = isStaff && (data['type'] == 'DELIVERY_ASSIGNED' ||
+    // Explicit customer tracking notifications must NEVER trigger loud alarms or buzzers
+    final isCustomerNotification =
+        data['role'] == 'CUSTOMER' ||
+        data['screen'] == 'order-tracking' ||
+        data['isLiveTracking'] == 'true' ||
+        data['type'] == 'ORDER_PLACED' ||
+        data['type'] == 'ORDER_STATUS_UPDATE';
+
+    final isDeliveryRiderAlert = !isCustomerNotification && isStaff && (data['type'] == 'DELIVERY_ASSIGNED' ||
         title.toString().contains('🛵') ||
         title.toString().toLowerCase().contains('delivery assigned') ||
         ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
             (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED')));
 
-    final isOrderAlert = isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
+    final isOrderAlert = !isCustomerNotification && isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
         data['type'] == 'NEW_ORDER' ||
         data['type'] == 'VENDOR_NEW_ORDER' ||
         orderStatus == 'PENDING' ||
@@ -1187,6 +1226,7 @@ title.toString().contains('🛵') ||
         title.toString().toLowerCase().contains('awaiting approval'))));
 
     final isOrderStatusUpdate = !isCancelledOrTerminal && !isOrderAlert && (
+        isCustomerNotification ||
         !isStaff ||
         orderStatus == 'OUT_FOR_DELIVERY' ||
         orderStatus == 'DISPATCHED' ||
@@ -1209,12 +1249,17 @@ title.toString().contains('🛵') ||
         body.toString().toLowerCase().contains('on the way') ||
         body.toString().toLowerCase().contains('arriving'));
 
-    final notifId = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-        ? NotificationService.getOrderNotifId(cleanOrderId)
-        : (isCartAlert ? 8888 : ('${title}_$body'.hashCode & 0x7FFFFFFF));
-    final tag = (cleanOrderId != null && cleanOrderId.isNotEmpty)
-        ? 'order_$cleanOrderId'
-        : (isCartAlert ? 'cart_alert' : 'general_alert');
+    // Blinkit/Zepto Standard: Single dedicated slot for customer live tracking
+    final notifId = isOrderStatusUpdate
+        ? NotificationService.LIVE_TRACKING_NOTIF_ID
+        : ((cleanOrderId != null && cleanOrderId.isNotEmpty)
+            ? NotificationService.getOrderNotifId(cleanOrderId)
+            : (isCartAlert ? 8888 : ('${title}_$body'.hashCode & 0x7FFFFFFF)));
+    final tag = isOrderStatusUpdate
+        ? NotificationService.LIVE_TRACKING_TAG
+        : ((cleanOrderId != null && cleanOrderId.isNotEmpty)
+            ? 'order_$cleanOrderId'
+            : (isCartAlert ? 'cart_alert' : 'general_alert'));
 
     // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
     // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
@@ -1381,8 +1426,9 @@ title.toString().contains('🛵') ||
           : (order.displayId.isNotEmpty ? order.displayId : order.id),
     );
     final displayTag = baseNum.isNotEmpty ? '#$baseNum' : '#ORDER';
-    final notifTag = baseNum.isNotEmpty ? 'order_$baseNum' : 'order_${order.id}';
-    final int notifId = NotificationService.getOrderNotifId(order.id, readableId: order.readableId);
+    // Blinkit/Zepto Standard: Unified persistent Live Activity tag & ID
+    final notifTag = NotificationService.LIVE_TRACKING_TAG;
+    final int notifId = NotificationService.LIVE_TRACKING_NOTIF_ID;
 
     if (isTerminal) {
       _lastLiveActivityOrderId = null;
@@ -1595,6 +1641,11 @@ title.toString().contains('🛵') ||
   /// Clears ongoing lock screen tracking widget once order is delivered or cancelled
   Future<void> clearLiveOrderActivity(String orderId, {String? readableId}) async {
     if (kIsWeb) return;
+    try {
+      final p = _localNotifications ?? FlutterLocalNotificationsPlugin();
+      await p.cancel(LIVE_TRACKING_NOTIF_ID, tag: LIVE_TRACKING_TAG);
+      await p.cancel(LIVE_TRACKING_NOTIF_ID);
+    } catch (_) {}
     await clearOrderNotificationsById(
       orderId,
       readableId: readableId,

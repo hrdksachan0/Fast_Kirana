@@ -79,35 +79,17 @@ export function buildOrderFcmPayload(
   data: Record<string, string>,
   ttlSeconds = 600,
 ) {
-  const collapseId = getUniversalOrderCollapseId(data.readableId, data.orderId)
-
-  const orderStatus = (data.status || data.orderStatus || '').toUpperCase()
-  const isCancelledOrTerminal =
-    orderStatus === 'CANCELLED' ||
-    orderStatus === 'REJECTED' ||
-    orderStatus === 'FAILED' ||
-    orderStatus === 'REFUNDED' ||
-    title.toLowerCase().includes('cancel') ||
-    body.toLowerCase().includes('cancel')
-
-  const isOrderAlert =
-    !isCancelledOrTerminal &&
-    (data.screen === 'restaurant-console' ||
-      data.screen === 'admin-orders' ||
-      data.screen === 'delivery' ||
-      data.screen === 'picker' ||
-      Boolean(data.restaurantId) ||
-      data.type === 'NEW_ORDER' ||
-      title.includes('🛎️') ||
-      title.includes('💳') ||
-      title.includes('👨‍🍳'))
-
   const isCustomerTracking =
     !isOrderAlert &&
     (data.role === 'CUSTOMER' ||
       data.screen === 'order-tracking' ||
       data.isLiveTracking === 'true' ||
       Boolean(data.readableId || data.orderId))
+
+  // Blinkit/Zepto standard: Unified live tracking tag prevents stacking multiple cards
+  const collapseId = isCustomerTracking
+    ? 'fastminute_live_tracking'
+    : getUniversalOrderCollapseId(data.readableId, data.orderId)
 
   const channelId = isOrderAlert
     ? 'fastminute_order_alarm_v3'
