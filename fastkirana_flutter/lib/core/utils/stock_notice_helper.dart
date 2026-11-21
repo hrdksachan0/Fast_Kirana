@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_haptics.dart';
 
 class StockNoticeHelper {
   StockNoticeHelper._();
@@ -13,7 +13,7 @@ class StockNoticeHelper {
     bool hasFloatingCart = true,
     String? customMessage,
   }) {
-    HapticFeedback.lightImpact();
+    AppHaptics.alertPulse();
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
     messenger.hideCurrentSnackBar();

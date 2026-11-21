@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,6 +12,7 @@ import '../data/models/product.dart';
 import '../providers/cart_provider.dart';
 import '../providers/store_settings_provider.dart';
 import '../features/products/product_detail_screen.dart';
+import '../core/utils/app_haptics.dart';
 
 // Re-export extracted modular subcomponents for seamless backward compatibility
 export 'product/product_image_with_badge.dart';
@@ -217,7 +217,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           onTapUp: (_) => setState(() => _isPressed = false),
           onTapCancel: () => setState(() => _isPressed = false),
           onTap: widget.onTap ?? () {
-            HapticFeedback.lightImpact();
+            AppHaptics.subtleTap();
             Navigator.push(context, FadeSlideRoute(page: ProductDetailScreen(product: product)));
           },
           child: AnimatedScale(
@@ -315,19 +315,23 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               ),
                             ),
                             SizedBox(width: s(4)),
-                            AddToCartButton(
-                              scaffoldContext: context,
-                              product: product,
-                              inCartQty: inCartQty,
-                              hasVariants: hasOptions,
-                              isOutOfStock: isOutOfStock,
-                              isTimingClosed: !timingStatus.isAvailableNow,
-                              nextSlot: timingStatus.nextAvailableTimeStr,
-                              isStoreOpen: isStoreOpen,
-                              isFood: isFood,
-                              gradientColors: gradientColors,
-                              primaryColor: primaryColor,
-                              uiScale: _uiScale,
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () {}, // Blocks touches from leaking through to parent card
+                              child: AddToCartButton(
+                                scaffoldContext: context,
+                                product: product,
+                                inCartQty: inCartQty,
+                                hasVariants: hasOptions,
+                                isOutOfStock: isOutOfStock,
+                                isTimingClosed: !timingStatus.isAvailableNow,
+                                nextSlot: timingStatus.nextAvailableTimeStr,
+                                isStoreOpen: isStoreOpen,
+                                isFood: isFood,
+                                gradientColors: gradientColors,
+                                primaryColor: primaryColor,
+                                uiScale: _uiScale,
+                              ),
                             ),
                           ],
                         ),
@@ -410,24 +414,31 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                                 child: WishlistButton(product: product, s: _uiScale),
                               ),
 
-                              // Bottom-Right Floating Green '+' / Stepper Button (Zepto Style)
+                              // Bottom-Right Floating Green '+' / Stepper Button (Zepto Style) with Touch Isolation Shield
                               Positioned(
-                                bottom: s(4),
-                                right: s(4),
-                                child: AddToCartButton(
-                                  scaffoldContext: context,
-                                  product: product,
-                                  inCartQty: inCartQty,
-                                  hasVariants: hasOptions,
-                                  isOutOfStock: isOutOfStock,
-                                  isTimingClosed: !timingStatus.isAvailableNow,
-                                  nextSlot: timingStatus.nextAvailableTimeStr,
-                                  isStoreOpen: isStoreOpen,
-                                  isFood: isFood,
-                                  gradientColors: gradientColors,
-                                  primaryColor: primaryColor,
-                                  uiScale: _uiScale,
-                                  isZeptoStyle: true,
+                                bottom: s(2),
+                                right: s(2),
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {}, // Defense in depth: shield against opening product details
+                                  child: Padding(
+                                    padding: EdgeInsets.all(s(2)),
+                                    child: AddToCartButton(
+                                      scaffoldContext: context,
+                                      product: product,
+                                      inCartQty: inCartQty,
+                                      hasVariants: hasOptions,
+                                      isOutOfStock: isOutOfStock,
+                                      isTimingClosed: !timingStatus.isAvailableNow,
+                                      nextSlot: timingStatus.nextAvailableTimeStr,
+                                      isStoreOpen: isStoreOpen,
+                                      isFood: isFood,
+                                      gradientColors: gradientColors,
+                                      primaryColor: primaryColor,
+                                      uiScale: _uiScale,
+                                      isZeptoStyle: true,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],

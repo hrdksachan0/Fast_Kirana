@@ -10,7 +10,6 @@ import 'package:flutter_cashfree_pg_sdk/api/cferrorresponse/cferrorresponse.dart
 import 'payment_gateway_handler.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../../../core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../core/network/api_client.dart';
@@ -412,10 +411,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       );
 
       if (context != null && context.mounted) {
-        AppToast.showInfo(
+        AppToast.showBentoPaymentIncomplete(
           context,
-          'Payment Incomplete',
+          title: 'Payment Incomplete',
           subtitle: 'Your items are safely saved in your cart.',
+          actionLabel: 'Switch to COD',
+          onAction: () {
+            setPaymentMethod('cod');
+            final activeCart = ref.read(cartProvider).value ?? Cart.empty();
+            handlePlaceOrder(context, cart: activeCart);
+          },
         );
       }
       return;
@@ -534,10 +539,15 @@ class CheckoutController extends StateNotifier<CheckoutState> {
             pendingCart: null,
           );
           if (context.mounted) {
-            AppToast.showInfo(
+            AppToast.showBentoPaymentIncomplete(
               context,
-              'Payment Cancelled',
+              title: 'Payment Cancelled',
               subtitle: 'Your items are safely saved in your cart.',
+              actionLabel: 'Switch to COD',
+              onAction: () async {
+                state = state.copyWith(selectedPayment: 'cod', isPlacingOrder: true);
+                await completeOrderPlacement(context, cart: cart);
+              },
             );
           }
         },

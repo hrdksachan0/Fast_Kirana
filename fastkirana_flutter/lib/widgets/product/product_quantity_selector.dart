@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
@@ -8,6 +7,7 @@ import '../../providers/cart_provider.dart';
 import '../cart_conflict_dialog.dart';
 import '../variant_selector_sheet.dart';
 import '../../core/utils/stock_notice_helper.dart';
+import '../../core/utils/app_haptics.dart';
 
 // ─── Add To Cart Button & Quantity Stepper ─────────────────────────────────
 
@@ -63,7 +63,11 @@ class AddToCartButton extends ConsumerWidget {
     return FittedBox(
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerRight,
-      child: btn,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {}, // Intercepts touches to prevent parent card from opening ProductDetailScreen
+        child: btn,
+      ),
     );
   }
 
@@ -92,7 +96,7 @@ class AddToCartButton extends ConsumerWidget {
   Widget _storeClosed() {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        AppHaptics.subtleTap();
         ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
         ScaffoldMessenger.of(scaffoldContext).showSnackBar(
           SnackBar(
@@ -158,7 +162,7 @@ class AddToCartButton extends ConsumerWidget {
     final matchingItems = cart?.items.where((i) => i.productId == product.id || i.productId.startsWith('${product.id}_')).toList() ?? [];
 
     return Container(
-      height: s(31),
+      height: s(33),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: gradientColors,
@@ -185,7 +189,7 @@ class AddToCartButton extends ConsumerWidget {
             child: InkWell(
               borderRadius: BorderRadius.horizontal(left: Radius.circular(s(8))),
               onTap: () {
-                HapticFeedback.lightImpact();
+                AppHaptics.smoothTick();
                 if (hasVariants) {
                   // If only 1 variant item is in the cart, decrement it directly
                   if (matchingItems.length == 1) {
@@ -198,8 +202,8 @@ class AddToCartButton extends ConsumerWidget {
                 }
               },
               child: SizedBox(
-                width: s(28),
-                height: s(31),
+                width: s(32),
+                height: s(33),
                 child: Center(
                   child: Icon(Icons.remove_rounded, size: s(18), color: Colors.white),
                 ),
@@ -209,16 +213,20 @@ class AddToCartButton extends ConsumerWidget {
 
           // Count - tapping opens variant sheet if product has variants
           GestureDetector(
-            onTap: hasVariants ? () => VariantSelectorSheet.show(context, product) : null,
+            behavior: HitTestBehavior.opaque,
+            onTap: hasVariants ? () {
+              AppHaptics.smoothTick();
+              VariantSelectorSheet.show(context, product);
+            } : null,
             child: Container(
-              constraints: BoxConstraints(minWidth: s(18)),
+              constraints: BoxConstraints(minWidth: s(20)),
               alignment: Alignment.center,
               child: Text(
                 '$inCartQty',
                 style: GoogleFonts.plusJakartaSans(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  fontSize: s(12.5),
+                  fontSize: s(13.0),
                   letterSpacing: -0.2,
                 ),
               ),
@@ -238,11 +246,11 @@ class AddToCartButton extends ConsumerWidget {
                     final singleItem = matchingItems.first;
                     final effectiveItemStock = product.getStockForVariant(singleItem.selectedVariant);
                     if (effectiveItemStock > 0 && inCartQty >= effectiveItemStock) {
-                      HapticFeedback.heavyImpact();
+                      AppHaptics.alertPulse();
                       _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
                       return;
                     }
-                    HapticFeedback.lightImpact();
+                    AppHaptics.smoothTick();
                     final success = ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
                     if (!success) {
                       _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
@@ -252,7 +260,7 @@ class AddToCartButton extends ConsumerWidget {
                   }
                 } else {
                   if (product.stock > 0 && inCartQty >= product.stock) {
-                    HapticFeedback.heavyImpact();
+                    AppHaptics.alertPulse();
                     _showStockLimitSnackbar(ref);
                     return;
                   }
@@ -260,14 +268,14 @@ class AddToCartButton extends ConsumerWidget {
                   if (conflict != null) {
                     _showConflictDialog(context, ref);
                   } else {
-                    HapticFeedback.lightImpact();
+                    AppHaptics.smoothTick();
                     ref.read(cartProvider.notifier).increment(product);
                   }
                 }
               },
               child: SizedBox(
-                width: s(28),
-                height: s(31),
+                width: s(32),
+                height: s(33),
                 child: Center(
                   child: Icon(Icons.add_rounded, size: s(18), color: Colors.white),
                 ),
@@ -281,9 +289,9 @@ class AddToCartButton extends ConsumerWidget {
 
   Widget _addButton(BuildContext context, WidgetRef ref) {
     return Bounceable(
-      scaleFactor: 0.92,
+      scaleFactor: 0.94,
       onTap: () {
-        HapticFeedback.lightImpact();
+        AppHaptics.smoothAdd();
         if (hasVariants) {
           VariantSelectorSheet.show(context, product);
         } else {
@@ -291,7 +299,7 @@ class AddToCartButton extends ConsumerWidget {
         }
       },
       child: Container(
-        height: s(31),
+        height: s(33),
         padding: EdgeInsets.symmetric(horizontal: s(12)),
         decoration: BoxDecoration(
           color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
@@ -332,9 +340,9 @@ class AddToCartButton extends ConsumerWidget {
 
   Widget _zeptoAddButton(BuildContext context, WidgetRef ref) {
     return Bounceable(
-      scaleFactor: 0.92,
+      scaleFactor: 0.94,
       onTap: () {
-        HapticFeedback.lightImpact();
+        AppHaptics.smoothAdd();
         if (hasVariants) {
           VariantSelectorSheet.show(context, product);
         } else {
@@ -385,17 +393,11 @@ class AddToCartButton extends ConsumerWidget {
   void _handleAdd(BuildContext context, WidgetRef ref) {
     final cartItems = ref.read(cartProvider).value?.totalItems ?? 0;
     if (!product.isInStock) {
-      final bottomPadding = MediaQuery.of(scaffoldContext).padding.bottom;
-      final bottomMargin = (cartItems > 0) ? (bottomPadding + 80.0) : (bottomPadding + 16.0);
-      ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
-      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-        SnackBar(
-          content: Text('${product.name} is currently out of stock.'),
-          backgroundColor: const Color(0xFFDC2626),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(left: 16, right: 16, bottom: bottomMargin),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(s(10))),
-        ),
+      StockNoticeHelper.showStockLimit(
+        context: scaffoldContext,
+        stock: 0,
+        hasFloatingCart: cartItems > 0,
+        customMessage: '${product.name} is currently out of stock.',
       );
       return;
     }
