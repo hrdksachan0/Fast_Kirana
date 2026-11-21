@@ -343,7 +343,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       children: [
                         // 1. HERO PRODUCT IMAGE (Proportionate aspect for compact, non-bulky cards)
                         AspectRatio(
-                          aspectRatio: cardWidth < 125 ? 1.05 : 1.02,
+                          aspectRatio: cardWidth < 125 ? 0.94 : 0.91,
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
@@ -354,11 +354,14 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                                     borderRadius: BorderRadius.circular(s(9)),
                                   ),
                                   clipBehavior: Clip.antiAlias,
-                                  child: AppCachedImage(
-                                    imageUrl: product.imageUrl ?? '',
-                                    fit: BoxFit.contain,
-                                    width: double.infinity,
-                                    height: double.infinity,
+                                  child: Transform.scale(
+                                    scale: 1.05,
+                                    child: AppCachedImage(
+                                      imageUrl: product.imageUrl ?? '',
+                                      fit: BoxFit.contain,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    ),
                                   ),
                                 ),
                               ),

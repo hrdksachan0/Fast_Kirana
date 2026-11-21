@@ -117,21 +117,37 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
       )
 
-      // Also broadcast to global admin_orders topic if a specific hub topic was used
+      if (storeId && storeId.includes('209206')) {
+        fcmDispatchPromises.push(
+          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_ghatampur', ...staffPayload }).catch(() => {})
+        )
+      } else if (storeId && storeId.includes('816101')) {
+        fcmDispatchPromises.push(
+          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_barharwa', ...staffPayload }).catch(() => {})
+        )
+      }
+
+      // Also broadcast to global admin_orders topic if a specific hub topic was used (received by Super Admin)
       if (storeId) {
         fcmDispatchPromises.push(
           sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
         )
       }
 
-      // DIRECT FCM PUSH to registered Admin device token (Guaranteed Instant Delivery)
+      // DIRECT FCM PUSH to registered Admin device token (Hub-Scoped + Super Admin HQ)
       try {
         const adminTokens = await prisma.fcmToken.findMany({
           where: {
-            OR: [
-              { user: { role: Role.ADMIN } },
-              { user: { phone: { contains: '7054470303' } } },
-            ],
+            user: {
+              role: Role.ADMIN,
+              OR: [
+                { assignedStoreId: storeId },
+                { assignedStoreId: null },
+                { phone: { contains: '9170942500' } },
+                ...(storeId && storeId.includes('209206') ? [{ phone: { contains: '7054470303' } }] : []),
+                ...(storeId && storeId.includes('816101') ? [{ phone: { contains: '7633898577' } }] : []),
+              ],
+            },
           },
           select: { token: true },
         })

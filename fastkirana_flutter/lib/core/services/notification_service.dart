@@ -189,10 +189,17 @@ title.toString().contains('🛵') ||
       final msgType = (data['type'] ?? '').toString().toUpperCase();
       final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
-      // STRICT HUB ISOLATION: Akbarpur admin never receives Ghatampur alerts, and vice versa!
+      // STRICT HUB ISOLATION:
+      // Super Admin (9170942500, SUPER_ADMIN, or unassigned store) monitors ALL hubs!
+      // Hub Admins (Ghatampur 7054470303, Barharwa 7633898577) receive alerts strictly for their assigned hub!
       final assignedStoreId = prefs.getString('assigned_store_id') ?? await SecureStorage.read('assigned_store_id') ?? '';
       final notifStoreId = (data['storeId'] ?? '').toString().trim();
-      if (assignedStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
+      final userPhone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
+      final cleanPhone = userPhone.replaceAll(RegExp(r'[^0-9]'), '');
+      final tenDigit = cleanPhone.length > 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
+      final isSuperAdmin = tenDigit == '9170942500' || userRole == 'SUPER_ADMIN' || assignedStoreId.isEmpty;
+
+      if (!isSuperAdmin && assignedStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
         if (assignedStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
           debugPrint('NotificationService: Suppressed alert for different hub admin ($notifStoreId != $assignedStoreId) in background.');
           return;
@@ -1183,10 +1190,17 @@ title.toString().contains('🛵') ||
         final msgType = (data['type'] ?? '').toString().toUpperCase();
         final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
-        // STRICT HUB ISOLATION: Akbarpur admin never receives Ghatampur alerts, and vice versa!
+        // STRICT HUB ISOLATION:
+        // Super Admin (9170942500, SUPER_ADMIN, or unassigned store) monitors ALL hubs!
+        // Hub Admins (Ghatampur 7054470303, Barharwa 7633898577) receive alerts strictly for their assigned hub!
         final adminStoreId = prefs.getString('assigned_store_id') ?? await SecureStorage.read('assigned_store_id') ?? '';
         final notifStoreId = (data['storeId'] ?? '').toString().trim();
-        if (adminStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
+        final adminPhone = prefs.getString('user_phone') ?? await SecureStorage.read('user_phone') ?? '';
+        final cleanPhone = adminPhone.replaceAll(RegExp(r'[^0-9]'), '');
+        final tenDigit = cleanPhone.length > 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
+        final isSuperAdmin = tenDigit == '9170942500' || userRole == 'SUPER_ADMIN' || adminStoreId.isEmpty;
+
+        if (!isSuperAdmin && adminStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
           if (adminStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
             debugPrint('NotificationService: Suppressed alert for different hub admin ($notifStoreId != $adminStoreId) in foreground.');
             return;
@@ -1939,12 +1953,22 @@ title.toString().contains('🛵') ||
       final savedUserRole = (prefs.getString('user_role') ?? (await SecureStorage.read('user_role')) ?? '').toUpperCase().trim();
       final cleanDigits = phone.replaceAll(RegExp(r'[^0-9]'), '');
       final tenDigit = cleanDigits.length > 10 ? cleanDigits.substring(cleanDigits.length - 10) : cleanDigits;
-      final isAdminPhone = tenDigit == '7054470303';
+      final isSuperAdminPhone = tenDigit == '9170942500';
+      final isGhatampurAdminPhone = tenDigit == '7054470303';
+      final isBarharwaAdminPhone = tenDigit == '7633898577';
+      final isRiderPhone = tenDigit == '9450358388';
 
-      final isMasterAdmin = isAdminPhone || savedUserRole == 'ADMIN' || savedUserRole == 'SUPER_ADMIN';
+      final isAdminPhone = isSuperAdminPhone || isGhatampurAdminPhone || isBarharwaAdminPhone;
+      final isMasterAdmin = isSuperAdminPhone || (savedUserRole == 'ADMIN' && (storeId == null || storeId.isEmpty));
 
-      // If user is logged in as Admin or Admin Phone, never downgrade their device registration or topics to Picker/Delivery/Restaurant
-      final effectiveRole = isMasterAdmin ? 'ADMIN' : resolvedRole;
+      // Strictly map role & hub based on verified official credentials
+      final effectiveRole = isRiderPhone
+          ? 'DELIVERY'
+          : (isAdminPhone ? 'ADMIN' : resolvedRole);
+
+      final effectiveStoreId = isGhatampurAdminPhone || isRiderPhone
+          ? 'hub-209206'
+          : (isBarharwaAdminPhone ? 'hub-816101' : storeId);
 
       final isAdmin = effectiveRole == 'ADMIN' ||
           effectiveRole == 'SUPER_ADMIN' ||
@@ -1980,15 +2004,28 @@ title.toString().contains('🛵') ||
           final adminTopics = <String>{
             'admin_orders',
             'admin_orders_all',
-            'admin_orders_ghatampur',
-            'admin_orders_hub-209206',
-            if (storeId != null && storeId.isNotEmpty) 'admin_orders_$storeId',
+            if (isMasterAdmin) ...[
+              'admin_orders_ghatampur',
+              'admin_orders_barharwa',
+              'admin_orders_akbarpur',
+              'admin_orders_hub-209206',
+              'admin_orders_hub-816101',
+              'admin_orders_hub-224122',
+            ] else if (effectiveStoreId == 'hub-209206') ...[
+              'admin_orders_ghatampur',
+              'admin_orders_hub-209206',
+            ] else if (effectiveStoreId == 'hub-816101') ...[
+              'admin_orders_barharwa',
+              'admin_orders_hub-816101',
+            ] else if (effectiveStoreId != null && effectiveStoreId.isNotEmpty) ...[
+              'admin_orders_$effectiveStoreId',
+            ],
           };
           for (final topic in adminTopics) {
             keepTopics.add(topic);
             await subscribeToTopic(topic);
           }
-          await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);
+          await _purgeTopics(_knownStaffTopics(storeId: effectiveStoreId, restaurantId: rId), keep: keepTopics);
         } else if (isRestaurant) {
           if (rId != null && rId.isNotEmpty) {
             final restTopic = 'restaurant_$rId';
@@ -1996,15 +2033,15 @@ title.toString().contains('🛵') ||
             await subscribeToTopic(restTopic);
           }
           // Strictly purge ALL admin, staff, picker, delivery, and other restaurant topics
-          await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);
+          await _purgeTopics(_knownStaffTopics(storeId: effectiveStoreId, restaurantId: rId), keep: keepTopics);
         } else if (isDeliveryOrPicker) {
           final isPicker = effectiveRole == 'PICKER';
           final topic = isPicker
-              ? ((storeId != null && storeId.isNotEmpty) ? 'picker_orders_$storeId' : 'picker_orders')
-              : ((storeId != null && storeId.isNotEmpty) ? 'delivery_orders_$storeId' : 'delivery_orders');
+              ? ((effectiveStoreId != null && effectiveStoreId.isNotEmpty) ? 'picker_orders_$effectiveStoreId' : 'picker_orders')
+              : ((effectiveStoreId != null && effectiveStoreId.isNotEmpty) ? 'delivery_orders_$effectiveStoreId' : 'delivery_orders');
           keepTopics.add(topic);
           await subscribeToTopic(topic);
-          await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);
+          await _purgeTopics(_knownStaffTopics(storeId: effectiveStoreId, restaurantId: rId), keep: keepTopics);
         } else {
           // Normal CUSTOMER / USER (or guest): Actively purge EVERY tracked + known admin/staff/hub/kitchen topic!
           await _purgeTopics(_knownStaffTopics(storeId: storeId, restaurantId: rId), keep: keepTopics);

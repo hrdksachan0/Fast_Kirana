@@ -101,19 +101,19 @@ class Responsive {
     final width = MediaQuery.of(context).size.width;
     if (isCompact) {
       // Used in screens with side category rail (narrower column ~135-155px)
-      // Perfectly calibrated compact aspect ratio (~205-215px height on mobile)
-      if (width < 360) return 0.66;
-      if (width < 400) return 0.69;
-      if (width < mobileBreakpoint) return 0.71;
-      if (width < tabletBreakpoint) return 0.75;
-      return 0.79;
+      // Calibrated aspect ratio with larger hero image visibility (~215-225px height on mobile)
+      if (width < 360) return 0.63;
+      if (width < 400) return 0.65;
+      if (width < mobileBreakpoint) return 0.67;
+      if (width < tabletBreakpoint) return 0.71;
+      return 0.75;
     }
-    // Full width 2-column grid (Sleek, comfortable proportions without skyscraper height)
-    if (width < 360) return 0.68;
-    if (width < 400) return 0.71;
-    if (width < mobileBreakpoint) return 0.73;
-    if (width < tabletBreakpoint) return 0.77;
-    return 0.82;
+    // Full width 2-column grid (Sleek, comfortable proportions with larger hero product image)
+    if (width < 360) return 0.64;
+    if (width < 400) return 0.66;
+    if (width < mobileBreakpoint) return 0.68;
+    if (width < tabletBreakpoint) return 0.72;
+    return 0.76;
   }
 
   /// Unified Responsive Product Card Width for horizontal shelves
@@ -143,10 +143,10 @@ class Responsive {
       return 248.0;
     }
 
-    // Grocery cards: card width + 82px for pill, 2-line title, and price/stepper row.
-    // Minimum 192px on compact phones, dynamically scales to ~204-208px on Moto/Pixel
-    final dynamicHeight = cardW + 82.0;
-    return dynamicHeight.clamp(192.0, 212.0);
+    // Grocery cards: card width / 0.92 + 84px for pill, 2-line title, and price/stepper row.
+    // Calibrated so larger hero images render spacious and with zero overflow on all devices.
+    final dynamicHeight = (cardW / 0.92) + 84.0;
+    return dynamicHeight.clamp(206.0, 228.0);
   }
 
   /// Responsive scaled font size with safety clamping

@@ -443,17 +443,29 @@ async def dispatch_isolated_order_fcm_notifications(
             }
             if store_id:
                 await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_title, admin_body, admin_data)
+                if "209206" in str(store_id):
+                    await send_fcm_topic_notification("admin_orders_ghatampur", admin_title, admin_body, admin_data)
+                elif "816101" in str(store_id):
+                    await send_fcm_topic_notification("admin_orders_barharwa", admin_title, admin_body, admin_data)
             await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
             await send_fcm_topic_notification("admin_orders_all", admin_title, admin_body, admin_data)
-            await send_fcm_topic_notification("admin_orders_ghatampur", admin_title, admin_body, admin_data)
-            # Direct FCM push to registered Admin device tokens (Guaranteed buzzer delivery)
+
+            # Direct FCM push to registered Admin device tokens (Hub-Scoped + Superadmin HQ)
             try:
                 from database import AsyncSessionLocal
                 async with AsyncSessionLocal() as s:
-                    adm_res = await s.execute(
-                        select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
-                            or_(User.role == Role.ADMIN, User.phone.like("%7054470303%"))
+                    adm_conditions = [
+                        User.role == Role.ADMIN,
+                        or_(
+                            User.assignedStoreId == store_id,
+                            User.assignedStoreId.is_(None),
+                            User.phone.like("%9170942500%"),
+                            User.phone.like("%7054470303%") if "209206" in str(store_id or "") else False,
+                            User.phone.like("%7633898577%") if "816101" in str(store_id or "") else False,
                         )
+                    ]
+                    adm_res = await s.execute(
+                        select(FcmToken.token).join(User, FcmToken.userId == User.id).where(and_(*adm_conditions))
                     )
                     adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
                     if adm_toks:
@@ -463,6 +475,55 @@ async def dispatch_isolated_order_fcm_notifications(
             return  # Stop here! Do not notify restaurant/picker/rider until approved
 
         # ── CASE 2: AUTO-APPROVED / CONFIRMED ──
+        # Always alert Admin for new incoming live orders!
+        admin_live_title = f"🔔 New Live Order #{readable_id}!"
+        admin_live_body = f"Order #{readable_id} ({safe_shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) received. Tap to manage."
+        admin_live_data = {
+            "orderId": order_id,
+            "readableId": str(readable_id),
+            "storeId": str(store_id or ""),
+            "restaurantId": str(restaurant_id or ""),
+            "status": status_val,
+            "paymentStatus": "PAID" if is_paid else "PENDING",
+            "isPaid": "true" if is_paid else "false",
+            "screen": "admin-orders",
+            "type": "NEW_ORDER",
+            "role": "ADMIN",
+            "timestamp": now_ts,
+            "sound": "order_chime",
+        }
+        if store_id:
+            await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_live_title, admin_live_body, admin_live_data)
+            if "209206" in str(store_id):
+                await send_fcm_topic_notification("admin_orders_ghatampur", admin_live_title, admin_live_body, admin_live_data)
+            elif "816101" in str(store_id):
+                await send_fcm_topic_notification("admin_orders_barharwa", admin_live_title, admin_live_body, admin_live_data)
+        await send_fcm_topic_notification("admin_orders", admin_live_title, admin_live_body, admin_live_data)
+        await send_fcm_topic_notification("admin_orders_all", admin_live_title, admin_live_body, admin_live_data)
+
+        # Direct FCM push to hub admin & superadmin
+        try:
+            from database import AsyncSessionLocal
+            async with AsyncSessionLocal() as s:
+                adm_conditions = [
+                    User.role == Role.ADMIN,
+                    or_(
+                        User.assignedStoreId == store_id,
+                        User.assignedStoreId.is_(None),
+                        User.phone.like("%9170942500%"),
+                        User.phone.like("%7054470303%") if "209206" in str(store_id or "") else False,
+                        User.phone.like("%7633898577%") if "816101" in str(store_id or "") else False,
+                    )
+                ]
+                adm_res = await s.execute(
+                    select(FcmToken.token).join(User, FcmToken.userId == User.id).where(and_(*adm_conditions))
+                )
+                adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
+                if adm_toks:
+                    await send_fcm_notification(tokens=adm_toks, title=admin_live_title, body=admin_live_body, data=admin_live_data)
+        except Exception as direct_err:
+            logger.error(f"Failed direct FCM push to admin tokens in case 2: {direct_err}")
+
         if restaurant_id:
             # Alert Restaurant/Chef to start cooking (Rider is notified when food is packed/prepared)
             rest_title = f"👨‍🍳 New Order for {safe_shop_name or 'Kitchen'}!"

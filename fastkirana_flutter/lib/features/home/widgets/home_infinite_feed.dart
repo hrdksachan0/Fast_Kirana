@@ -226,8 +226,8 @@ class HomeInfiniteFeed {
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: Responsive.isTablet(context) ? 4 : 3,
                   childAspectRatio: Responsive.isTablet(context)
-                      ? 0.74
-                      : (MediaQuery.of(context).size.width < 360 ? 0.58 : 0.605),
+                      ? 0.72
+                      : (MediaQuery.of(context).size.width < 360 ? 0.55 : 0.575),
                   crossAxisSpacing: 8,
                   mainAxisSpacing: 10,
                 ),
