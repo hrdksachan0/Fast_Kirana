@@ -69,13 +69,16 @@ class OrderItemHelper {
       if (firstValidCost > 0) return firstValidCost;
     }
 
-    // Fallback to base product costPrice if available
+    // Fallback to base product costPrice or directCost if available
     if (product is Map) {
       final pCost = (product['costPrice'] as num?)?.toDouble()
           ?? (product['cost_price'] as num?)?.toDouble()
+          ?? (product['cost'] as num?)?.toDouble()
           ?? 0.0;
       if (pCost > 0) return pCost;
     }
+
+    if (directCost > 0.0) return directCost;
 
     return directCost;
   }

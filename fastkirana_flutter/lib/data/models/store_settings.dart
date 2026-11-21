@@ -132,4 +132,5 @@ class StoreSettings with _$StoreSettings {
   double get deliveryThresholdTier3 => _parseDoubleVal(raw['delivery_threshold_tier3'], 349.0);
   double get deliveryFeePerKmBeyond5km => _parseDoubleVal(raw['delivery_fee_per_km_beyond_5km'], 10.0);
   String get storeName => raw['store_name']?.toString() ?? raw['shop_name']?.toString() ?? '';
+  String get storeOpeningTime => raw['store_opening_time']?.toString() ?? raw['opening_time']?.toString() ?? '7:00 AM';
 }

@@ -262,7 +262,17 @@ export async function PATCH(
     let sortedVariants = variants
 
     if (variants && Array.isArray(variants) && variants.length > 0) {
-      sortedVariants = [...variants].sort((a: any, b: any) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+      const parentCost = updateData.costPrice !== undefined ? updateData.costPrice : (product.costPrice || 0)
+      sortedVariants = [...variants]
+        .map((v: any) => {
+          const vCost = parseFloat(v.costPrice) || 0
+          return {
+            ...v,
+            costPrice: vCost > 0 ? vCost : (parentCost > 0 ? parentCost : 0),
+          }
+        })
+        .sort((a: any, b: any) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0))
+
       finalPrice = parseFloat(sortedVariants[0].price) || 0
       finalMrp = parseFloat(sortedVariants[0].mrp) || finalPrice
       updateData.variants = sortedVariants

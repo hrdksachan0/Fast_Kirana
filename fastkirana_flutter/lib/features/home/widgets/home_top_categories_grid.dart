@@ -64,7 +64,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                     Text(
                       'Explore by Category',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.scaledFontSize(context, 18),
+                        fontSize: Responsive.scaledFontSize(context, 16.5),
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF0F172A),
                         letterSpacing: -0.4,
@@ -80,7 +80,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
                           boxShadow: [
                             BoxShadow(
@@ -113,7 +113,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 // 2. Top Hero Row (2 Wide Appetizing Anchors)
                 if (bento.heroes.isNotEmpty) ...[
@@ -133,7 +133,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                 ],
 
                 // 3. Compact 4-Column Grid (Symmetric Rows)
@@ -173,7 +173,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
         children: [
           // Luxury Dual-Tone Hero Container with Smooth Squircle Finish
           Container(
-            height: 114,
+            height: 100,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -184,7 +184,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                   softBg.withValues(alpha: 0.7),
                 ],
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(15),
               border: Border.all(
                 color: borderColor.withValues(alpha: 0.9),
                 width: 1.2,
@@ -238,7 +238,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
 
           // 2-Line Centered Title Below Card
           SizedBox(
-            height: 32,
+            height: 28,
             child: Center(
               child: Text(
                 title,
@@ -246,7 +246,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: Responsive.scaledFontSize(context, 12),
+                  fontSize: Responsive.scaledFontSize(context, 11.5),
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF0F172A),
                   height: 1.15,
@@ -328,7 +328,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
         children: [
           // Luxury Soft-Gradient Squircle Container
           Container(
-            height: 86,
+            height: 74,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -339,7 +339,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                 ],
                 stops: const [0.0, 0.8],
               ),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(15),
               border: Border.all(
                 color: borderColor.withValues(alpha: 0.85),
                 width: 1.1,
@@ -393,7 +393,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
 
           // 2-Line Centered Label Below Card (Truncation-Free)
           SizedBox(
-            height: 32,
+            height: 28,
             child: Center(
               child: Text(
                 title,
@@ -401,7 +401,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontSize: Responsive.scaledFontSize(context, 10.5),
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF0F172A),
                   height: 1.15,
@@ -434,7 +434,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                     height: 102,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
                 ),
@@ -444,7 +444,7 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
                     height: 102,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
                 ),

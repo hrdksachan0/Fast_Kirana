@@ -361,15 +361,20 @@ export function useAdminProducts({
 
     const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
     setHasVariantsNew(hasVariants)
+    const baseProductCost = p.costPrice != null && Number(p.costPrice) > 0 ? Number(p.costPrice) : 0
     setNewProductVariants(
       hasVariants
-        ? (p.variants as any[]).map((v) => ({
-            name: v.name,
-            price: String(v.price),
-            mrp: String(v.mrp),
-            costPrice: String(v.costPrice ?? 0),
-            stock: String(v.stock),
-          }))
+        ? (p.variants as any[]).map((v) => {
+            const vCost = v.costPrice ?? v.cp ?? v.cost
+            const resolvedCost = vCost != null && Number(vCost) > 0 ? Number(vCost) : baseProductCost
+            return {
+              name: v.name,
+              price: String(v.price),
+              mrp: String(v.mrp),
+              costPrice: String(resolvedCost),
+              stock: String(v.stock),
+            }
+          })
         : []
     )
 
@@ -657,15 +662,20 @@ export function useAdminProducts({
 
     const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0
     setHasVariantsEdit(hasVariants)
+    const baseProductCost = p.costPrice != null && Number(p.costPrice) > 0 ? Number(p.costPrice) : 0
     setEditProductVariants(
       hasVariants
-        ? (p.variants as any[]).map((v) => ({
-            name: v.name,
-            price: String(v.price),
-            mrp: String(v.mrp),
-            costPrice: String(v.costPrice ?? 0),
-            stock: String(v.stock),
-          }))
+        ? (p.variants as any[]).map((v) => {
+            const vCost = v.costPrice ?? v.cp ?? v.cost
+            const resolvedCost = vCost != null && Number(vCost) > 0 ? Number(vCost) : baseProductCost
+            return {
+              name: v.name,
+              price: String(v.price),
+              mrp: String(v.mrp),
+              costPrice: String(resolvedCost),
+              stock: String(v.stock),
+            }
+          })
         : []
     )
 
@@ -801,13 +811,17 @@ export function useAdminProducts({
           storeId: selectedHubId && selectedHubId !== 'all' ? selectedHubId : undefined,
           variants:
             sortedEditVariants.length > 0
-              ? sortedEditVariants.map((v) => ({
-                  name: v.name,
-                  price: parseFloat(v.price) || 0,
-                  mrp: parseFloat(v.mrp) || 0,
-                  costPrice: parseFloat(v.costPrice) || 0,
-                  stock: parseInt(v.stock) || 0,
-                }))
+              ? sortedEditVariants.map((v) => {
+                  const vCost = parseFloat(v.costPrice) || 0
+                  const parentCost = parseFloat(productEditForm.costPrice) || 0
+                  return {
+                    name: v.name,
+                    price: parseFloat(v.price) || 0,
+                    mrp: parseFloat(v.mrp) || 0,
+                    costPrice: vCost > 0 ? vCost : (parentCost > 0 ? parentCost : 0),
+                    stock: parseInt(v.stock) || 0,
+                  }
+                })
               : null,
           addons:
             customAddons !== undefined
@@ -988,13 +1002,17 @@ export function useAdminProducts({
         vendorId: newProduct.vendorId || null,
         variants:
           sortedNewVariants.length > 0
-            ? sortedNewVariants.map((v) => ({
-                name: v.name,
-                price: parseFloat(v.price) || 0,
-                mrp: parseFloat(v.mrp) || 0,
-                costPrice: parseFloat(v.costPrice) || 0,
-                stock: parseInt(v.stock) || 0,
-              }))
+            ? sortedNewVariants.map((v) => {
+                const vCost = parseFloat(v.costPrice) || 0
+                const parentCost = parseFloat(newProduct.costPrice) || 0
+                return {
+                  name: v.name,
+                  price: parseFloat(v.price) || 0,
+                  mrp: parseFloat(v.mrp) || 0,
+                  costPrice: vCost > 0 ? vCost : (parentCost > 0 ? parentCost : 0),
+                  stock: parseInt(v.stock) || 0,
+                }
+              })
             : null,
       }
 

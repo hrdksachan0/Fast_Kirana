@@ -299,90 +299,85 @@ class DeliveryHistoryTab extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Top Header Row with Wrap to prevent horizontal overflow/collision
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      '#$orderNum',
+                                Text(
+                                  '#$orderNum',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13),
+                                    fontWeight: FontWeight.w900,
+                                    color: slateDark,
+                                  ),
+                                ),
+                                if (isCombined) ...[
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: AppDesignSystem.emerald50,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: AppDesignSystem.emerald200),
+                                    ),
+                                    child: Text(
+                                      '📦 Combined',
                                       style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 12.5),
+                                        fontSize: Responsive.scaledFontSize(context, 8.5),
                                         fontWeight: FontWeight.w900,
-                                        color: slateDark,
+                                        color: AppDesignSystem.emerald800,
                                       ),
                                     ),
-                                    if (isCombined) ...[
-                                      const SizedBox(width: 5),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: AppDesignSystem.emerald50,
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: AppDesignSystem.emerald200),
-                                        ),
-                                        child: Text(
-                                          '📦 Combined',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 8.5),
-                                            fontWeight: FontWeight.w900,
-                                            color: AppDesignSystem.emerald800,
-                                          ),
-                                        ),
+                                  ),
+                                ],
+                                const SizedBox(width: 6),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.access_time_rounded, size: 10, color: slateMuted),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      timeStr,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 10),
+                                        fontWeight: FontWeight.w600,
+                                        color: slateMuted,
                                       ),
-                                    ],
-                                    const SizedBox(width: 8),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.access_time_rounded, size: 11, color: slateMuted),
-                                        const SizedBox(width: 3),
-                                        Text(
-                                          timeStr,
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                                            fontWeight: FontWeight.w600,
-                                            color: slateMuted,
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   ],
                                 ),
-                                Row(
-                                  children: [
-                                    Text(
-                                      '₹$totalAmt',
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 13),
-                                        fontWeight: FontWeight.w900,
-                                        color: slateDark,
-                                      ),
+                                const Spacer(),
+                                Text(
+                                  '₹$totalAmt',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: slateDark,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: isPaid ? AppDesignSystem.green100 : (isCod ? AppDesignSystem.statusPending : AppDesignSystem.statusCancelled),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    isPaid
+                                        ? (isCod ? '💵 COD' : (rawPm == 'UPI' ? '⚡ UPI' : '💳 PAID'))
+                                        : (isCod ? '💵 COD' : '⚠️ UNPAID'),
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 8.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: isPaid ? AppDesignSystem.green700 : (isCod ? AppDesignSystem.amber700 : AppDesignSystem.red600),
                                     ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: isPaid ? AppDesignSystem.green100 : (isCod ? AppDesignSystem.statusPending : AppDesignSystem.statusCancelled),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        isPaid
-                                            ? (isCod ? '💵 COD RECEIVED' : (rawPm == 'UPI' ? '⚡ UPI RECEIVED' : '💳 ONLINE RECEIVED'))
-                                            : (isCod ? '💵 COD' : '⚠️ UNPAID (${rawPm.isNotEmpty ? rawPm : 'ONLINE'})'),
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 8.5),
-                                          fontWeight: FontWeight.w900,
-                                          color: isPaid ? AppDesignSystem.green700 : (isCod ? AppDesignSystem.amber700 : AppDesignSystem.red600),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
                                   child: Column(
@@ -396,6 +391,7 @@ class DeliveryHistoryTab extends StatelessWidget {
                                           color: slateDark,
                                         ),
                                       ),
+                                      const SizedBox(height: 2),
                                       Text(
                                         addr,
                                         style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 10.5), color: slateMuted, height: 1.25),
@@ -405,8 +401,9 @@ class DeliveryHistoryTab extends StatelessWidget {
                                     ],
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                   decoration: BoxDecoration(
                                     color: AppDesignSystem.green100,
                                     borderRadius: BorderRadius.circular(6),

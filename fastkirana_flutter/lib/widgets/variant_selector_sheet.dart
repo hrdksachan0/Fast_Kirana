@@ -977,33 +977,41 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
             ),
           ),
 
-          // Option 4: Crisp White Pill with 1.5px Slate Border
+          // Theme 1: FastMinute Red Confirm / Done Button (Roomy 48px, never clipped!)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: SizedBox(
               width: double.infinity,
-              height: 44,
-              child: OutlinedButton(
+              height: 48,
+              child: ElevatedButton(
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   Navigator.pop(context);
                 },
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF1E293B),
-                  side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE20A22),
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
-                child: Text(
-                  'Continue Shopping',
-                  style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 14),
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF1E293B),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Done Shopping',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 14),
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                  ],
                 ),
               ),
             ),

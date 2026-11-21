@@ -1,0 +1,27 @@
+<svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="moonGolden" x1="18" y1="8" x2="38" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="45%" stop-color="#FACC15"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <linearGradient id="cloudSoft" x1="16" y1="32" x2="38" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FCE7F3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Twinkling Diamond Star 1 -->
+  <path d="M42 12L43.2 8.5L44.4 12L48 13.2L44.4 14.4L43.2 18L42 14.4L38.5 13.2L42 12Z" fill="#F59E0B"/>
+  <!-- Twinkling Diamond Star 2 -->
+  <path d="M46 22L46.8 20L47.6 22L49.6 22.8L47.6 23.6L46.8 25.6L46 23.6L44 22.8L46 22Z" fill="#FBBF24"/>
+
+  <!-- 3D Crescent Moon -->
+  <path d="M33 8C25.27 8 19 14.27 19 22C19 29.73 25.27 36 33 36C35.1 36 37.1 35.53 38.9 34.7C32.7 33.48 28 28.06 28 21.5C28 14.94 32.7 9.52 38.9 8.3C37.1 7.47 35.1 8 33 8Z" fill="url(#moonGolden)"/>
+
+  <!-- Soft Puffy Clouds -->
+  <circle cx="21" cy="40" r="6" fill="url(#cloudSoft)"/>
+  <circle cx="28" cy="37" r="7.5" fill="url(#cloudSoft)"/>
+  <circle cx="36" cy="39" r="6.5" fill="url(#cloudSoft)"/>
+  <rect x="18" y="40" width="22" height="6" rx="3" fill="url(#cloudSoft)"/>
+</svg>

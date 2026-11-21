@@ -20,10 +20,11 @@ class StockNoticeHelper {
 
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     // Bottom navigation bar height is ~56-62px.
-    // FloatingCartBar is positioned ~10px above bottom nav bar (height ~54px).
-    // Total bottom obstruction when cart is present is ~126px + bottomPadding.
-    // Setting bottom margin to bottomPadding + 148px floats with 22px breathing room cleanly ABOVE the cart bar!
-    final bottomMargin = hasFloatingCart ? (bottomPadding + 148.0) : (bottomPadding + 78.0);
+    // FloatingCartBar is positioned ~8-10px above bottom nav bar (height ~52px).
+    // Total bottom offset when cart is present is ~120px + bottomPadding.
+    // Setting bottom margin to (bottomPadding + 118.0) places it just 10-12px cleanly above the FloatingCartBar,
+    // avoiding the massive empty gap shown on screen!
+    final bottomMargin = hasFloatingCart ? (bottomPadding + 118.0) : (bottomPadding + 68.0);
 
     final String message = customMessage ??
         (stock <= 0

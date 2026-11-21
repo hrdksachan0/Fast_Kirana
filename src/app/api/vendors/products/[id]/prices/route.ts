@@ -18,11 +18,23 @@ export async function PUT(
     if (mrp !== undefined) updateData.mrp = Number(mrp)
     if (stock !== undefined) updateData.stock = Number(stock)
     if (variants !== undefined) {
-      updateData.variants = Array.isArray(variants)
+      let parsedVariants = Array.isArray(variants)
         ? variants
         : (typeof variants === 'string' && variants.trim().length > 0
             ? JSON.parse(variants)
             : variants)
+
+      if (Array.isArray(parsedVariants) && parsedVariants.length > 0) {
+        const fallbackCost = updateData.costPrice !== undefined ? updateData.costPrice : 0
+        parsedVariants = parsedVariants.map((v: any) => {
+          const vCost = Number(v.costPrice) || 0
+          return {
+            ...v,
+            costPrice: vCost > 0 ? vCost : (fallbackCost > 0 ? fallbackCost : 0),
+          }
+        })
+      }
+      updateData.variants = parsedVariants
     }
 
     const updated = await prisma.product.update({

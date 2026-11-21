@@ -454,9 +454,9 @@ title.toString().contains('🛵') ||
         fullScreenIntent: isOrderAlert,
         ongoing: (isOrderStatusUpdate && rawStatus != 'DELIVERED' && rawStatus != 'CANCELLED'),
         onlyAlertOnce: true,
-        showProgress: progress != null,
+        showProgress: !isOrderAlert && progress != null,
         maxProgress: 100,
-        progress: progress ?? 0,
+        progress: !isOrderAlert ? (progress ?? 0) : 0,
         color: const Color(0xFF00A344),
         colorized: true,
         subText: null, // STRICTLY NULL: prevents Android OS from appending truncated text ("Packe...") to header line!
@@ -476,12 +476,17 @@ title.toString().contains('🛵') ||
         ),
       );
 
+      final routeUrl = NotificationService._resolveNotificationRoute(Map<String, dynamic>.from(data)) ??
+          (isOrderAlert
+              ? (data['role'] == 'DELIVERY' || data['type'] == 'DELIVERY_ASSIGNED' ? '/delivery' : '/admin-orders')
+              : (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders'));
+
       await localNotifications.show(
         notifId,
         cleanTitle,
         cleanBodyText,
         NotificationDetails(android: androidDetails),
-        payload: (data['url'] ?? data['linkUrl'] ?? data['link'] ?? (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders')).toString(),
+        payload: routeUrl.toString(),
       );
     } catch (e) {
       debugPrint("Background notification show error: $e");
@@ -1439,6 +1444,11 @@ title.toString().contains('🛵') ||
         .replaceAll('Online Payment Order Confirmed!', 'Order Confirmed!')
         .trim();
 
+    final routeUrl = _resolveNotificationRoute(Map<String, dynamic>.from(message.data)) ??
+        (isOrderAlert
+            ? (message.data['role'] == 'DELIVERY' || message.data['type'] == 'DELIVERY_ASSIGNED' ? '/delivery' : '/admin-orders')
+            : (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders'));
+
     _localNotifications?.show(
       notifId,
       cleanTitle,
@@ -1455,9 +1465,9 @@ title.toString().contains('🛵') ||
           showWhen: true,
           ongoing: (isOrderStatusUpdate && orderStatus != 'DELIVERED' && orderStatus != 'CANCELLED'),
           onlyAlertOnce: true,
-          showProgress: progress != null,
+          showProgress: !isOrderAlert && progress != null,
           maxProgress: 100,
-          progress: progress ?? 0,
+          progress: !isOrderAlert ? (progress ?? 0) : 0,
           color: const Color(0xFF00A344),
           colorized: true,
           subText: null, // STRICTLY NULL: prevents Android OS from appending truncated text ("Packe...") to header line!
@@ -1491,7 +1501,7 @@ title.toString().contains('🛵') ||
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
-      payload: (_resolveNotificationRoute(Map<String, dynamic>.from(message.data)) ?? (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders')).toString(),
+      payload: routeUrl.toString(),
     );
   }
 

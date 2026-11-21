@@ -86,8 +86,6 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
     final shareText = '🎁 *Surprise Gift Card for $toName!* 💖\n\n'
         'From: *$fromName*\n'
         '💌 *Personal Note:* "$noteText"\n\n'
-        '🚚 *FastMinute Express Delivery*\n'
-        '📍 *Track your live surprise delivery:* https://fastminute.in/order/track\n\n'
         '✨ Complimentary handwritten greeting card • 100% Secret Surprise (Price & Invoice Hidden)';
 
     final whatsappUrl = 'whatsapp://send?text=${Uri.encodeComponent(shareText)}';
@@ -98,15 +96,6 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
 
     if (!success) {
       await Share.share(shareText, subject: '🎁 Surprise Gift from FastMinute');
-    }
-
-    // Auto-advance to Checkout per user request so order is placed with live tracking
-    final cart = ref.read(cartProvider).valueOrNull;
-    if (cart != null && cart.items.isNotEmpty && mounted) {
-      Navigator.push(
-        context,
-        FadeSlideRoute(page: const CheckoutScreen()),
-      );
     }
   }
 

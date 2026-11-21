@@ -98,10 +98,10 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
             : null,
       ),
       padding: EdgeInsets.fromLTRB(
-        context.isCompact ? 10 : 16,
-        8,
-        context.isCompact ? 10 : 16,
-        widget.showSearch ? 12 : 6,
+        context.isCompact ? 10 : 14,
+        6,
+        context.isCompact ? 10 : 14,
+        widget.showSearch ? 8 : 4,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,7 +111,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // FastKirana Speed Logo
-              FastKiranaLogoWidget(size: context.isCompact ? 34 : 40),
+              FastKiranaLogoWidget(size: context.isCompact ? 30 : 36),
               SizedBox(width: context.isCompact ? 8 : 12),
 
               // 10-15 Min Fast Delivery Header & Location Selector
@@ -130,20 +130,22 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                     final shortLocation = hasLocation
                         ? selectedAddress.shortAddress
                         : 'Select Location';
+                    final displayLoc = shortLocation
+                        .replaceAll(RegExp(r'\s+Central\s+Hub', caseSensitive: false), '')
+                        .trim();
                     final addrLabel = (hasLocation && selectedAddress.label.trim().isNotEmpty)
                         ? selectedAddress.label.trim().replaceAll('📍', '').trim()
                         : '';
-                    final isSameText = selectedArea.trim().toLowerCase() == shortLocation.trim().toLowerCase();
 
                     final String line1Text;
                     if (!hasLocation) {
                       line1Text = 'Delivery';
-                    } else if (addrLabel.isNotEmpty && addrLabel.toLowerCase() != shortLocation.toLowerCase()) {
+                    } else if (addrLabel.isNotEmpty &&
+                        ['home', 'work', 'office'].contains(addrLabel.toLowerCase()) &&
+                        addrLabel.toLowerCase() != displayLoc.toLowerCase()) {
                       line1Text = 'Delivering to $addrLabel';
-                    } else if (isSameText) {
-                      line1Text = 'Delivering to';
                     } else {
-                      line1Text = 'Delivering to $selectedArea';
+                      line1Text = 'Delivering to';
                     }
 
                     return GestureDetector(
@@ -180,8 +182,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                               Container(
                                 width: 6,
                                 height: 6,
-                                decoration: BoxDecoration(
-                                  color: hasLocation ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE11D48),
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -192,8 +194,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize:
                                         Responsive.scaledFontSize(context, 10.5),
-                                    fontWeight: FontWeight.w700,
-                                    color: hasLocation ? AppDesignSystem.textSecondary : const Color(0xFFEA580C),
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFFE11D48),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -208,7 +210,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                             children: [
                               Flexible(
                                 child: Text(
-                                  shortLocation,
+                                  displayLoc,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: Responsive.scaledFontSize(
                                         context, 14.5),
@@ -243,8 +245,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                     },
                     borderRadius: BorderRadius.circular(18),
                     child: Container(
-                      height: 34,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      height: 31,
+                      padding: const EdgeInsets.symmetric(horizontal: 7),
                       decoration: BoxDecoration(
                         color: isCampaignActive ? const Color(0xFFFFF8E7) : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(18),
@@ -305,7 +307,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                     alignment: Alignment.center,
                     children: [
                       const Icon(Icons.notifications_none_rounded,
-                          size: 20, color: Color(0xFF334155)),
+                          size: 18, color: Color(0xFF334155)),
                       Positioned(
                         top: 9,
                         right: 9,
@@ -335,7 +337,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                     context, FadeSlideRoute(page: const SearchScreen()));
               },
               child: Container(
-                height: 48,
+                height: 44,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -359,8 +361,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                   children: [
                     // Ambient Lens Badge
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
                         color: isCampaignActive ? const Color(0xFFFEF3C7) : const Color(0xFFFEF2F2),
                         shape: BoxShape.circle,
@@ -369,7 +371,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                       ),
                       child: Icon(
                         Icons.search_rounded,
-                        size: 17,
+                        size: 15,
                         color: isCampaignActive ? const Color(0xFFD97706) : AppDesignSystem.primary,
                       ),
                     ),
@@ -435,8 +437,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                         button: true,
                         label: 'Voice search',
                         child: Container(
-                          width: 32,
-                          height: 32,
+                          width: 28,
+                          height: 28,
                           decoration: BoxDecoration(
                             color: isCampaignActive ? const Color(0xFFFEF3C7) : const Color(0xFFFEF2F2),
                             shape: BoxShape.circle,
@@ -444,7 +446,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                 color: isCampaignActive ? const Color(0xFFFFE082) : const Color(0xFFFECDD3), width: 0.8),
                           ),
                           child: Icon(Icons.mic_rounded,
-                              size: 16, color: isCampaignActive ? const Color(0xFFD97706) : AppDesignSystem.primary),
+                              size: 15, color: isCampaignActive ? const Color(0xFFD97706) : AppDesignSystem.primary),
                         ),
                       ),
                     ),

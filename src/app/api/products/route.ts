@@ -668,8 +668,18 @@ export async function POST(request: NextRequest) {
     let sortedVariants = variants
     let resolvedUnit = finalUnit
 
+    const baseCostPrice = Number(costPrice || 0)
+
     if (variants && Array.isArray(variants) && variants.length > 0) {
-      sortedVariants = [...variants].sort((a: any, b: any) => (Number(a.price) || 0) - (Number(b.price) || 0))
+      sortedVariants = [...variants]
+        .map((v: any) => {
+          const vCost = Number(v.costPrice) || 0
+          return {
+            ...v,
+            costPrice: vCost > 0 ? vCost : (baseCostPrice > 0 ? baseCostPrice : 0),
+          }
+        })
+        .sort((a: any, b: any) => (Number(a.price) || 0) - (Number(b.price) || 0))
       finalPrice = Number(sortedVariants[0].price) || 0
       finalMrp = Number(sortedVariants[0].mrp) || finalPrice
       if (!unit || unit === '1 pc' || unit === '1 unit' || unit === '1 Serving') {

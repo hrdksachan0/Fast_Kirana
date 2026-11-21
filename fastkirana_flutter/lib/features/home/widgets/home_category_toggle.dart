@@ -13,8 +13,8 @@ class HomeCategoryToggle extends StatefulWidget {
     super.key,
     required this.isGrocerySelected,
     required this.onModeChanged,
-    this.height = 56.0,
-    this.padding = const EdgeInsets.fromLTRB(16, 6, 16, 12),
+    this.height = 48.0,
+    this.padding = const EdgeInsets.fromLTRB(16, 4, 16, 8),
   });
 
   @override
@@ -276,8 +276,8 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                             ),
                                             child: SvgPicture.string(
                                               _grocerySvg,
-                                              width: isCompactHeight ? 26 : 32,
-                                              height: isCompactHeight ? 26 : 32,
+                                              width: isCompactHeight ? 22 : 26,
+                                              height: isCompactHeight ? 22 : 26,
                                             ),
                                           ),
                                         ),
@@ -291,7 +291,7 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                           AnimatedDefaultTextStyle(
                                             duration: const Duration(milliseconds: 220),
                                             style: GoogleFonts.plusJakartaSans(
-                                              fontSize: isCompactHeight ? 14.5 : 16.5,
+                                              fontSize: isCompactHeight ? 13.5 : 15.0,
                                               fontWeight: FontWeight.w900,
                                               color: isGrocery
                                                   ? Colors.white
@@ -360,8 +360,8 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                             ),
                                             child: SvgPicture.string(
                                               _burgerSvg,
-                                              width: isCompactHeight ? 26 : 32,
-                                              height: isCompactHeight ? 26 : 32,
+                                              width: isCompactHeight ? 22 : 26,
+                                              height: isCompactHeight ? 22 : 26,
                                             ),
                                           ),
                                         ),
@@ -375,7 +375,7 @@ class _HomeCategoryToggleState extends State<HomeCategoryToggle>
                                           AnimatedDefaultTextStyle(
                                             duration: const Duration(milliseconds: 220),
                                             style: GoogleFonts.plusJakartaSans(
-                                              fontSize: isCompactHeight ? 14.5 : 16.5,
+                                              fontSize: isCompactHeight ? 13.5 : 15.0,
                                               fontWeight: FontWeight.w900,
                                               color: !isGrocery
                                                   ? Colors.white

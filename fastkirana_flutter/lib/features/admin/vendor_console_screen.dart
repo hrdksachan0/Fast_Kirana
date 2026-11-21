@@ -650,7 +650,8 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     final String prodId = prod['id']?.toString() ?? '';
     final String prodName = prod['name']?.toString() ?? 'Product';
     final String unit = prod['unit']?.toString() ?? '';
-    final double initialCost = OrderItemHelper.resolveCostPrice(prod);
+    final double rawDirectCost = (prod['costPrice'] ?? prod['cost_price'] ?? prod['cost'] as num?)?.toDouble() ?? 0.0;
+    final double initialCost = rawDirectCost > 0 ? rawDirectCost : OrderItemHelper.resolveCostPrice(prod);
     final double initialPrice = (prod['price'] as num?)?.toDouble() ?? 0.0;
     final double initialMrp = (prod['mrp'] as num?)?.toDouble() ?? initialPrice;
     final int initialStock = (prod['stock'] as num?)?.toInt() ?? 0;
@@ -675,6 +676,16 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       } catch (_) {}
     }
 
+    // Ensure all variants have non-zero costPrice inherited from parent if available
+    for (final v in workingVariants) {
+      final vCostRaw = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble();
+      if ((vCostRaw == null || vCostRaw <= 0) && initialCost > 0) {
+        v['costPrice'] = initialCost;
+      } else if (vCostRaw != null && vCostRaw > 0) {
+        v['costPrice'] = vCostRaw;
+      }
+    }
+
     int selectedVariantIndex = 0;
 
     final costCtrl = TextEditingController();
@@ -684,9 +695,12 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
     if (workingVariants.isNotEmpty) {
       final v0 = workingVariants[0];
-      final vCost = (v0['costPrice'] ?? v0['cost_price'] ?? v0['cp'] ?? v0['cost'] as num?)?.toDouble() ?? initialCost;
-      final vPrice = (v0['price'] as num?)?.toDouble() ?? initialPrice;
-      final vMrp = (v0['mrp'] as num?)?.toDouble() ?? (initialMrp > 0 ? initialMrp : vPrice);
+      final rawCost0 = (v0['costPrice'] ?? v0['cost_price'] ?? v0['cp'] ?? v0['cost'] as num?)?.toDouble();
+      final vCost = (rawCost0 != null && rawCost0 > 0) ? rawCost0 : initialCost;
+      final rawPrice0 = (v0['price'] as num?)?.toDouble();
+      final vPrice = (rawPrice0 != null && rawPrice0 > 0) ? rawPrice0 : initialPrice;
+      final rawMrp0 = (v0['mrp'] as num?)?.toDouble();
+      final vMrp = (rawMrp0 != null && rawMrp0 > 0) ? rawMrp0 : (initialMrp > 0 ? initialMrp : vPrice);
       final vStock = (v0['stock'] as num?)?.toInt() ?? initialStock;
 
       costCtrl.text = vCost > 0 ? vCost.toStringAsFixed(vCost.truncateToDouble() == vCost ? 0 : 2) : '';
@@ -721,9 +735,12 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
           void loadVariantInputs(int idx) {
             if (workingVariants.isNotEmpty && idx < workingVariants.length) {
               final v = workingVariants[idx];
-              final vCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble() ?? 0.0;
-              final vPrice = (v['price'] as num?)?.toDouble() ?? 0.0;
-              final vMrp = (v['mrp'] as num?)?.toDouble() ?? vPrice;
+              final rawCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble();
+              final vCost = (rawCost != null && rawCost > 0) ? rawCost : initialCost;
+              final rawPrice = (v['price'] as num?)?.toDouble();
+              final vPrice = (rawPrice != null && rawPrice > 0) ? rawPrice : initialPrice;
+              final rawMrp = (v['mrp'] as num?)?.toDouble();
+              final vMrp = (rawMrp != null && rawMrp > 0) ? rawMrp : (vPrice > 0 ? vPrice : initialMrp);
               final vStock = (v['stock'] as num?)?.toInt() ?? 0;
 
               costCtrl.text = vCost > 0 ? vCost.toStringAsFixed(vCost.truncateToDouble() == vCost ? 0 : 2) : '';
@@ -902,8 +919,10 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                           final isSel = idx == selectedVariantIndex;
                           final v = workingVariants[idx];
                           final vName = (v['name'] ?? 'Variant ${idx + 1}').toString();
-                          final vCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble() ?? 0.0;
-                          final vSell = (v['price'] as num?)?.toDouble() ?? 0.0;
+                          final rawVCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble();
+                          final vCost = isSel ? costVal : ((rawVCost != null && rawVCost > 0) ? rawVCost : initialCost);
+                          final rawVSell = (v['price'] as num?)?.toDouble();
+                          final vSell = isSel ? sellVal : ((rawVSell != null && rawVSell > 0) ? rawVSell : initialPrice);
 
                           return Padding(
                             padding: const EdgeInsets.only(right: 8),
@@ -1085,7 +1104,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                             TextField(
                               controller: costCtrl,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              onChanged: (_) => setModalState(() {}),
+                              onChanged: (_) { syncInputsToCurrentVariant(); setModalState(() {}); },
                               decoration: InputDecoration(
                                 prefixText: '₹ ',
                                 hintText: '0.00',
@@ -1115,7 +1134,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                             TextField(
                               controller: sellCtrl,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              onChanged: (_) => setModalState(() {}),
+                              onChanged: (_) { syncInputsToCurrentVariant(); setModalState(() {}); },
                               decoration: InputDecoration(
                                 prefixText: '₹ ',
                                 hintText: '0.00',
@@ -1149,7 +1168,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                             TextField(
                               controller: mrpCtrl,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              onChanged: (_) => setModalState(() {}),
+                              onChanged: (_) { syncInputsToCurrentVariant(); setModalState(() {}); },
                               decoration: InputDecoration(
                                 prefixText: '₹ ',
                                 hintText: '0.00',

@@ -219,107 +219,51 @@ class LuxuryGiftEnvelopeCard extends StatelessWidget {
 
                   const SizedBox(height: 14),
 
-                  // Actions: Share Gift Card with Live Tracking & Direct Checkout
-                  Row(
-                    children: [
-                      // Share Gift Card Button (WhatsApp / Share Sheet)
-                      Expanded(
-                        flex: 5,
-                        child: Bounceable(
-                          onTap: onShareCard ?? onTapEdit,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFF25D366).withValues(alpha: 0.6),
-                                width: 1.2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF25D366).withValues(alpha: 0.12),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                  // Action: Share Gift Card (Full-width button)
+                  SizedBox(
+                    width: double.infinity,
+                    child: Bounceable(
+                      onTap: onShareCard ?? onTapEdit,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF881337),
+                              Color(0xFFBE123C),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFBE123C).withValues(alpha: 0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('💬', style: TextStyle(fontSize: 13)),
-                                const SizedBox(width: 5),
-                                Flexible(
-                                  child: Text(
-                                    'Share Card',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF15803D),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          ],
+                          border: Border.all(
+                            color: const Color(0xFFFFDF73).withValues(alpha: 0.5),
+                            width: 1.0,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Direct Proceed to Checkout Button
-                      Expanded(
-                        flex: 6,
-                        child: Bounceable(
-                          onTap: onProceedToCheckout ?? onTapEdit,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF881337),
-                                  Color(0xFFBE123C),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFBE123C).withValues(alpha: 0.35),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                              border: Border.all(
-                                color: const Color(0xFFFFDF73).withValues(alpha: 0.4),
-                                width: 0.8,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('💌', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Share Card',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.2,
                               ),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('🎁', style: TextStyle(fontSize: 12)),
-                                const SizedBox(width: 5),
-                                Flexible(
-                                  child: Text(
-                                    cartItemCount > 0
-                                        ? 'Checkout ($cartItemCount) ➔'
-                                        : 'Proceed ➔',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
