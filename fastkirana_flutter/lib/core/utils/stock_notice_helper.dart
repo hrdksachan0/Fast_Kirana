@@ -18,13 +18,11 @@ class StockNoticeHelper {
     if (messenger == null) return;
     messenger.hideCurrentSnackBar();
 
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    // Bottom navigation bar height is ~56-62px.
-    // FloatingCartBar is positioned ~8-10px above bottom nav bar (height ~52px).
-    // Total bottom offset when cart is present is ~120px + bottomPadding.
-    // Setting bottom margin to (bottomPadding + 118.0) places it just 10-12px cleanly above the FloatingCartBar,
-    // avoiding the massive empty gap shown on screen!
-    final bottomMargin = hasFloatingCart ? (bottomPadding + 118.0) : (bottomPadding + 68.0);
+    // On screens with bottomNavigationBar (like CartScreen), Flutter's Scaffold
+    // automatically positions floating SnackBars directly above the bottomNavigationBar.
+    // Adding extra height causes it to jump up into the middle of the screen!
+    // A clean, comfortable margin of 12.0 above whatever bottom bar is present is optimal:
+    final bottomMargin = 12.0;
 
     final String message = customMessage ??
         (stock <= 0
