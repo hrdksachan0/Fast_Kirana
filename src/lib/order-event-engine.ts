@@ -145,7 +145,7 @@ export class OrderEventEngine {
           total: totalAmount,
           itemsCount: allOrders.reduce((sum, o) => sum + (o.items?.length || 0), 0),
           customerPhone: primaryOrder.address?.phone || primaryOrder.user?.phone || '',
-          customerName: primaryOrder.address?.name || primaryOrder.user?.name || 'Customer',
+          customerName: (primaryOrder.address as any)?.name || primaryOrder.user?.name || 'Customer',
         },
         version: Date.now(),
         timestamp: Date.now(),
