@@ -329,15 +329,20 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                                 )
                               else if (isFreeDelivery)
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.check_circle_rounded, size: 10.5, color: Color(0xFF16A34A)),
                                     const SizedBox(width: 3),
-                                    Text(
-                                      'Free Delivery Unlocked',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF16A34A),
+                                    Flexible(
+                                      child: Text(
+                                        'Free Delivery Unlocked',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF16A34A),
+                                        ),
                                       ),
                                     ),
                                   ],

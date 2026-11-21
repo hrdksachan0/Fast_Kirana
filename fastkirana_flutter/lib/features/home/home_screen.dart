@@ -472,6 +472,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   int _selectedFilterIndex = 0;
   bool _isResolvingInitialLocation = false;
+  static bool _hasPromptedLocationOffInSession = false;
 
 
 
@@ -930,86 +931,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
 
-            // First-Time App Open (Jab koi address set na ho):
-
-
-
-
-
-
-
-            // Customer ko home page par aate hi Swiggy-style sleek permission sheet dikhta hai.
-
-
-
-
-
-
-
-            if (currentAddress == null && !hasChosen) {
-
-
-
-
-
-
-
-              Future.delayed(const Duration(milliseconds: 300), () {
-
-
-
-
-
-
-
-                if (mounted) {
-
-
-
-
-
-
-
-                  SwiggyLocationPermissionSheet.show(context);
-
-
-
-
-
-
-
-                }
-
-
-
-
-
-
-
-              });
-
-
-
-
-
-
-
+            // Zepto / Blinkit behavior:
+            // Agar Device Location (GPS hardware) OFF hai ya user ke paas koi address nahi hai:
+            // App khulte hi Zepto-style location permission / enable sheet dikhao.
+            if (!serviceEnabled || (currentAddress == null && !hasChosen)) {
+              if (!_hasPromptedLocationOffInSession) {
+                _hasPromptedLocationOffInSession = true;
+                Future.delayed(const Duration(milliseconds: 400), () {
+                  if (mounted) {
+                    SwiggyLocationPermissionSheet.show(context);
+                  }
+                });
+              }
             }
-
-
-
-
-
-
-
           }
-
-
-
-
-
-
-
         }();
 
 
@@ -1139,55 +1074,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
   void didChangeAppLifecycleState(AppLifecycleState state) {
-
-
-
-
-
-
-
     if (state == AppLifecycleState.resumed) {
-
-
-
-
-
-
-
       ref.invalidate(storeSettingsProvider);
-
-
-
-
-
-
-
       ref.invalidate(navratriDataProvider);
-
-
-
-
-
-
-
       ref.invalidate(navratriLinkedProductsProvider);
-
-
-
-
-
-
-
       _checkAndRevalidateCatalog();
-
-
-
-
-
-
-
+      // On resume, check if user enabled GPS in device settings
+      Geolocator.isLocationServiceEnabled().then((enabled) {
+        if (enabled && mounted) {
+          final currentAddr = ref.read(selectedAddressProvider);
+          if (currentAddr == null) {
+            LocationService.bootstrapUserLocation(ref);
+          } else {
+            LocationService.checkLocationDriftAndPrompt(context, ref);
+          }
+        }
+      });
     }
-
 
 
 

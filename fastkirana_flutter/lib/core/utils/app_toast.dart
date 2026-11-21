@@ -89,6 +89,98 @@ class AppToast {
     );
   }
 
+
+  /// Displays a Bento Action Capsule specifically tailored for Payment Incomplete/Aborted scenarios.
+  /// Floats safely above the checkout button with 1-tap resolution button.
+  static void showBentoPaymentIncomplete(
+    BuildContext context, {
+    String title = 'Payment Incomplete',
+    String subtitle = 'Your items are safely saved in your cart.',
+    String actionLabel = 'Switch to COD',
+    VoidCallback? onAction,
+    Duration duration = const Duration(milliseconds: 4500),
+  }) {
+    HapticFeedback.mediumImpact();
+
+    try {
+      _dismissTimer?.cancel();
+      _currentOverlay?.remove();
+      _currentOverlay = null;
+
+      final overlay =
+          Overlay.maybeOf(context, rootOverlay: true) ?? Overlay.of(context);
+
+      final entry = OverlayEntry(
+        builder: (ctx) => _BentoPaymentToastWidget(
+          title: title,
+          subtitle: subtitle,
+          actionLabel: actionLabel,
+          onAction: onAction,
+          onDismiss: () {
+            _dismissTimer?.cancel();
+            _currentOverlay?.remove();
+            _currentOverlay = null;
+          },
+        ),
+      );
+
+      _currentOverlay = entry;
+      overlay.insert(entry);
+
+      _dismissTimer = Timer(duration, () {
+        _currentOverlay?.remove();
+        _currentOverlay = null;
+      });
+    } catch (_) {
+      _fallbackBentoSnackBar(
+        context,
+        title: title,
+        subtitle: subtitle,
+        actionLabel: actionLabel,
+        onAction: onAction,
+        duration: duration,
+      );
+    }
+  }
+
+  static void _fallbackBentoSnackBar(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required String actionLabel,
+    VoidCallback? onAction,
+    required Duration duration,
+  }) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    messenger.showSnackBar(
+      SnackBar(
+        duration: duration,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: EdgeInsets.fromLTRB(
+          14,
+          0,
+          14,
+          bottomPadding + 94,
+        ),
+        padding: EdgeInsets.zero,
+        content: _BentoPaymentCard(
+          title: title,
+          subtitle: subtitle,
+          actionLabel: actionLabel,
+          onAction: onAction,
+          onDismiss: () => messenger.hideCurrentSnackBar(),
+        ),
+      ),
+    );
+  }
+
   static void _show(
     BuildContext context,
     String title, {
@@ -584,3 +676,283 @@ class _LuxuryToastWidgetState extends State<_LuxuryToastWidget> {
     );
   }
 }
+
+
+class _BentoPaymentToastWidget extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback? onAction;
+  final VoidCallback onDismiss;
+
+  const _BentoPaymentToastWidget({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    this.onAction,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_BentoPaymentToastWidget> createState() => _BentoPaymentToastWidgetState();
+}
+
+class _BentoPaymentToastWidgetState extends State<_BentoPaymentToastWidget> {
+  bool _isExiting = false;
+
+  void _triggerDismiss() {
+    if (_isExiting) return;
+    HapticFeedback.lightImpact();
+    setState(() => _isExiting = true);
+    Future.delayed(const Duration(milliseconds: 200), widget.onDismiss);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxWidth = (screenWidth - 28).clamp(280.0, 480.0);
+
+    return Positioned(
+      bottom: bottomPadding + 94,
+      left: 0,
+      right: 0,
+      child: Material(
+        color: Colors.transparent,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Dismissible(
+            key: UniqueKey(),
+            direction: DismissDirection.down,
+            onDismissed: (_) => widget.onDismiss(),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: _isExiting ? 0.0 : 1.0),
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutBack,
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, (1 - value) * 28),
+                  child: Transform.scale(
+                    scale: 0.94 + (value * 0.06),
+                    child: Opacity(
+                      opacity: value.clamp(0.0, 1.0),
+                      child: child,
+                    ),
+                  ),
+                );
+              },
+              child: SizedBox(
+                width: maxWidth,
+                child: _BentoPaymentCard(
+                  title: widget.title,
+                  subtitle: widget.subtitle,
+                  actionLabel: widget.actionLabel,
+                  onAction: widget.onAction,
+                  onDismiss: _triggerDismiss,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BentoPaymentCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback? onAction;
+  final VoidCallback onDismiss;
+
+  const _BentoPaymentCard({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    this.onAction,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.60),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+            spreadRadius: -2,
+          ),
+          BoxShadow(
+            color: const Color(0xFFE11D48).withValues(alpha: 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E1B2E), Color(0xFF11121C)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+                width: 1.0,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top Header Row
+                Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0x33E11D48),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0x66E11D48)),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.credit_card_off_rounded,
+                          color: Color(0xFFFB7185),
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 5.5,
+                                height: 5.5,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFB7185),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'PAYMENT NOTICE',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9.0,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFFB7185),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13.0,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: onDismiss,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.close_rounded, size: 13, color: Color(0xFF94A3B8)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Subtitle
+                Text(
+                  subtitle,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFCBD5E1),
+                    height: 1.35,
+                  ),
+                  softWrap: true,
+                ),
+                const SizedBox(height: 10),
+
+                // Hero Full-Width Action Button
+                GestureDetector(
+                  onTap: () {
+                    onDismiss();
+                    if (onAction != null) {
+                      onAction!();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          actionLabel,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12.0,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

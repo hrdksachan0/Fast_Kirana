@@ -7,15 +7,16 @@ class AppHaptics {
   AppHaptics._();
 
   /// Smooth, crisp mechanical tick for stepper (+ and -) buttons.
-  /// Refined and subtle without shaking the device chassis.
+  /// Dual-engine: triggers lightImpact() and fallback vibrate() to guarantee vibration across all Android OEM skins.
   static void smoothTick() {
-    HapticFeedback.selectionClick();
+    HapticFeedback.lightImpact();
+    HapticFeedback.vibrate();
   }
 
   /// Satisfying, gentle confirmation pulse when user adds an item to cart (ADD button).
-  /// Smooth, solid feeling that feels premium on any Android or iOS device.
   static void smoothAdd() {
     HapticFeedback.mediumImpact();
+    HapticFeedback.vibrate();
   }
 
   /// Refined alert pulse for max stock / restrictions.

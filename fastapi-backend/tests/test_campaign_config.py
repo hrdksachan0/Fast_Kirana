@@ -25,7 +25,9 @@ from services.campaign_config import (
 @pytest.fixture
 def config():
     source = Path(__file__).resolve().parents[2] / "public" / "navratri" / "navratri.json"
-    return json.loads(source.read_text(encoding="utf-8"))
+    cfg = json.loads(source.read_text(encoding="utf-8"))
+    cfg["enabled"] = True
+    return cfg
 
 
 def test_defaults_and_generic_empty_navigation(config):

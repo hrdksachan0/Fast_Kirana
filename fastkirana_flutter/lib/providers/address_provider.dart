@@ -27,9 +27,9 @@ class AddressesNotifier extends StateNotifier<AsyncValue<List<Address>>> {
       final filtered = addresses
           .where((a) => !a.label.toUpperCase().startsWith('STORE_PICKUP'))
           .toList();
-      state = AsyncValue.data(filtered);
+      if (mounted) state = AsyncValue.data(filtered);
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (mounted) state = AsyncValue.error(e, st);
     }
   }
 

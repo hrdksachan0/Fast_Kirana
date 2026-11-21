@@ -82,6 +82,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
   const [recentDeposits, setRecentDeposits] = useState<DepositLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [dateFilter, setDateFilter] = useState<'today' | 'yesterday'>('today')
 
   // Settlement modal state
   const [selectedRider, setSelectedRider] = useState<RiderCashInfo | null>(null)
@@ -92,7 +93,10 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
   const fetchData = async () => {
     try {
       setIsLoading(true)
-      const url = storeId ? `/api/admin/rider-cash?storeId=${encodeURIComponent(storeId)}` : '/api/admin/rider-cash'
+      const params = new URLSearchParams()
+      if (storeId) params.append('storeId', storeId)
+      if (dateFilter) params.append('dateFilter', dateFilter)
+      const url = `/api/admin/rider-cash?${params.toString()}`
       const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
@@ -112,7 +116,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
 
   useEffect(() => {
     fetchData()
-  }, [storeId])
+  }, [storeId, dateFilter])
 
   const handleOpenSettleModal = (rider: RiderCashInfo) => {
     setSelectedRider(rider)
@@ -294,28 +298,28 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
         {/* Card 2: Today Deliveries (Work) */}
         <div className="bg-card border border-border/80 p-3.5 rounded-2xl space-y-1.5 shadow-2xs">
           <div className="flex items-center justify-between text-blue-600 dark:text-blue-400">
-            <span className="text-[10px] font-black uppercase tracking-wider">Today Orders</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">{dateFilter === 'yesterday' ? 'Yesterday Orders' : 'Today Orders'}</span>
             <Package className="h-4 w-4" />
           </div>
           <p className="text-xl sm:text-2xl font-black text-blue-900 dark:text-blue-100">
             {totalDeliveredOrdersToday}
           </p>
           <p className="text-[10px] text-blue-700/80 dark:text-blue-400 font-bold">
-            Delivered trips today
+            {dateFilter === 'yesterday' ? 'Delivered trips yesterday' : 'Delivered trips today'}
           </p>
         </div>
 
         {/* Card 3: Total Money Handled */}
         <div className="bg-card border border-border/80 p-3.5 rounded-2xl space-y-1.5 shadow-2xs">
           <div className="flex items-center justify-between text-purple-600 dark:text-purple-400">
-            <span className="text-[10px] font-black uppercase tracking-wider">Money Handled</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">{dateFilter === 'yesterday' ? 'Value Yesterday' : 'Money Handled'}</span>
             <IndianRupee className="h-4 w-4" />
           </div>
           <p className="text-xl sm:text-2xl font-black text-purple-900 dark:text-purple-100">
             {formatPrice(totalDeliveredMoneyToday)}
           </p>
           <p className="text-[10px] text-purple-700/80 dark:text-purple-400 font-bold">
-            Delivered value today
+            {dateFilter === 'yesterday' ? 'Delivered value yesterday' : 'Delivered value today'}
           </p>
         </div>
 
@@ -420,15 +424,43 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
             </div>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
-            <input
-              type="text"
-              placeholder="Search rider name or phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-muted/30 border border-border rounded-xl text-xs font-medium focus:outline-none focus:border-primary"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Date Filter Toggle */}
+            <div className="flex items-center gap-1 bg-surface-muted/60 p-1 rounded-xl border border-border">
+              <button
+                type="button"
+                onClick={() => setDateFilter('today')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  dateFilter === 'today'
+                    ? 'bg-primary text-primary-foreground shadow-2xs font-extrabold'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateFilter('yesterday')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  dateFilter === 'yesterday'
+                    ? 'bg-primary text-primary-foreground shadow-2xs font-extrabold'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                Yesterday
+              </button>
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Search rider name or phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-muted/30 border border-border rounded-xl text-xs font-medium focus:outline-none focus:border-primary"
+              />
+            </div>
           </div>
         </div>
 
@@ -446,7 +478,7 @@ export function AdminRiderCash({ storeId }: AdminRiderCashProps = {}) {
                   <th className="py-3 px-4">Work &amp; Trips</th>
                   <th className="py-3 px-4">Money Handled</th>
                   <th className="py-3 px-4">Cash in Pocket (COD)</th>
-                  <th className="py-3 px-4">Today Deposited</th>
+                  <th className="py-3 px-4">{dateFilter === 'yesterday' ? 'Yesterday Deposited' : 'Today Deposited'}</th>
                   <th className="py-3 px-4 text-right">Settlement Action</th>
                 </tr>
               </thead>

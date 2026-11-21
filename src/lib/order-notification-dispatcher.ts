@@ -687,6 +687,20 @@ export async function dispatchAdminApprovedNotifications(orderId: string, origin
         }
       }
     }
+
+    // Unified Order Event Engine broadcast on admin approval
+    try {
+      const { OrderEventEngine } = await import('@/lib/order-event-engine')
+      await OrderEventEngine.emit({
+        orderId: primaryOrder.id,
+        tag: 'ORDER_ADMIN_APPROVED',
+        newStatus: primaryOrder.status || 'CONFIRMED',
+        previousStatus: 'ADMIN_PENDING',
+        origin: baseOrigin,
+      })
+    } catch (engineErr) {
+      console.error('dispatchAdminApprovedNotifications OrderEventEngine error:', engineErr)
+    }
   } catch (err) {
     console.error('dispatchAdminApprovedNotifications error:', err)
   }

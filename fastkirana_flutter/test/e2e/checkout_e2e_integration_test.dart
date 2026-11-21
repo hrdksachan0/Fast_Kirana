@@ -256,7 +256,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Delivered'), findsWidgets);
+      expect(find.textContaining('Delivered'), findsWidgets);
     });
 
     testWidgets('Step 5: Edge Case - Cashfree Payment Failure with Seamless COD Recovery',

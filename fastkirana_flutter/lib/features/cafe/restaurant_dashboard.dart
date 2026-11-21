@@ -716,9 +716,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       HapticFeedback.heavyImpact();
       try {
         await _audioPlayer.stop();
-        // Play local asset audio for zero latency and offline reliability
+        // Play local asset audio for zero latency and offline reliability (Kitchen Order Bell)
         await _audioPlayer.play(
-          AssetSource('sounds/order_chime.mp3'),
+          AssetSource('sounds/kitchen_order_bell.wav'),
           volume: 1.0,
         );
       } catch (e) {

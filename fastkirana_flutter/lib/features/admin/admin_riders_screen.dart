@@ -31,6 +31,7 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
   Map<String, dynamic>? _summary;
   String _searchQuery = '';
   String? _currentStoreId;
+  String _selectedDateFilter = 'today';
 
   @override
   void initState() {
@@ -59,6 +60,7 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
         '/api/admin/rider-cash',
         queryParameters: {
           if (storeId != null && storeId.isNotEmpty && storeId != 'all') 'storeId': storeId,
+          'dateFilter': _selectedDateFilter,
         },
         options: await AdminAuthorization.optionsAsync(),
       );
@@ -354,7 +356,7 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                           children: [
                             Expanded(
                               child: _buildSummaryCard(
-                                title: 'COD Delivered Today',
+                                title: _selectedDateFilter == 'yesterday' ? 'COD Delivered Yesterday' : 'COD Delivered Today',
                                 value: '₹${(_summary!['deliveredCodToday'] as num? ?? 0.0).toStringAsFixed(0)}',
                                 icon: Icons.payments_rounded,
                                 color: AppDesignSystem.emerald700,
@@ -363,7 +365,7 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: _buildSummaryCard(
-                                title: 'Cash Deposited Today',
+                                title: _selectedDateFilter == 'yesterday' ? 'Cash Deposited Yesterday' : 'Cash Deposited Today',
                                 value: '₹${(_summary!['totalCashDepositedToday'] as num? ?? 0.0).toStringAsFixed(0)}',
                                 icon: Icons.savings_rounded,
                                 color: AppDesignSystem.primary,
@@ -374,7 +376,114 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // 2. Search Field
+                      // 2. Date Filter Toggle (Today vs Yesterday)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(3.5),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppDesignSystem.slate200),
+                          boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1))],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (_selectedDateFilter != 'today') {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _selectedDateFilter = 'today');
+                                    _fetchRidersData();
+                                  }
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _selectedDateFilter == 'today'
+                                        ? AppDesignSystem.slate900
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.today_rounded,
+                                        size: 14,
+                                        color: _selectedDateFilter == 'today'
+                                            ? Colors.white
+                                            : AppDesignSystem.slate600,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Today',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: _selectedDateFilter == 'today'
+                                              ? Colors.white
+                                              : AppDesignSystem.slate700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (_selectedDateFilter != 'yesterday') {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _selectedDateFilter = 'yesterday');
+                                    _fetchRidersData();
+                                  }
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _selectedDateFilter == 'yesterday'
+                                        ? AppDesignSystem.slate900
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.history_rounded,
+                                        size: 14,
+                                        color: _selectedDateFilter == 'yesterday'
+                                            ? Colors.white
+                                            : AppDesignSystem.slate600,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Yesterday',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: _selectedDateFilter == 'yesterday'
+                                              ? Colors.white
+                                              : AppDesignSystem.slate700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // 3. Search Field
                       Container(
                         height: 42,
                         decoration: BoxDecoration(
@@ -578,7 +687,7 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('📦 WORK TODAY', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: AppDesignSystem.slate400)),
+                            Text(_selectedDateFilter == 'yesterday' ? '📦 WORK YESTERDAY' : '📦 WORK TODAY', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: AppDesignSystem.slate400)),
                             const SizedBox(height: 2),
                             Text(
                               '$todayTotalOrders Orders',
@@ -604,7 +713,7 @@ class _AdminRidersScreenState extends ConsumerState<AdminRidersScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('💰 ORDER VALUE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: AppDesignSystem.slate400)),
+                            Text(_selectedDateFilter == 'yesterday' ? '💰 VALUE YESTERDAY' : '💰 ORDER VALUE', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: AppDesignSystem.slate400)),
                             const SizedBox(height: 2),
                             Text(
                               '₹${todayTotalMoney.toStringAsFixed(0)}',

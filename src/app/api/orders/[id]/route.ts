@@ -1682,6 +1682,30 @@ export async function PATCH(
       console.error('Failed to emit SSE order update:', sseErr)
     }
 
+    // Unified Order Event Engine: Single Funnel for Realtime, FCM, SSE & WhatsApp
+    try {
+      const { OrderEventEngine } = await import('@/lib/order-event-engine')
+      const targetTag = (body as any)?.isApproval === true || existingOrder.status === 'ADMIN_PENDING'
+        ? 'ORDER_ADMIN_APPROVED'
+        : 'ORDER_STATUS_CHANGED'
+
+      await OrderEventEngine.emit({
+        orderId: existingOrder.id,
+        tag: targetTag,
+        newStatus: updated[0]?.status || status,
+        previousStatus: existingOrder.status,
+        actorId: userId,
+        actorRole: userRole,
+        origin,
+        payload: {
+          deliveryUserId: deliveryUserId || updated[0]?.deliveryUserId,
+          deliveryRoute: body.deliveryRoute,
+        },
+      })
+    } catch (engineErr) {
+      console.error('[PATCH /api/orders/[id]] OrderEventEngine error:', engineErr)
+    }
+
     return NextResponse.json(updated[0])
   } catch (error) {
     console.error('Order status update error:', error)

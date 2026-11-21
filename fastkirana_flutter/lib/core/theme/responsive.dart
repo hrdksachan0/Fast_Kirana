@@ -120,30 +120,33 @@ class Responsive {
   /// Engineered for Blinkit/Zepto 3-card visible horizontal viewport
   static double productCardShelfWidth(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width < 360) return 102.0;
-    if (width < 400) return 108.0;
-    if (width < mobileBreakpoint) return 114.0;
-    if (width < tabletBreakpoint) return 122.0;
-    return 132.0;
+    if (width >= tabletBreakpoint) return 142.0;
+    if (width >= mobileBreakpoint) return 132.0;
+
+    // Exact dynamic 3-card viewport calculation across all phone screen sizes:
+    // (screenWidth - leftPadding 16 - rightPadding 16 - 2 separators of 8) / 3
+    final avail = width - 48.0;
+    return (avail / 3.0).clamp(108.0, 130.0);
   }
 
   /// Unified Responsive Product Shelf Height for horizontal tracks (Compact & proportionate)
-  /// Calibrated to eliminate dead whitespace below Grocery product cards
+  /// Calibrated dynamically to card width to prevent bottom price/name clipping on all Android devices
   static double productShelfHeight(BuildContext context, {bool isFood = false}) {
     final width = MediaQuery.of(context).size.width;
+    final cardW = productCardShelfWidth(context);
+
     if (isFood) {
-      if (width < 360) return 212.0;
-      if (width < 400) return 218.0;
-      if (width < mobileBreakpoint) return 224.0;
-      if (width < tabletBreakpoint) return 232.0;
-      return 238.0;
+      if (width < 360) return 218.0;
+      if (width < 400) return 224.0;
+      if (width < mobileBreakpoint) return 232.0;
+      if (width < tabletBreakpoint) return 240.0;
+      return 248.0;
     }
-    // Grocery cards (Zepto/Blinkit space-optimized compact ratio: ~176-184px)
-    if (width < 360) return 174.0;
-    if (width < 400) return 180.0;
-    if (width < mobileBreakpoint) return 184.0;
-    if (width < tabletBreakpoint) return 192.0;
-    return 198.0;
+
+    // Grocery cards: card width + 82px for pill, 2-line title, and price/stepper row.
+    // Minimum 192px on compact phones, dynamically scales to ~204-208px on Moto/Pixel
+    final dynamicHeight = cardW + 82.0;
+    return dynamicHeight.clamp(192.0, 212.0);
   }
 
   /// Responsive scaled font size with safety clamping

@@ -16,6 +16,7 @@ import '../../data/models/order.dart';
 import 'package:flutter/services.dart' show SystemSound, SystemSoundType;
 import 'package:audioplayers/audioplayers.dart';
 import 'order_alarm_service.dart';
+import 'order_event_bus.dart';
 
 final logger = Logger();
 
@@ -46,10 +47,58 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
     final isExplicitCustomer = userRole == 'CUSTOMER' || userRole == 'USER';
 
+    final prefUserId = prefs.getString('user_id');
+    final secureUserId = await SecureStorage.read('user_id');
+    final savedUserId = prefUserId ?? secureUserId;
+    final isLoggedOut = savedUserId == null || savedUserId.isEmpty;
+
+    // Detect if this is an Admin / Staff incoming alert (NOT a customer order notification)
+    final msgRole = (data['role'] ?? '').toString().toUpperCase();
+    final msgScreen = (data['screen'] ?? '').toString().toLowerCase();
+    final msgType = (data['type'] ?? '').toString().toUpperCase();
+    final isAdminOrStaffAlert = msgRole == 'ADMIN' ||
+        msgRole == 'PICKER' ||
+        msgRole == 'CHEF' ||
+        msgRole == 'DELIVERY' ||
+        msgScreen == 'admin-orders' ||
+        msgScreen == 'restaurant-console' ||
+        msgScreen == 'picker' ||
+        msgScreen == 'delivery' ||
+        msgType == 'STAFF_ALERT' ||
+        title.contains('🚨') ||
+        title.contains('🔔') ||
+        title.toLowerCase().contains('new order') ||
+        title.toLowerCase().contains('awaiting approval');
+
+    final isOrderSpecific = !isAdminOrStaffAlert && (data['orderId'] != null ||
+        data['readableId'] != null ||
+        data['type'] == 'ORDER_STATUS_UPDATE' ||
+        data['type'] == 'ORDER_STATUS_CHANGED' ||
+        data['type'] == 'ORDER_PLACED' ||
+        data['screen'] == 'order-tracking');
+
+    // 🛡️ LOGOUT LEAKAGE PROTECTION (Background):
+    // Only suppress if it was a customer-specific order notification and device is logged out!
+    if (isLoggedOut && isOrderSpecific) {
+      debugPrint('NotificationService: Suppressed background order notification for logged-out device.');
+      return;
+    }
+
     final prefPhone = prefs.getString('user_phone') ?? '';
     final securePhone = await SecureStorage.read('user_phone') ?? '';
     final rawPhone = (prefPhone.isNotEmpty ? prefPhone : securePhone).replaceAll(RegExp(r'[^0-9]'), '');
     final cleanPhone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
+
+    // 🛡️ CROSS-ACCOUNT PHONE CHECK:
+    // Only apply customer phone matching to customer order updates, NEVER to Admin/Store Alerts!
+    if (!isLoggedOut && isOrderSpecific && cleanPhone.isNotEmpty) {
+      final notifPhone = (data['customerPhone'] ?? data['phone'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
+      final notifLast10 = notifPhone.length >= 10 ? notifPhone.substring(notifPhone.length - 10) : '';
+      if (notifLast10.isNotEmpty && notifLast10 != cleanPhone) {
+        debugPrint('NotificationService: Suppressed background notification for different phone ($notifLast10 != $cleanPhone).');
+        return;
+      }
+    }
     final isAdminPhone = cleanPhone == '7054470303' && !isExplicitCustomer;
 
     isStaff = isAdminPhone ||
@@ -976,6 +1025,9 @@ class NotificationService {
     final body = rawBody.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
 
     final data = message.data;
+    if (data.isNotEmpty) {
+      OrderEventBus.instance.ingestFromFCMData(data);
+    }
 
     // Check current user role to suppress admin/kitchen alerts ONLY for confirmed customers
     try {
@@ -985,10 +1037,57 @@ class NotificationService {
       final userRole = (prefRole ?? secureRole ?? '').toUpperCase().trim();
       final isExplicitCustomer = userRole == 'CUSTOMER' || userRole == 'USER';
 
+      final prefUserId = prefs.getString('user_id');
+      final secureUserId = await SecureStorage.read('user_id');
+      final currentUserId = prefUserId ?? secureUserId;
+      final isLoggedOut = currentUserId == null || currentUserId.isEmpty;
+
+      // Detect if this is an Admin / Staff incoming alert (NOT a customer order notification)
+      final msgRole = (data['role'] ?? '').toString().toUpperCase();
+      final msgScreen = (data['screen'] ?? '').toString().toLowerCase();
+      final msgType = (data['type'] ?? '').toString().toUpperCase();
+      final isAdminOrStaffAlert = msgRole == 'ADMIN' ||
+          msgRole == 'PICKER' ||
+          msgRole == 'CHEF' ||
+          msgRole == 'DELIVERY' ||
+          msgScreen == 'admin-orders' ||
+          msgScreen == 'restaurant-console' ||
+          msgScreen == 'picker' ||
+          msgScreen == 'delivery' ||
+          msgType == 'STAFF_ALERT' ||
+          title.contains('🚨') ||
+          title.contains('🔔') ||
+          title.toLowerCase().contains('new order') ||
+          title.toLowerCase().contains('awaiting approval');
+
+      final isOrderSpecific = !isAdminOrStaffAlert && (data['orderId'] != null ||
+          data['readableId'] != null ||
+          data['type'] == 'ORDER_STATUS_UPDATE' ||
+          data['type'] == 'ORDER_STATUS_CHANGED' ||
+          data['type'] == 'ORDER_PLACED' ||
+          data['screen'] == 'order-tracking');
+
+      // 🛡️ LOGOUT LEAKAGE PROTECTION (Foreground):
+      if (isLoggedOut && isOrderSpecific) {
+        debugPrint('NotificationService: Suppressed foreground order notification on logged-out device.');
+        return;
+      }
+
       final prefPhone = prefs.getString('user_phone') ?? '';
       final securePhone = await SecureStorage.read('user_phone') ?? '';
       final rawPhone = (prefPhone.isNotEmpty ? prefPhone : securePhone).replaceAll(RegExp(r'[^0-9]'), '');
       final cleanPhone = rawPhone.length > 10 ? rawPhone.substring(rawPhone.length - 10) : rawPhone;
+
+      // 🛡️ CROSS-ACCOUNT PHONE CHECK:
+      // Only apply customer phone matching to customer order updates, NEVER to Admin/Store Alerts!
+      if (!isLoggedOut && isOrderSpecific && cleanPhone.isNotEmpty) {
+        final notifPhone = (data['customerPhone'] ?? data['phone'] ?? '').toString().replaceAll(RegExp(r'[^0-9]'), '');
+        final notifLast10 = notifPhone.length >= 10 ? notifPhone.substring(notifPhone.length - 10) : '';
+        if (notifLast10.isNotEmpty && notifLast10 != cleanPhone) {
+          debugPrint('NotificationService: Suppressed foreground notification for different phone ($notifLast10 != $cleanPhone).');
+          return;
+        }
+      }
       final isAdminPhone = cleanPhone == '7054470303' && !isExplicitCustomer;
 
       final isStaff = isAdminPhone ||
@@ -1950,15 +2049,21 @@ title.toString().contains('🛵') ||
   }
 
   /// Unsubscribe from ALL FCM topics on logout so no notifications arrive when logged out
-  Future<void> unsubscribeAllTopics([Dio? dio]) async {
+  Future<void> unsubscribeAllTopics({
+    Dio? dio,
+    String? explicitUserId,
+    String? explicitPhone,
+    String? explicitStoreId,
+    String? explicitRestaurantId,
+  }) async {
     if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
     String? token;
     try {
-      final userId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
-      final phone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
-      final restaurantId = (await SecureStorage.read('assigned_restaurant_id')) ?? prefs.getString('assigned_restaurant_id');
-      final storeId = (await SecureStorage.read('assigned_store_id')) ?? prefs.getString('assigned_store_id');
+      final userId = explicitUserId ?? (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
+      final phone = explicitPhone ?? (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
+      final restaurantId = explicitRestaurantId ?? (await SecureStorage.read('assigned_restaurant_id')) ?? prefs.getString('assigned_restaurant_id');
+      final storeId = explicitStoreId ?? (await SecureStorage.read('assigned_store_id')) ?? prefs.getString('assigned_store_id');
       token = await getFcmToken();
 
       // 1. Collect EVERY subscribed & known staff/admin/hub/user topic

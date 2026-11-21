@@ -54,6 +54,10 @@ final navratriDataProvider = FutureProvider<NavratriData>((ref) async {
       _memoryCachedCampaign = NavratriData.fromJson(
           Map<String, dynamic>.from(body['campaign'] as Map));
       return _memoryCachedCampaign!;
+    } else if (body is Map && body.containsKey('campaign') && body['campaign'] == null) {
+      final current = _memoryCachedCampaign ?? await initCampaignCache();
+      _memoryCachedCampaign = current.copyWith(enabled: false);
+      return _memoryCachedCampaign!;
     }
   } catch (_) {
     // Cloud fetch optional; silent fallback
@@ -311,7 +315,7 @@ class NavratriData {
     required this.categories,
     required this.tabs,
     required this.destinations,
-    this.enabled = true,
+    this.enabled = false,
     this.autoplay = true,
     this.searchPrefix = 'Search for',
     this.labels = const NavratriLabels(),
@@ -319,6 +323,52 @@ class NavratriData {
     this.decorationImage = 'string-lights.svg',
     this.jhallarPalette = 'multi',
   });
+
+  NavratriData copyWith({
+    int? version,
+    String? layout,
+    String? composition,
+    List<CampaignBlock>? blocks,
+    bool? demo,
+    NavratriTimings? timings,
+    List<String>? searchSuggestions,
+    List<NavratriNavigationItem>? navigation,
+    List<NavratriHeaderSlide>? headers,
+    List<NavratriProduct>? products,
+    List<NavratriCategory>? categories,
+    List<NavratriTab>? tabs,
+    List<NavratriDestination>? destinations,
+    bool? enabled,
+    bool? autoplay,
+    String? searchPrefix,
+    NavratriLabels? labels,
+    NavratriAppearance? appearance,
+    String? decorationImage,
+    String? jhallarPalette,
+  }) {
+    return NavratriData(
+      version: version ?? this.version,
+      layout: layout ?? this.layout,
+      composition: composition ?? this.composition,
+      blocks: blocks ?? this.blocks,
+      demo: demo ?? this.demo,
+      timings: timings ?? this.timings,
+      searchSuggestions: searchSuggestions ?? this.searchSuggestions,
+      navigation: navigation ?? this.navigation,
+      headers: headers ?? this.headers,
+      products: products ?? this.products,
+      categories: categories ?? this.categories,
+      tabs: tabs ?? this.tabs,
+      destinations: destinations ?? this.destinations,
+      enabled: enabled ?? this.enabled,
+      autoplay: autoplay ?? this.autoplay,
+      searchPrefix: searchPrefix ?? this.searchPrefix,
+      labels: labels ?? this.labels,
+      appearance: appearance ?? this.appearance,
+      decorationImage: decorationImage ?? this.decorationImage,
+      jhallarPalette: jhallarPalette ?? this.jhallarPalette,
+    );
+  }
 
   factory NavratriData.fromJson(Map<String, dynamic> json) {
     if (json['version'] != 1) {

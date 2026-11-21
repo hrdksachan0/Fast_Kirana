@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
+import 'order_event_bus.dart';
 
 class SupabaseService {
   static SupabaseClient? _client;
@@ -79,10 +80,21 @@ class SupabaseService {
         event: 'status_update',
         callback: (payload) {
           if (payload.isNotEmpty) {
+            OrderEventBus.instance.ingestFromSupabasePayload(payload);
             final statusStr = payload['status']?.toString();
             if (statusStr != null && onStatusUpdate != null) {
               onStatusUpdate(statusStr);
             }
+          }
+        },
+      );
+
+      // Listen for unified order event envelopes
+      channel.onBroadcast(
+        event: 'order_event',
+        callback: (payload) {
+          if (payload.isNotEmpty) {
+            OrderEventBus.instance.ingestFromSupabasePayload(payload);
           }
         },
       );
@@ -196,6 +208,7 @@ class SupabaseService {
         event: 'new_order',
         callback: (payload) {
           if (payload.isNotEmpty) {
+            OrderEventBus.instance.ingestFromSupabasePayload(payload);
             onOrderChange(payload);
           }
         },
@@ -205,6 +218,17 @@ class SupabaseService {
         event: 'status_update',
         callback: (payload) {
           if (payload.isNotEmpty) {
+            OrderEventBus.instance.ingestFromSupabasePayload(payload);
+            onOrderChange(payload);
+          }
+        },
+      );
+
+      channel.onBroadcast(
+        event: 'order_event',
+        callback: (payload) {
+          if (payload.isNotEmpty) {
+            OrderEventBus.instance.ingestFromSupabasePayload(payload);
             onOrderChange(payload);
           }
         },

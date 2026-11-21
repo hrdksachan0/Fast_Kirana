@@ -153,7 +153,7 @@ class _SelectDeliveryLocationViewState
 
           // 3. Subtitle
           Text(
-            'Set your delivery location to see fresh groceries, exact delivery time & local offers in your area.',
+            'Set your delivery location to see store availability, fresh groceries & local offers in your area.',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w500,

@@ -9,7 +9,6 @@ import '../../../core/utils/route_detector.dart';
 import '../../../core/services/order_alarm_service.dart';
 import 'rider_active_delivery_card.dart';
 import 'rider_pickup_card.dart';
-import 'rider_batch_roadmap_card.dart';
 
 /// Active Deliveries & Ready for Pickup Tab for Rider Console
 class DeliveryOrdersTab extends StatefulWidget {
@@ -45,6 +44,38 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
 
   // 0 = On The Way (Active Deliveries), 1 = Assigned Pickups
   int _deliverySubTab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _smartAutoSelectTab();
+  }
+
+  @override
+  void didUpdateWidget(covariant DeliveryOrdersTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final activeChanged = oldWidget.activeDeliveries.length != widget.activeDeliveries.length;
+    final pickupsChanged = oldWidget.pendingPickups.length != widget.pendingPickups.length;
+    if (activeChanged || pickupsChanged) {
+      _smartAutoSelectTab();
+    }
+  }
+
+  void _smartAutoSelectTab() {
+    // 1. If rider has an active delivery out on the road, auto-focus "On The Way" (Tab 0)
+    if (widget.activeDeliveries.isNotEmpty) {
+      _deliverySubTab = 0;
+    }
+    // 2. If NO active delivery on the road, but rider has pending pickups waiting at the store/hub,
+    // automatically open "Assigned Pickups" (Tab 1)! Never show an empty screen to the rider!
+    else if (widget.pendingPickups.isNotEmpty) {
+      _deliverySubTab = 1;
+    }
+    // 3. Fallback when both are empty
+    else {
+      _deliverySubTab = 0;
+    }
+  }
 
   bool _orderMatchesRoute(Map<String, dynamic> o) {
     if (_selectedRoute == DeliveryRouteKey.all) return true;
@@ -832,14 +863,6 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                   : Column(
                       key: ValueKey('active_deliveries_${_selectedOutlet}_$_selectedRoute'),
                       children: [
-                        if (activeDeliveriesForOutlet.length >= 2)
-                          RiderBatchRoadmapCard(
-                            stop1Order: activeDeliveriesForOutlet[0],
-                            stop2Order: activeDeliveriesForOutlet[1],
-                            distanceBetweenMeters: activeDeliveriesForOutlet[0]['batch']?['distanceBetweenDropsMeters'] ??
-                                activeDeliveriesForOutlet[1]['batch']?['distanceBetweenDropsMeters'],
-                            onOpenNavigation: widget.onOpenNavigation,
-                          ),
                         ...activeDeliveriesForOutlet.mapIndexed((idx, o) => RiderActiveDeliveryCard(
                               key: ValueKey('active_del_${o['id']}'),
                               order: o,

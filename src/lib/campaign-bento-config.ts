@@ -38,6 +38,16 @@ export const freshMarketTabSchema = z
   })
   .strict()
 
+export const seasonalSwitchUpTabSchema = z
+  .object({
+    id: slugId,
+    label: shortText.min(1),
+    icon: z.string().trim().max(16).default('✨'),
+    image: z.string().trim().optional().default(''),
+    items: z.array(bentoSlotItemSchema).max(6).default([]),
+  })
+  .strict()
+
 export const giftingOccasionSchema = z
   .object({
     id: slugId,
@@ -85,7 +95,7 @@ export const campaignBentoConfigSchema = z
         borderColor: z.string().trim().optional().default('#C0E2FD'),
         accentColor: z.string().trim().optional().default('#0284C7'),
         textColor: z.string().trim().optional().default('#1E3A8A'),
-        tabs: z.array(freshMarketTabSchema).default([
+        tabs: z.array(seasonalSwitchUpTabSchema).default([
           { id: 'body-lotions', label: 'Body Lotions', icon: '🧴', image: '/navratri/categories/body.png', items: [] },
           { id: 'face-moisturizers', label: 'Face Moisturizers', icon: '✨', image: '/navratri/categories/face.png', items: [] },
           { id: 'lip-balm', label: 'Lip Balm', icon: '💄', image: '/navratri/categories/lip.png', items: [] },
@@ -123,7 +133,7 @@ export const campaignBentoConfigSchema = z
     freshMarket: z
       .object({
         ...cardVisibilityFields,
-        title: shortText.min(1).default('bloom'),
+        title: shortText.min(1).default('Fresh Market'),
         subtitle: shortText.default('Farm-fresh essentials, ready to add'),
         headerImage: campaignImageSchema.default('/navratri/bloom-panoramic-header.svg'),
         tabs: z.array(freshMarketTabSchema).min(1).max(5),
@@ -232,7 +242,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
     endDate: null,
     timeSlot: 'ALL_DAY',
     targetHubs: ['all'],
-    title: 'bloom',
+    title: 'Fresh Market',
     subtitle: 'Farm-fresh essentials, ready to add',
     headerImage: '/navratri/bloom-panoramic-header.svg',
     tabs: [

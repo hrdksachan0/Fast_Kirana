@@ -2004,6 +2004,26 @@ export async function POST(request: NextRequest) {
           } catch (notifErr) {
             console.error('Failed to dispatch order notifications:', notifErr)
           }
+
+          // Unified Order Event Engine (Realtime Supabase, FCM multi-target, WhatsApp, SSE)
+          try {
+            const { OrderEventEngine } = await import('@/lib/order-event-engine')
+            const primaryCreated = createdOrders.find((o) => !o.restaurantId) || createdOrders[0]
+            if (primaryCreated) {
+              await OrderEventEngine.emit({
+                orderId: primaryCreated.id,
+                tag: 'ORDER_CREATED',
+                newStatus: primaryCreated.status,
+                previousStatus: '',
+                actorId: userId,
+                actorRole: 'CUSTOMER',
+                origin,
+                settingsMap,
+              })
+            }
+          } catch (eventErr) {
+            console.error('[POST /api/orders] OrderEventEngine emit error:', eventErr)
+          }
         }
       } catch (sseErr) {
         console.error('Failed to emit SSE/notifications for new orders:', sseErr)

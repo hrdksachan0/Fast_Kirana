@@ -220,6 +220,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           if (orderId.isNotEmpty || readableId.isNotEmpty) {
             if (isAssignedToOther || isCompleted) {
               _knownAssignedOrderIds.remove(orderId);
+              if (OrderAlarmService.instance.isPlaying &&
+                  (OrderAlarmService.instance.activeOrderId == orderId || OrderAlarmService.instance.activeOrderId == readableId)) {
+                OrderAlarmService.instance.stopAlarm();
+              }
               setState(() {
                 _orders.removeWhere((o) {
                   final oid = o['id']?.toString();

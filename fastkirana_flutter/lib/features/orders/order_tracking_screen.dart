@@ -23,6 +23,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
+import '../../core/models/order_event.dart';
+import '../../core/services/order_event_bus.dart';
+import '../../core/services/alert_engine.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
@@ -94,6 +97,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   // Subscriptions & Timers
   final List<RealtimeChannel> _supabaseChannels = [];
   final Set<String> _subscribedChannelKeys = {};
+  StreamSubscription<OrderEvent>? _eventBusSub;
   Timer? _pollTimer;
   Timer? _etaUpdateTimer;
   StreamSubscription<String>? _sseLineSubscription;
@@ -151,10 +155,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _initCashfree();
     _fetchLiveOrder();
     _initSupabaseRealtime();
+    _initEventBusListener();
 
-    // Zero-load fallback polling: 6s during active delivery to back up WebSockets, 25s otherwise
-    _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
-      if (_order?.status == OrderStatus.shipped || _order?.status == OrderStatus.packed) {
+    // Active order polling: 3s fallback so customer screen syncs within 3 seconds whenever admin changes status
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      final st = _order?.status;
+      if (st != OrderStatus.delivered && st != OrderStatus.cancelled) {
         _silentPollOrder();
       }
     });
@@ -171,6 +177,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   @override
   void dispose() {
+    _eventBusSub?.cancel();
     _pollTimer?.cancel();
     _etaUpdateTimer?.cancel();
     _sseLineSubscription?.cancel();
@@ -443,6 +450,35 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
+  void _initEventBusListener() {
+    _eventBusSub?.cancel();
+    _eventBusSub = OrderEventBus.instance.forOrder(widget.orderId).listen((event) {
+      if (!mounted) return;
+      debugPrint('[OrderTracking] ⚡ Instant sync from EventBus: tag=${event.tag} status=${event.status}');
+
+      final parsed = Order.parseStatus(event.status);
+      if (_order != null && _order!.status != parsed) {
+        setState(() {
+          final updatedSubs = _order!.subOrders?.map((s) => s.copyWith(status: parsed)).toList();
+          _order = _order!.copyWith(status: parsed, subOrders: updatedSubs);
+        });
+        AlertEngine.handle(event, currentUserRole: 'CUSTOMER', context: context);
+        NotificationService().updateLiveOrderActivity(
+          order: _order!,
+          customEtaText: _etaText.isNotEmpty ? _etaText : null,
+        );
+        if (parsed == OrderStatus.cancelled || parsed == OrderStatus.delivered) {
+          ref.invalidate(ordersProvider(''));
+        }
+      } else {
+        AlertEngine.handle(event, currentUserRole: 'CUSTOMER', context: context);
+      }
+
+      // Background silent verification
+      _silentPollOrder();
+    });
+  }
+
   Future<void> _fetchLiveOrder() async {
     try {
       final repo = OrderRepository(ref.read(dioProvider));
@@ -498,6 +534,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   void _triggerStatusHaptic(OrderStatus? newStatus, OrderStatus? oldStatus) {
     if (newStatus == null || oldStatus == newStatus) return;
+    _playStatusChime();
     // Elegant, non-intrusive micro-haptic clicks (Swiggy/Zepto style: zero annoying continuous buzzing)
     switch (newStatus) {
       case OrderStatus.confirmed:

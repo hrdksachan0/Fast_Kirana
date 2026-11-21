@@ -60,7 +60,22 @@ export function isManuallyPausedToday(restaurant: {
   updatedAt?: Date | string | null
 }): boolean {
   const isClosed = restaurant.isOpen === false || restaurant.isOpen === 'false' || restaurant.isOpen === 0
-  return isClosed
+  if (!isClosed) return false
+
+  // If no updatedAt provided, assume it is manually paused today
+  if (!restaurant.updatedAt) return true
+
+  try {
+    const updatedDate = new Date(restaurant.updatedAt)
+    const today = new Date()
+    return (
+      updatedDate.getFullYear() === today.getFullYear() &&
+      updatedDate.getMonth() === today.getMonth() &&
+      updatedDate.getDate() === today.getDate()
+    )
+  } catch {
+    return true
+  }
 }
 
 export function checkStoreOperatingStatus(restaurant?: {
@@ -87,7 +102,7 @@ export function checkStoreOperatingStatus(restaurant?: {
       isOpen: false,
       isClosedBySchedule: false,
       isClosedByOwner: true,
-      formattedScheduleStr: restaurant.closeReason || 'Closed (Not accepting orders)',
+      formattedScheduleStr: restaurant.closeReason || 'Temporarily Paused by Store Owner',
     }
   }
 

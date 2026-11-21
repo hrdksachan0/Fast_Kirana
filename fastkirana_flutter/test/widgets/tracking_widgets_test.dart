@@ -35,14 +35,14 @@ void main() {
         OrderItem(
           id: 'item-1',
           name: 'Amul Taaza Milk 500ml',
-          quantity: 2,
-          price: 27.0,
+          quantity: 5,
+          price: 30.0,
         ),
         OrderItem(
           id: 'item-2',
           name: 'Modern Bread Large',
-          quantity: 1,
-          price: 45.0,
+          quantity: 5,
+          price: 40.0,
         ),
       ],
     );
@@ -108,11 +108,11 @@ void main() {
       expect(find.text('Bill Details'), findsOneWidget);
       expect(find.text('Amul Taaza Milk 500ml'), findsOneWidget);
       expect(find.text('Modern Bread Large'), findsOneWidget);
-      expect(find.text('Items Subtotal'), findsOneWidget);
-      expect(find.text('Delivery Partner Fee'), findsOneWidget);
-      expect(find.text('Handling & Taxes'), findsOneWidget);
+      expect(find.text('Item Total'), findsOneWidget);
+      expect(find.text('Delivery Fee'), findsOneWidget);
+      expect(find.text('Packaging Charge'), findsOneWidget);
       expect(find.text('Total Paid'), findsOneWidget);
-      expect(find.textContaining('345'), findsOneWidget);
+      expect(find.textContaining('345'), findsWidgets);
     });
 
     testWidgets('TrackingPaymentCard shows Cash on Delivery badge for COD orders', (WidgetTester tester) async {

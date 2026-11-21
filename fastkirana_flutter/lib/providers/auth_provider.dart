@@ -154,6 +154,19 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> clear() async {
+    // 0. Capture user identity BEFORE wiping storage so FCM can cleanly unsubscribe
+    String? savedUserId;
+    String? savedPhone;
+    String? savedStoreId;
+    String? savedRestId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      savedUserId = (await SecureStorage.read('user_id')) ?? prefs.getString('user_id');
+      savedPhone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone');
+      savedStoreId = (await SecureStorage.read('assigned_store_id')) ?? prefs.getString('assigned_store_id');
+      savedRestId = (await SecureStorage.read('assigned_restaurant_id')) ?? prefs.getString('assigned_restaurant_id');
+    } catch (_) {}
+
     // 1. Instantly set in-memory auth state to null and invalidate memory caches (0ms)
     state = const AsyncValue.data(null);
     SecureStorage.invalidateCache();
@@ -175,12 +188,30 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     // 3. Offload all network and disk I/O cleanup to a non-blocking background task!
     // This completely eliminates the 6-8s UI freeze and prevents screen redraw flicker.
     final dio = _ref.read(dioProvider);
-    unawaited(_runBackgroundLogoutCleanup(dio));
+    unawaited(_runBackgroundLogoutCleanup(
+      dio,
+      explicitUserId: savedUserId,
+      explicitPhone: savedPhone,
+      explicitStoreId: savedStoreId,
+      explicitRestaurantId: savedRestId,
+    ));
   }
 
-  static Future<void> _runBackgroundLogoutCleanup(dynamic dio) async {
+  static Future<void> _runBackgroundLogoutCleanup(
+    dynamic dio, {
+    String? explicitUserId,
+    String? explicitPhone,
+    String? explicitStoreId,
+    String? explicitRestaurantId,
+  }) async {
     try {
-      await NotificationService().unsubscribeAllTopics(dio).timeout(const Duration(seconds: 4), onTimeout: () {});
+      await NotificationService().unsubscribeAllTopics(
+        dio: dio,
+        explicitUserId: explicitUserId,
+        explicitPhone: explicitPhone,
+        explicitStoreId: explicitStoreId,
+        explicitRestaurantId: explicitRestaurantId,
+      ).timeout(const Duration(seconds: 4), onTimeout: () {});
       await NotificationService().clearAllNotifications().timeout(const Duration(seconds: 1), onTimeout: () {});
     } catch (e) {
       LoggerService.error('AuthProvider: background notification cleanup error', e);

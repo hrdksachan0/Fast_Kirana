@@ -20,6 +20,8 @@ import '../../navratri/navratri_data.dart';
 import '../../../widgets/festive_fairy_lights.dart';
 import '../../../providers/store_settings_provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../../widgets/swiggy_location_permission_sheet.dart';
 
 class HomeTopHeader extends ConsumerStatefulWidget {
   final bool showSearch;
@@ -79,7 +81,9 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
     final activeData = campaignAsync.valueOrNull ?? memoryCachedCampaign;
     final isCampaignActive = activeData?.enabled == true;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
       decoration: BoxDecoration(
         color: isCampaignActive ? const Color(0xFFFFF9ED) : Colors.white,
         gradient: isCampaignActive
@@ -126,6 +130,21 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                     final shortLocation = hasLocation
                         ? selectedAddress.shortAddress
                         : 'Select Location';
+                    final addrLabel = (hasLocation && selectedAddress.label.trim().isNotEmpty)
+                        ? selectedAddress.label.trim().replaceAll('📍', '').trim()
+                        : '';
+                    final isSameText = selectedArea.trim().toLowerCase() == shortLocation.trim().toLowerCase();
+
+                    final String line1Text;
+                    if (!hasLocation) {
+                      line1Text = 'Delivery';
+                    } else if (addrLabel.isNotEmpty && addrLabel.toLowerCase() != shortLocation.toLowerCase()) {
+                      line1Text = 'Delivering to $addrLabel';
+                    } else if (isSameText) {
+                      line1Text = 'Delivering to';
+                    } else {
+                      line1Text = 'Delivering to $selectedArea';
+                    }
 
                     return GestureDetector(
                       onTap: () {
@@ -169,7 +188,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                               const SizedBox(width: 5),
                               Flexible(
                                 child: Text(
-                                  hasLocation ? (selectedArea.isNotEmpty ? 'Delivering to $selectedArea' : 'Delivery') : 'Delivery',
+                                  line1Text,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize:
                                         Responsive.scaledFontSize(context, 10.5),
@@ -434,60 +453,65 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
               ),
             ),
           ],
-          if (isCampaignActive)
-            Builder(
-              builder: (context) {
-                final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
-                final campaign = campaignAsync.valueOrNull;
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubic,
+            child: isCampaignActive
+                ? Builder(
+                    builder: (context) {
+                      final storeSettings = ref.watch(storeSettingsProvider).valueOrNull;
+                      final campaign = campaignAsync.valueOrNull;
 
-                // Priority:
-                // 1. Cloud Store Settings (jhallar_palette / fairy_lights_palette)
-                // 2. Cloud Campaign Data (jhallarPalette)
-                // 3. Fallback default: 'multi' (Blinkit Multi-Color 🌈)
-                final rawCloudPalette = storeSettings?.raw['jhallar_palette']?.toString() ??
-                    storeSettings?.raw['fairy_lights_palette']?.toString() ??
-                    campaign?.jhallarPalette;
+                      // Priority:
+                      // 1. Cloud Store Settings (jhallar_palette / fairy_lights_palette)
+                      // 2. Cloud Campaign Data (jhallarPalette)
+                      // 3. Fallback default: 'multi' (Blinkit Multi-Color 🌈)
+                      final rawCloudPalette = storeSettings?.raw['jhallar_palette']?.toString() ??
+                          storeSettings?.raw['fairy_lights_palette']?.toString() ??
+                          campaign?.jhallarPalette;
 
-                final palette = (rawCloudPalette != null && rawCloudPalette.trim().isNotEmpty)
-                    ? rawCloudPalette.trim().toLowerCase()
-                    : 'multi';
+                      final palette = (rawCloudPalette != null && rawCloudPalette.trim().isNotEmpty)
+                          ? rawCloudPalette.trim().toLowerCase()
+                          : 'multi';
 
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Left Ornate Diwali Brass Diya
-                      SizedBox(
-                        width: 26,
-                        height: 26,
-                        child: SvgPicture.asset(
-                          'assets/navratri/diwali-single-diya.svg',
-                          fit: BoxFit.contain,
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Left Ornate Diwali Brass Diya
+                            SizedBox(
+                              width: 26,
+                              height: 26,
+                              child: SvgPicture.asset(
+                                'assets/navratri/diwali-single-diya.svg',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: FestiveFairyLights(height: 22, palette: palette),
+                            ),
+                            const SizedBox(width: 4),
+                            // Right Ornate Diwali Brass Diya
+                            Transform.flip(
+                              flipX: true,
+                              child: SizedBox(
+                                width: 26,
+                                height: 26,
+                                child: SvgPicture.asset(
+                                  'assets/navratri/diwali-single-diya.svg',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: FestiveFairyLights(height: 22, palette: palette),
-                      ),
-                      const SizedBox(width: 4),
-                      // Right Ornate Diwali Brass Diya
-                      Transform.flip(
-                        flipX: true,
-                        child: SizedBox(
-                          width: 26,
-                          height: 26,
-                          child: SvgPicture.asset(
-                            'assets/navratri/diwali-single-diya.svg',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                      );
+                    },
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

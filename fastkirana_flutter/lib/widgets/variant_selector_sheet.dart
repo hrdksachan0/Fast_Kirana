@@ -969,11 +969,43 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
               shrinkWrap: true,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               itemCount: variants.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (ctx, index) {
                 final v = variants[index];
                 return _buildGroceryVariantCard(context, v, isStoreOpen);
               },
+            ),
+          ),
+
+          // Option 4: Crisp White Pill with 1.5px Slate Border
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: OutlinedButton(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(context);
+                },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF1E293B),
+                  side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Continue Shopping',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 14),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
             ),
           ),
           SizedBox(
@@ -1020,25 +1052,33 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
     final variantProduct = _buildVariantProduct(variant);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: isSelected ? const Color(0xFFF7FEE7) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isSelected ? const Color(0xFF00875A) : const Color(0xFFE5E7EB),
-          width: isSelected ? 1.5 : 1,
+          color: isSelected ? const Color(0xFF0C831F) : const Color(0xFFF1F5F9),
+          width: isSelected ? 1.5 : 1.2,
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
+        boxShadow: isSelected
+            ? const [
+                BoxShadow(
+                  color: Color(0x140C831F),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ]
+            : const [
+                BoxShadow(
+                  color: Color(0x06000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 1.5),
+                ),
+              ],
       ),
       child: Row(
         children: [
-          // Left: Variant Title & Pricing (Image 2)
+          // Left: Variant Title & Pricing (Clean Zoomed-out)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1046,43 +1086,51 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 Text(
                   variant.name,
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 15),
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF111827),
+                    fontSize: Responsive.scaledFontSize(context, 14.5),
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 3),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       '₹${variant.price.toInt()}',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 16),
+                        fontSize: Responsive.scaledFontSize(context, 15.5),
                         fontWeight: FontWeight.w900,
-                        color: const Color(0xFF111827),
+                        color: const Color(0xFF0F172A),
                       ),
                     ),
                     if (variant.mrp > variant.price) ...[
-                      const SizedBox(width: 7),
+                      const SizedBox(width: 6),
                       Text(
                         '₹${variant.mrp.toInt()}',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w600,
                           decoration: TextDecoration.lineThrough,
-                          color: const Color(0xFF9CA3AF),
+                          color: const Color(0xFF94A3B8),
                         ),
                       ),
                     ],
                     if (discount > 0) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        '$discount% OFF',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFFDC2626),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFFDBEAFE)),
+                        ),
+                        child: Text(
+                          'SAVE ₹${(variant.mrp - variant.price).toInt()}',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 10.5),
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF2563EB),
+                          ),
                         ),
                       ),
                     ],
@@ -1092,13 +1140,13 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
             ),
           ),
 
-          // Right: Solid Green "ADD" Button or Stepper (Image 2)
+          // Right: Crisp White ADD Button (with green border) or Stepper
           if (isSoldOut)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'Sold Out',
@@ -1114,7 +1162,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFFF3F4F6),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'Closed',
@@ -1127,9 +1175,9 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
             )
           else if (inCartQty == 0)
             SizedBox(
-              height: 38,
-              width: 96,
-              child: ElevatedButton(
+              height: 34,
+              width: 86,
+              child: OutlinedButton(
                 onPressed: () {
                   final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(variantProduct);
                   if (conflictRestaurant != null) {
@@ -1148,30 +1196,39 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                   HapticFeedback.mediumImpact();
                   ref.read(cartProvider.notifier).addProduct(variantProduct, 1, variant.name);
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00875A),
-                  foregroundColor: Colors.white,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF0C831F),
+                  side: const BorderSide(color: Color(0xFF0C831F), width: 1.5),
                   elevation: 0,
                   padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 child: Text(
                   'ADD',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                    fontSize: Responsive.scaledFontSize(context, 13),
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.4,
+                    color: const Color(0xFF0C831F),
                   ),
                 ),
               ),
             )
           else
             Container(
-              height: 38,
-              width: 96,
+              height: 34,
+              width: 86,
               decoration: BoxDecoration(
-                color: const Color(0xFF00875A),
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFF0C831F),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x330C831F),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1185,12 +1242,12 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                         ref.read(cartProvider.notifier).decrement(variantProductId);
                       }
                     },
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
                     child: const SizedBox(
-                      width: 30,
-                      height: 38,
+                      width: 27,
+                      height: 34,
                       child: Center(
-                        child: Icon(Icons.remove, size: 17, color: Colors.white),
+                        child: Icon(Icons.remove, size: 16, color: Colors.white),
                       ),
                     ),
                   ),
@@ -1223,12 +1280,12 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                         );
                       }
                     },
-                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
                     child: const SizedBox(
-                      width: 30,
-                      height: 38,
+                      width: 27,
+                      height: 34,
                       child: Center(
-                        child: Icon(Icons.add, size: 17, color: Colors.white),
+                        child: Icon(Icons.add, size: 16, color: Colors.white),
                       ),
                     ),
                   ),

@@ -14,14 +14,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(request.url)
+    const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
+    const dateFilter = (searchParams.get('dateFilter') || searchParams.get('filter') || 'today').toLowerCase()
+
     const now = new Date()
     const istOffsetMs = 5.5 * 60 * 60 * 1000
     const istNow = new Date(now.getTime() + istOffsetMs)
     istNow.setUTCHours(0, 0, 0, 0)
     const todayStart = new Date(istNow.getTime() - istOffsetMs)
+    const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000)
+    const yesterdayEnd = todayStart
 
-    const { searchParams } = new URL(request.url)
-    const storeId = getEffectiveStoreId(session, searchParams.get('storeId'))
+    const isYesterday = dateFilter === 'yesterday'
+    const dateFilterWhere = isYesterday
+      ? { gte: yesterdayStart, lt: yesterdayEnd }
+      : { gte: todayStart }
 
     const riderWhere: any = { role: 'DELIVERY' }
     if (storeId && storeId !== 'all') {
@@ -63,49 +71,59 @@ export async function GET(request: NextRequest) {
           })
         }
 
-        // Active orders currently assigned and in progress
-        const activeOrders = await prisma.order.count({
+        // Active orders currently assigned and in progress (Combined order = 1)
+        const activeOrdersList = await prisma.order.findMany({
           where: {
             deliveryUserId: r.id,
             status: { in: ['PACKED', 'SHIPPED'] },
-          }
+          },
+          select: { id: true, combinedId: true },
         })
+        const activeOrdersCount = new Set(
+          activeOrdersList.map((o) => (o.combinedId && o.combinedId.trim().length > 0 ? o.combinedId.trim() : o.id))
+        ).size
 
-        // Today's delivered COD orders for this rider (Cash in Rider's Pocket)
-        const todayCodOrders = await prisma.order.aggregate({
+        // Delivered COD orders for this rider (Cash in Rider's Pocket)
+        const codOrders = await prisma.order.findMany({
           where: {
             deliveryUserId: r.id,
             status: 'DELIVERED',
             paymentMethod: 'COD',
-            deliveredAt: { gte: todayStart }
+            deliveredAt: dateFilterWhere,
           },
-          _sum: { total: true },
-          _count: { id: true }
+          select: { id: true, combinedId: true, total: true },
         })
 
-        // Today's delivered Online/UPI orders for this rider (Paid Direct to Store Bank)
-        const todayOnlineOrders = await prisma.order.aggregate({
+        // Delivered Online/UPI orders for this rider (Paid Direct to Store Bank)
+        const onlineOrders = await prisma.order.findMany({
           where: {
             deliveryUserId: r.id,
             status: 'DELIVERED',
             paymentMethod: { in: ['UPI', 'CARD', 'WALLET'] },
-            deliveredAt: { gte: todayStart }
+            deliveredAt: dateFilterWhere,
           },
-          _sum: { total: true },
-          _count: { id: true }
+          select: { id: true, combinedId: true, total: true },
         })
 
-        // Today's cash deposits for this rider
-        const todayDeposits = await prisma.cashDepositTransaction.aggregate({
+        // Cash deposits for this rider during selected date
+        const riderDeposits = await prisma.cashDepositTransaction.aggregate({
           where: {
             riderId: r.id,
-            createdAt: { gte: todayStart }
+            createdAt: dateFilterWhere,
           },
-          _sum: { amount: true }
+          _sum: { amount: true },
         })
 
-        const codMoney = todayCodOrders._sum.total || 0
-        const onlineMoney = todayOnlineOrders._sum.total || 0
+        const codMoney = codOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+        const onlineMoney = onlineOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+
+        // 🛡️ Deduplicate combined orders: count sub-orders sharing the same combinedId as 1 single order
+        const getOrderKey = (o: { id: string; combinedId: string | null }) =>
+          o.combinedId && o.combinedId.trim().length > 0 ? o.combinedId.trim() : o.id
+
+        const codOrdersCount = new Set(codOrders.map(getOrderKey)).size
+        const onlineOrdersCount = new Set(onlineOrders.map(getOrderKey)).size
+        const totalOrdersCount = new Set([...codOrders, ...onlineOrders].map(getOrderKey)).size
 
         return {
           id: r.id,
@@ -117,29 +135,30 @@ export async function GET(request: NextRequest) {
           cashLimit: wallet.cashLimit,
           totalCollected: wallet.totalCollected,
           totalDeposited: wallet.totalDeposited,
-          activeOrdersCount: activeOrders,
-          todayTotalOrdersCount: (todayCodOrders._count.id || 0) + (todayOnlineOrders._count.id || 0),
+          activeOrdersCount: activeOrdersCount,
+          todayTotalOrdersCount: totalOrdersCount,
           todayTotalDeliveredMoney: codMoney + onlineMoney,
-          todayCodOrdersCount: todayCodOrders._count.id || 0,
+          todayCodOrdersCount: codOrdersCount,
           todayCodTotal: codMoney,
-          todayOnlineOrdersCount: todayOnlineOrders._count.id || 0,
+          todayOnlineOrdersCount: onlineOrdersCount,
           todayOnlineTotal: onlineMoney,
-          todayDepositedTotal: todayDeposits._sum.amount || 0,
+          todayDepositedTotal: riderDeposits._sum.amount || 0,
           assignedStoreId: r.assignedStoreId,
           storeName: r.assignedStore?.name || null,
         }
       })
     )
 
-    // 2. Hub-Scoped Finance Summary metrics for Today
+    // 2. Hub-Scoped Finance Summary metrics for Selected Date (Today or Yesterday)
     const todayDeliveredOrders = await prisma.order.findMany({
       where: {
         status: 'DELIVERED',
-        deliveredAt: { gte: todayStart },
+        deliveredAt: dateFilterWhere,
         ...(storeId && storeId !== 'all' ? { storeId } : {}),
       },
       select: {
         id: true,
+        combinedId: true,
         total: true,
         paymentMethod: true,
         paymentStatus: true,
@@ -165,7 +184,7 @@ export async function GET(request: NextRequest) {
 
     const todayAllDeposits = await prisma.cashDepositTransaction.aggregate({
       where: {
-        createdAt: { gte: todayStart },
+        createdAt: dateFilterWhere,
         ...(storeId && storeId !== 'all' ? { rider: { assignedStoreId: storeId } } : {}),
       },
       _sum: { amount: true }
@@ -198,7 +217,8 @@ export async function GET(request: NextRequest) {
         pendingRiderCash,
         activeRidersCount: ridersWithWallets.length,
         totalOrdersDeliveredToday,
-        totalDeliveredMoneyToday
+        totalDeliveredMoneyToday,
+        dateFilter: isYesterday ? 'yesterday' : 'today',
       },
       recentDeposits: recentDeposits.map((d: any) => ({
         id: d.id,

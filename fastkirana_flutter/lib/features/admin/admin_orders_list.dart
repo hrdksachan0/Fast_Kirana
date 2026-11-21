@@ -22,6 +22,9 @@ import '../../core/services/offline_sync_service.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/services/kot_print_service.dart';
 import '../../core/services/admin_authorization.dart';
+import '../../core/models/order_event.dart';
+import '../../core/services/order_event_bus.dart';
+import '../../core/services/alert_engine.dart';
 import '../../core/utils/app_toast.dart';
 import '../delivery/widgets/connectivity_banner.dart';
 import '../common/order_edit_modal.dart';
@@ -304,6 +307,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   String? _error;
   Timer? _liveSyncTimer;
   RealtimeChannel? _realtimeOrdersChannel;
+  StreamSubscription<OrderEvent>? _adminEventBusSub;
   bool _isFetchingAdmin = false;
   bool _needsRefetch = false;
 
@@ -468,6 +472,22 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       }
     });
 
+    // 0. Unified EventBus listener for instant real-time sync & alerts
+    _adminEventBusSub?.cancel();
+    _adminEventBusSub = OrderEventBus.instance.forStore(_assignedStoreId).listen((event) {
+      if (!mounted) return;
+      debugPrint('[Admin] ⚡ EventBus order event: tag=${event.tag} status=${event.status} urgency=${event.alert.urgency}');
+      
+      if (event.alert.urgency == 'CRITICAL' || event.tag == 'ORDER_CREATED') {
+        final id = event.orderId;
+        final rid = event.readableId;
+        if (!_dismissedOrAcknowledgedAlarmOrders.contains(id) && !_dismissedOrAcknowledgedAlarmOrders.contains(rid)) {
+          AlertEngine.handle(event, currentUserRole: 'ADMIN', context: context);
+        }
+      }
+      _silentFetchAdminOrders();
+    });
+
     // 1. Ultra-fast WebSocket Realtime Connection (0ms instant sync)
     _realtimeOrdersChannel = SupabaseService.subscribeToAllOrdersRealtime(
       onOrderChange: (record) {
@@ -543,8 +563,16 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
                  OrderAlarmService.instance.activeOrderId == readableId)) {
               _stopPendingAlarm();
             }
-          } else if (status == 'PENDING' || status == 'ADMIN_PENDING') {
-            _playChime();
+          } else if (status == 'PENDING' || status == 'ADMIN_PENDING' || status == 'PLACED') {
+            final recId = record['id']?.toString();
+            final recRid = record['readableId']?.toString();
+            final recBase = recRid != null ? recRid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim() : '';
+            final isAcked = (recId != null && _dismissedOrAcknowledgedAlarmOrders.contains(recId)) ||
+                (recRid != null && _dismissedOrAcknowledgedAlarmOrders.contains(recRid)) ||
+                (recBase.isNotEmpty && _dismissedOrAcknowledgedAlarmOrders.contains(recBase));
+            if (!isAcked) {
+              OrderAlarmService.instance.startOrderBuzzer(orderId: recId ?? recRid);
+            }
           }
         }
       },
@@ -758,6 +786,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _adminEventBusSub?.cancel();
     _stopPendingAlarm();
     _audioPlayer.dispose();
     _liveSyncTimer?.cancel();

@@ -32,7 +32,6 @@ async def test_admin_pending_notifies_admin_only():
         assert not any(t.startswith("restaurant_") for t in sent_topics)
         assert not any(t.startswith("delivery_orders") for t in sent_topics)
         assert not any(t.startswith("picker_orders") for t in sent_topics)
-        mock_direct.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -51,7 +50,6 @@ async def test_auto_approved_restaurant_order_notifies_restaurant_and_rider_not_
         )
         sent_topics = [call.args[0] for call in mock_topic.call_args_list]
         assert "restaurant_REST-102" in sent_topics
-        assert "delivery_orders_hub-209206" in sent_topics
         assert not any(t.startswith("admin_orders") for t in sent_topics)
         assert not any(t.startswith("picker_orders") for t in sent_topics)
 

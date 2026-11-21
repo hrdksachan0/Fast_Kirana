@@ -100,16 +100,18 @@ class WalletNotifier extends StateNotifier<WalletState> {
   }
 
   Future<void> fetchBalance() async {
+    if (!mounted) return;
     final currentUser = _ref.read(authProvider).value;
     if (currentUser == null) {
-      reset();
+      if (mounted) reset();
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    if (mounted) state = state.copyWith(isLoading: true, error: null);
     try {
       final dio = _ref.read(dioProvider);
       final response = await dio.get('/api/wallet/balance');
+      if (!mounted) return;
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data;
         state = WalletState(
@@ -122,6 +124,7 @@ class WalletNotifier extends StateNotifier<WalletState> {
         state = state.copyWith(isLoading: false);
       }
     } catch (e) {
+      if (!mounted) return;
       LoggerService.error('Error fetching wallet balance', e);
       final user = _ref.read(authProvider).value;
       if (user == null) {

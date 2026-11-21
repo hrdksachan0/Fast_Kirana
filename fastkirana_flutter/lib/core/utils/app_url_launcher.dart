@@ -17,10 +17,17 @@ class AppUrlLauncher {
     try {
       final scheme = uri.scheme.toLowerCase();
 
+      // For dialer (tel:), map (geo:) or whatsapp, ALWAYS enforce LaunchMode.externalApplication!
+      // Using LaunchMode.platformDefault on Android tries to embed/launch in current activity stack,
+      // which freezes the Flutter engine and causes Android proximity sensor screen blackouts/crashes!
+      final effectiveMode = (scheme == 'tel' || scheme == 'geo' || (scheme.startsWith('http') && uri.host.contains('wa.me')))
+          ? LaunchMode.externalApplication
+          : mode;
+
       // For dialer or WhatsApp, try launching with canLaunch check first
       final can = await canLaunchUrl(uri).catchError((_) => false);
       if (can) {
-        return await launchUrl(uri, mode: mode);
+        return await launchUrl(uri, mode: effectiveMode);
       }
 
       // Fallback attempt: some Android devices report canLaunchUrl=false for tel/whatsapp but still launch
@@ -54,7 +61,15 @@ class AppUrlLauncher {
   }) async {
     final trimmed = urlString.trim();
     if (trimmed.isEmpty) return false;
-    final uri = Uri.tryParse(trimmed);
+
+    // Auto-clean phone numbers to guarantee Android dialer compatibility
+    String finalUrl = trimmed;
+    if (finalUrl.toLowerCase().startsWith('tel:')) {
+      final phonePart = finalUrl.substring(4).replaceAll(RegExp(r'[^0-9+]'), '');
+      finalUrl = 'tel:$phonePart';
+    }
+
+    final uri = Uri.tryParse(finalUrl);
     if (uri == null) return false;
     return launchSafely(uri, context: context, mode: mode, customErrorMessage: customErrorMessage);
   }
