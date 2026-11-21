@@ -992,7 +992,8 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
 
               // Adaptive Cards Layout:
               // - 1 or 2 variants: 2 wide columns fitting the screen width
-              // - 3+ variants: Horizontal sliding carousel with BIG cards (~156px) so packshots and text stay large & bold
+              // - 3 variants: Exactly 3 cards fit comfortably side-by-side on screen
+              // - 4+ variants: 3 full cards visible + 4th card peeking horizontally
               Flexible(
                 child: LayoutBuilder(
                   builder: (ctx, constraints) {
@@ -1020,15 +1021,47 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                       );
                     }
 
-                    // 3+ variants: Horizontal sliding carousel with BIG, spacious cards
-                    // Card width ~156px allows 2 full cards + peeking 3rd card on 360-412px devices
-                    final double cardWidth = (constraints.maxWidth * 0.44).clamp(152.0, 168.0);
-                    const double spacing = 12.0;
+                    if (variants.length == 3) {
+                      // Exactly 3 variants: Display all 3 side-by-side without horizontal scrolling
+                      const spacing = 8.0;
+                      final availableWidth = constraints.maxWidth - 24; // 12px padding on each side
+                      final cardWidth = (availableWidth - 2 * spacing) / 3;
+
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                        child: IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (int i = 0; i < variants.length; i++) ...[
+                                if (i > 0) const SizedBox(width: spacing),
+                                SizedBox(
+                                  width: cardWidth,
+                                  child: _buildZeptoVariantCard(
+                                    context,
+                                    variants[i],
+                                    isStoreOpen,
+                                    cardWidth: cardWidth,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    // 4+ variants: Show 3 full cards + 4th card peeking
+                    const double spacing = 8.0;
+                    final availableWidth = constraints.maxWidth - 24;
+                    final double cardWidth = ((availableWidth - 2 * spacing) / 3.15).clamp(100.0, 125.0);
 
                     return SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                       child: IntrinsicHeight(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1122,10 +1155,13 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
     }
 
     return Container(
-      padding: EdgeInsets.all(isCompact ? 7 : 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 6 : 10,
+        vertical: isCompact ? 7 : 10,
+      ),
       decoration: BoxDecoration(
         color: isSelected ? const Color(0xFFFFF9FA) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isCompact ? 14 : 16),
         border: Border.all(
           color: isSelected ? const Color(0xFFE20A22) : const Color(0xFFE2E8F0),
           width: isSelected ? 1.5 : 1.0,
@@ -1146,7 +1182,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
             clipBehavior: Clip.none,
             children: [
               Container(
-                height: isCompact ? 86 : 106,
+                height: isCompact ? 80 : 106,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
@@ -1235,8 +1271,8 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                                 },
                                 borderRadius: BorderRadius.circular(8),
                                 child: Container(
-                                  width: isCompact ? 28 : 32,
-                                  height: isCompact ? 28 : 32,
+                                  width: isCompact ? 26 : 32,
+                                  height: isCompact ? 26 : 32,
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(8),
@@ -1250,12 +1286,12 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                                     ],
                                   ),
                                   child: Center(
-                                    child: Icon(Icons.add, size: isCompact ? 16 : 18, color: const Color(0xFFE20A22)),
+                                    child: Icon(Icons.add, size: isCompact ? 15 : 18, color: const Color(0xFFE20A22)),
                                   ),
                                 ),
                               )
                             : Container(
-                                height: isCompact ? 28 : 32,
+                                height: isCompact ? 26 : 32,
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
@@ -1281,21 +1317,21 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                                         }
                                       },
                                       child: SizedBox(
-                                        width: isCompact ? 22 : 26,
-                                        height: isCompact ? 28 : 32,
+                                        width: isCompact ? 20 : 26,
+                                        height: isCompact ? 26 : 32,
                                         child: Center(
-                                          child: Icon(Icons.remove, size: isCompact ? 13 : 15, color: const Color(0xFFE20A22)),
+                                          child: Icon(Icons.remove, size: isCompact ? 12 : 15, color: const Color(0xFFE20A22)),
                                         ),
                                       ),
                                     ),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                                      padding: EdgeInsets.symmetric(horizontal: isCompact ? 2 : 3),
                                       child: Text(
                                         '$inCartQty',
                                         style: GoogleFonts.inter(
                                           color: const Color(0xFFE20A22),
                                           fontWeight: FontWeight.w900,
-                                          fontSize: isCompact ? 11.5 : 13,
+                                          fontSize: isCompact ? 11 : 13,
                                         ),
                                       ),
                                     ),
@@ -1321,10 +1357,10 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                                         }
                                       },
                                       child: SizedBox(
-                                        width: isCompact ? 22 : 26,
-                                        height: isCompact ? 28 : 32,
+                                        width: isCompact ? 20 : 26,
+                                        height: isCompact ? 26 : 32,
                                         child: Center(
-                                          child: Icon(Icons.add, size: isCompact ? 13 : 15, color: const Color(0xFFE20A22)),
+                                          child: Icon(Icons.add, size: isCompact ? 12 : 15, color: const Color(0xFFE20A22)),
                                         ),
                                       ),
                                     ),
@@ -1335,11 +1371,11 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
             ],
           ),
 
-          const SizedBox(height: 8),
+          SizedBox(height: isCompact ? 6 : 8),
 
           // 2. Pack Size Pill
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: isCompact ? 5 : 6, vertical: 2),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(6),
@@ -1351,6 +1387,8 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF334155),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
 
@@ -1383,11 +1421,11 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 ),
               ),
               if (variant.mrp > variant.price) ...[
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 Text(
                   '₹${variant.mrp.toInt()}',
                   style: GoogleFonts.inter(
-                    fontSize: isCompact ? 10 : 11,
+                    fontSize: isCompact ? 9.5 : 11,
                     fontWeight: FontWeight.w600,
                     decoration: TextDecoration.lineThrough,
                     color: const Color(0xFF94A3B8),
@@ -1408,6 +1446,8 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF64748B),
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
         ],
