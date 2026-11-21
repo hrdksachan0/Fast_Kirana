@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/utils/restaurant_utils.dart';
 import '../../../core/utils/route_detector.dart';
+import '../../../core/services/order_alarm_service.dart';
 import 'rider_active_delivery_card.dart';
 import 'rider_pickup_card.dart';
 import 'rider_batch_roadmap_card.dart';
@@ -621,6 +622,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
                     borderRadius: BorderRadius.circular(12),
                     onTap: () {
                       HapticFeedback.selectionClick();
+                      OrderAlarmService.instance.stopAlarm();
                       setState(() => _deliverySubTab = 0);
                     },
                     child: AnimatedContainer(

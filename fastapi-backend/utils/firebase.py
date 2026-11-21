@@ -94,8 +94,8 @@ def is_order_buzzer_alert(title: str, body: str, data: Optional[Dict[str, Any]])
     if is_cancelled:
         return False
 
-    # Status updates for customer must NEVER ring the loud order buzzer
-    if role == "CUSTOMER" or screen == "order-tracking":
+    # Status updates for customer or active transit delivery (On The Way) must NEVER ring the loud order buzzer
+    if role == "CUSTOMER" or screen == "order-tracking" or status_val in ["SHIPPED", "OUT_FOR_DELIVERY", "ON_THE_WAY", "DELIVERED"] or "on the way" in t_lower or "out for delivery" in t_lower:
         return False
 
     # Restaurant / Kitchen Target: Ring loud buzzer when order is verified/assigned for cooking!
@@ -106,11 +106,10 @@ def is_order_buzzer_alert(title: str, body: str, data: Optional[Dict[str, Any]])
         if status_val in ["CONFIRMED", "PENDING"] and msg_type not in ["ORDER_STATUS_UPDATE", "STATUS_UPDATE"]:
             return True
 
-    # Rider Target: Ring loud buzzer when assigned by admin!
+    # Rider Target: Ring loud buzzer STRICTLY & ONLY when a delivery order is assigned by admin!
     is_rider_target = (role == "DELIVERY" or screen in ["delivery", "delivery-dashboard"])
     if is_rider_target:
-        if msg_type in ["DELIVERY_ASSIGNED", "NEW_ORDER", "ORDER_PACKED"] or "🛵" in title or "assigned" in t_lower:
-            return True
+        return msg_type == "DELIVERY_ASSIGNED" or "delivery assigned" in t_lower or "new delivery assigned" in t_lower
 
     return (
         screen in ["restaurant-console", "admin-orders", "delivery", "picker", "vendor-console"] or

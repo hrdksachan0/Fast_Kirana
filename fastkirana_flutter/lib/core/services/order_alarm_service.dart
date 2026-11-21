@@ -715,6 +715,12 @@ class OrderAlarmService {
   }) async {
     if (_isMuted) return;
 
+    final String status = (orderMap['status'] ?? '').toString().toUpperCase().trim();
+    if (status == 'SHIPPED' || status == 'OUT_FOR_DELIVERY' || status == 'ON_THE_WAY' || status == 'DELIVERED' || status == 'CANCELLED') {
+      debugPrint('[OrderAlarmService] Suppressed rider alarm for active delivery / completed order (status: $status)');
+      return;
+    }
+
     final String orderId = (orderMap['id'] ?? orderMap['readableId'] ?? '').toString();
     if (_isPlaying && _activeOrderId == orderId) return;
 

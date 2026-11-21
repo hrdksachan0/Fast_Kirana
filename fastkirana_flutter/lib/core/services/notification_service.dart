@@ -1195,13 +1195,20 @@ title.toString().contains('🛵') ||
         data['type'] == 'ORDER_PLACED' ||
         data['type'] == 'ORDER_STATUS_UPDATE';
 
-    final isDeliveryRiderAlert = !isCustomerNotification && isStaff && (data['type'] == 'DELIVERY_ASSIGNED' ||
-        title.toString().contains('🛵') ||
+    // Rider Loud Buzzer: STRICTLY & ONLY when a delivery order is newly assigned to this rider!
+    final isDeliveryRiderAlert = !isCustomerNotification && isStaff && (
+        data['type'] == 'DELIVERY_ASSIGNED' ||
         title.toString().toLowerCase().contains('delivery assigned') ||
-        ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
-            (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED')));
+        title.toString().toLowerCase().contains('new delivery assigned')
+    );
 
-    final isOrderAlert = !isCustomerNotification && isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
+    final isOnTheWayOrDelivering = orderStatus == 'SHIPPED' ||
+        orderStatus == 'OUT_FOR_DELIVERY' ||
+        orderStatus == 'ON_THE_WAY' ||
+        title.toString().toLowerCase().contains('out for delivery') ||
+        title.toString().toLowerCase().contains('on the way');
+
+    final isOrderAlert = !isCustomerNotification && !isOnTheWayOrDelivering && isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
         data['type'] == 'NEW_ORDER' ||
         data['type'] == 'VENDOR_NEW_ORDER' ||
         orderStatus == 'PENDING' ||

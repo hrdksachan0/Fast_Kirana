@@ -197,15 +197,23 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
               deliveryUserId.isNotEmpty &&
               !isAssignedToMe;
 
-          // 🚨 INSTANT REALTIME ALARM: If admin just assigned this order to current rider, sound buzzer immediately!
+          // 🚨 INSTANT REALTIME ALARM: ONLY trigger for new pending pickups, NEVER for active deliveries / On The Way!
+          final isPendingPickup = const ['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING', 'ORDER_PACKED'].contains(newStatus);
           final isNewAssignment = isAssignedToMe &&
-              !isCompleted &&
+              isPendingPickup &&
               orderId.isNotEmpty &&
               !_knownAssignedOrderIds.contains(orderId);
 
           if (isNewAssignment) {
             _knownAssignedOrderIds.add(orderId);
             _triggerContinuousRiderAlarm(record);
+          } else if (newStatus == 'SHIPPED' || newStatus == 'OUT_FOR_DELIVERY' || isCompleted) {
+            // If order is out for delivery (On The Way) or completed, register ID and silence alarm immediately!
+            _knownAssignedOrderIds.add(orderId);
+            if (OrderAlarmService.instance.isPlaying &&
+                (OrderAlarmService.instance.activeOrderId == orderId || OrderAlarmService.instance.activeOrderId == readableId)) {
+              OrderAlarmService.instance.stopAlarm();
+            }
           }
 
           // Instant peer rider drop: If another rider was assigned or order completed, remove immediately
@@ -463,18 +471,26 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   }
 
   void _checkAndTriggerNewOrderAlert(List<Map<String, dynamic>> ordersList) {
-    // Only alert for active orders ASSIGNED TO CURRENT RIDER!
+    // Register all active SHIPPED / Out For Delivery orders so they NEVER trigger alarms
+    final activeOnTheWayIds = ordersList
+        .where((o) => _isAssignedToMe(o) && (o['status'] == 'SHIPPED' || o['status'] == 'OUT_FOR_DELIVERY'))
+        .map((o) => o['id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty);
+    _knownAssignedOrderIds.addAll(activeOnTheWayIds);
+
+    // Only alert for active pending pickup orders ASSIGNED TO CURRENT RIDER!
     final myAssignedPending = ordersList.where((o) {
       if (!['CONFIRMED', 'PREPARING', 'PACKED', 'PENDING'].contains(o['status'])) return false;
       if (_isSelfPickupOrder(o)) return false;
       return _isAssignedToMe(o);
     }).toList();
 
-    if (myAssignedPending.isEmpty) {
+    // If no pending pickups OR rider is currently delivering an active trip ("On The Way"), stop alarm!
+    if (myAssignedPending.isEmpty || activeOnTheWayIds.isNotEmpty) {
       if (OrderAlarmService.instance.isPlaying) {
         OrderAlarmService.instance.stopAlarm();
       }
-      return;
+      if (myAssignedPending.isEmpty) return;
     }
 
     final currentAssignedIds = myAssignedPending

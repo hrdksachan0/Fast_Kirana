@@ -79,6 +79,32 @@ export function buildOrderFcmPayload(
   data: Record<string, string>,
   ttlSeconds = 600,
 ) {
+  const orderStatus = (data.status || data.orderStatus || '').toUpperCase()
+  const isCancelledOrTerminal =
+    orderStatus === 'CANCELLED' ||
+    orderStatus === 'REJECTED' ||
+    orderStatus === 'FAILED' ||
+    orderStatus === 'REFUNDED' ||
+    title.toLowerCase().includes('cancel') ||
+    body.toLowerCase().includes('cancel')
+
+  const isOnTheWay =
+    orderStatus === 'SHIPPED' ||
+    orderStatus === 'OUT_FOR_DELIVERY' ||
+    orderStatus === 'ON_THE_WAY' ||
+    title.toLowerCase().includes('out for delivery') ||
+    title.toLowerCase().includes('on the way')
+
+  const isOrderAlert =
+    !isCancelledOrTerminal &&
+    !isOnTheWay &&
+    (data.type === 'NEW_ORDER' ||
+      data.type === 'DELIVERY_ASSIGNED' ||
+      title.includes('🛎️') ||
+      title.includes('💳') ||
+      title.includes('👨‍🍳') ||
+      title.includes('🚨'))
+
   const isCustomerTracking =
     !isOrderAlert &&
     (data.role === 'CUSTOMER' ||
