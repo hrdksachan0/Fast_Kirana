@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/logger_service.dart';
 import '../theme/design_system.dart';
 
@@ -133,37 +134,96 @@ void showAppErrorSnackBar(
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Row(
-        children: [
-          Icon(
-            appError.code == 'NETWORK' ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
-            color: Colors.white,
-            size: 18,
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF18181B),
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: color.withValues(alpha: 0.35),
+            width: 1.0,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              appError.userMessage,
-              style: TextStyle(
-                fontSize: Responsive.scaledFontSize(context, 13),
-                fontWeight: FontWeight.w500,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+              spreadRadius: -2,
+            ),
+            BoxShadow(
+              color: color.withValues(alpha: 0.18),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.20),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(
+                  appError.code == 'NETWORK' ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+                  color: color,
+                  size: 14,
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                appError.userMessage,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+            if (appError.isRetryable && onRetry != null) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  onRetry();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Retry',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
-      backgroundColor: color,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.all(12),
+      padding: EdgeInsets.zero,
+      margin: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        MediaQuery.of(context).padding.bottom + 84,
+      ),
       duration: const Duration(seconds: 3),
-      action: (appError.isRetryable && onRetry != null)
-          ? SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: onRetry,
-            )
-          : null,
     ),
   );
 }
