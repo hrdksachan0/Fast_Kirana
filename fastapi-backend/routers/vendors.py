@@ -938,6 +938,7 @@ class UpdateVendorProductPricesRequest(BaseModel):
     stock: Optional[int] = None
     storeId: Optional[str] = None
     vendorId: Optional[str] = None
+    variants: Optional[Any] = None
 
 
 @vendors_router.patch("/products/{product_id}/prices")
@@ -1024,6 +1025,28 @@ async def update_vendor_product_prices(
             product.stock = max(0, int(body.stock))
         if body.vendorId is not None:
             product.vendorId = body.vendorId if body.vendorId != "" else None
+        if body.variants is not None:
+            parsed_variants = body.variants
+            if isinstance(parsed_variants, str) and parsed_variants.strip():
+                try:
+                    import json
+                    parsed_variants = json.loads(parsed_variants)
+                except Exception:
+                    pass
+            if isinstance(parsed_variants, list):
+                # Ensure each variant retains fallback cost price
+                fb_cost = product.costPrice if product.costPrice and product.costPrice > 0 else 0.0
+                sanitized_vars = []
+                for v in parsed_variants:
+                    if isinstance(v, dict):
+                        v_copy = dict(v)
+                        v_cp = float(v_copy.get("costPrice") or v_copy.get("cp") or 0.0)
+                        if v_cp <= 0 and fb_cost > 0:
+                            v_copy["costPrice"] = fb_cost
+                        sanitized_vars.append(v_copy)
+                    else:
+                        sanitized_vars.append(v)
+                product.variants = sanitized_vars
 
         # Recalculate discount if MRP > price
         if product.mrp > 0 and product.price <= product.mrp:

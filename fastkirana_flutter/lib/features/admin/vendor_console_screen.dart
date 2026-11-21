@@ -1230,15 +1230,18 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
 
                           Map<String, dynamic> patchData;
                           if (workingVariants.isNotEmpty) {
-                            final defaultVar = workingVariants[0];
+                            // Find lowest price variant or active selected variant as display default
+                            final sortedVars = [...workingVariants]
+                              ..sort((a, b) => ((a['price'] as num?)?.toDouble() ?? 0).compareTo((b['price'] as num?)?.toDouble() ?? 0));
+                            final lowestVar = sortedVars.first;
                             final totalStock = workingVariants.fold<int>(
                               0,
                               (sum, v) => sum + ((v['stock'] as num?)?.toInt() ?? 0),
                             );
                             patchData = {
-                              'costPrice': (defaultVar['costPrice'] as num?)?.toDouble() ?? costVal,
-                              'price': (defaultVar['price'] as num?)?.toDouble() ?? sellVal,
-                              'mrp': (defaultVar['mrp'] as num?)?.toDouble() ?? mrpVal,
+                              'costPrice': (lowestVar['costPrice'] as num?)?.toDouble() ?? costVal,
+                              'price': (lowestVar['price'] as num?)?.toDouble() ?? sellVal,
+                              'mrp': (lowestVar['mrp'] as num?)?.toDouble() ?? mrpVal,
                               'stock': totalStock > 0 ? totalStock : (int.tryParse(stockCtrl.text.trim()) ?? initialStock),
                               'variants': workingVariants,
                             };
@@ -1250,6 +1253,16 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                               'stock': int.tryParse(stockCtrl.text.trim()) ?? initialStock,
                             };
                           }
+
+                          // Optimistically update the product object in the UI list immediately
+                          prod['costPrice'] = patchData['costPrice'];
+                          prod['price'] = patchData['price'];
+                          prod['mrp'] = patchData['mrp'];
+                          prod['stock'] = patchData['stock'];
+                          if (workingVariants.isNotEmpty) {
+                            prod['variants'] = List<Map<String, dynamic>>.from(workingVariants);
+                          }
+                          setState(() {});
 
                           final res = await dio.patch(
                             '/api/vendors/products/$prodId/prices',
