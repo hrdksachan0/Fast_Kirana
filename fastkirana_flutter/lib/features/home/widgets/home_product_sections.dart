@@ -233,13 +233,13 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                 ),
               ),
               child: SizedBox(
-                height: 102,
+                height: 118,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.only(right: 16, bottom: 6),
                   itemCount: childSubcategories.length + 1,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  separatorBuilder: (_, __) => const SizedBox(width: 14),
                   itemBuilder: (context, index) {
                     final isAll = index == 0;
                     final isSelected = isAll
@@ -259,69 +259,72 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                         });
                       },
                       child: SizedBox(
-                        width: 72,
+                        width: 82,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // 1. Soft Warm Pastel Squircle Card
+                            // 1. Soft Warm Pastel Squircle Card (Enlarged for premium Zepto/Blinkit visual impact)
                             Container(
-                              width: 60,
-                              height: 60,
+                              width: 74,
+                              height: 74,
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? const Color(0xFFFFF1F2)
                                     : const Color(0xFFFFF8EE),
-                                borderRadius: BorderRadius.circular(18),
+                                borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: isSelected
                                       ? const Color(0xFFE20A22)
                                       : const Color(0xFFFFE8D1),
-                                  width: isSelected ? 1.8 : 1.2,
+                                  width: isSelected ? 2.0 : 1.2,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: isSelected
                                         ? const Color(0xFFE20A22).withValues(alpha: 0.16)
                                         : const Color(0xFFF59E0B).withValues(alpha: 0.06),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
-                              padding: const EdgeInsets.all(7),
+                              padding: const EdgeInsets.all(4),
                               child: isAll
                                   ? Center(
                                       child: Icon(
                                         Icons.dashboard_rounded,
-                                        size: 26,
+                                        size: 32,
                                         color: isSelected
                                             ? const Color(0xFFE20A22)
                                             : const Color(0xFFB45309),
                                       ),
                                     )
                                   : imageUrl.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: imageUrl,
-                                          fit: BoxFit.contain,
-                                          placeholder: (_, __) => Container(
-                                            color: Colors.transparent,
-                                          ),
-                                          errorWidget: (_, __, ___) => Center(
-                                            child: Text(
-                                              emoji,
-                                              style: const TextStyle(fontSize: 26),
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(16),
+                                          child: CachedNetworkImage(
+                                            imageUrl: imageUrl,
+                                            fit: BoxFit.contain,
+                                            placeholder: (_, __) => Container(
+                                              color: Colors.transparent,
+                                            ),
+                                            errorWidget: (_, __, ___) => Center(
+                                              child: Text(
+                                                emoji,
+                                                style: const TextStyle(fontSize: 32),
+                                              ),
                                             ),
                                           ),
                                         )
                                       : Center(
                                           child: Text(
                                             emoji,
-                                            style: const TextStyle(fontSize: 26),
+                                            style: const TextStyle(fontSize: 32),
                                           ),
                                         ),
                             ),
 
-                            const SizedBox(height: 5),
+                            const SizedBox(height: 6),
 
                             // 2. Title Label (Centered 2-line max)
                             SizedBox(
@@ -330,7 +333,7 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                                 title,
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: Responsive.scaledFontSize(context, 10.5),
+                                  fontSize: Responsive.scaledFontSize(context, 11),
                                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
                                   color: isSelected ? const Color(0xFFE20A22) : const Color(0xFF334155),
                                   height: 1.15,
@@ -345,7 +348,7 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                               duration: const Duration(milliseconds: 200),
                               curve: Curves.easeOutCubic,
                               height: 2.5,
-                              width: isSelected ? 22 : 0,
+                              width: isSelected ? 26 : 0,
                               decoration: BoxDecoration(
                                 color: isSelected ? const Color(0xFFE20A22) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(2),
