@@ -1486,12 +1486,9 @@ export async function POST(request: NextRequest) {
 
     const autoApproveSetting = settingsMap['admin_auto_approve_orders']
     const isAutoApprove = autoApproveSetting === 'true'
-    // Online Paid orders (funds already captured) move straight to PENDING (Placed - No Admin Verification, Restaurant/Store accepts).
-    // Online UNPAID orders land in PENDING (Payment Pending queue in Admin dashboard).
-    // Cash on Delivery (COD) orders require Admin Verification (ADMIN_PENDING) unless auto-approve is true.
-    const initialOrderStatus = isOnlinePaid
-      ? OrderStatus.PENDING
-      : (isOnlineRequested ? OrderStatus.PENDING : (isAutoApprove ? OrderStatus.PENDING : OrderStatus.ADMIN_PENDING))
+    // All customer orders (COD and Online Paid) land in ADMIN_PENDING (Needs Approval)
+    // so admin can review and verify before dispatch, unless auto-approve is explicitly enabled.
+    const initialOrderStatus = isAutoApprove ? OrderStatus.PENDING : OrderStatus.ADMIN_PENDING
 
     // 6. Create orders inside a Prisma Transaction
     const createdOrders = await prisma.$transaction(async (tx) => {

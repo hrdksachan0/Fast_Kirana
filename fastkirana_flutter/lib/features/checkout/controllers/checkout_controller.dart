@@ -1376,7 +1376,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       addressId: selectedAddress?.id ?? 'addr_default',
       restaurantId: restaurantId,
       shopName: shopName,
-      status: (isOnlinePaid || effectivePayment == 'wallet') ? OrderStatus.confirmed : OrderStatus.adminPending,
+      status: OrderStatus.adminPending,
       subtotal: subtotal,
       discount: effectiveDiscount,
       deliveryFee: deliveryFee,

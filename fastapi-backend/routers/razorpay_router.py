@@ -325,12 +325,13 @@ async def verify_razorpay_payment(
         existing_res = await db.execute(existing_stmt)
         existing_order = existing_res.scalars().first()
 
-    # If already exists in DB, ensure paymentStatus is PAID and confirmed
+    # If already exists in DB, ensure paymentStatus is PAID
     if existing_order:
         if existing_order.paymentStatus != PaymentStatus.PAID:
             existing_order.paymentStatus = PaymentStatus.PAID
-            if existing_order.status in [OrderStatus.ADMIN_PENDING, OrderStatus.PENDING]:
-                existing_order.status = OrderStatus.PENDING
+            # Keep in ADMIN_PENDING so admin reviews before packing/dispatching!
+            if existing_order.status != OrderStatus.CANCELLED:
+                existing_order.status = OrderStatus.ADMIN_PENDING
             rzp_note = f"Razorpay PG Paid (Ref: {rzp_payment_id})"
             if not existing_order.notes or "Razorpay PG Paid" not in existing_order.notes:
                 existing_order.notes = f"{existing_order.notes} | {rzp_note}" if existing_order.notes else rzp_note

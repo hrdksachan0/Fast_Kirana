@@ -1859,7 +1859,8 @@ async def auto_recover_unplaced_cashfree_order(
             is_rzp_ref = str(cf_ref).startswith("pay_") or str(cf_order_id).startswith("order_")
             pg_name = "Razorpay" if is_rzp_ref else "Cashfree"
             pg_tag = f"[RZP_ORDER:{cf_order_id}]" if is_rzp_ref else f"[CF_ORDER:{cf_order_id}]"
-            order_status = OrderStatus.CONFIRMED
+            # Keep in ADMIN_PENDING so admin reviews and approves before dispatch!
+            order_status = OrderStatus.ADMIN_PENDING
             order_notes = f"{pg_tag} | {pg_name} PG Paid (Ref: {cf_ref}) | Auto-Recovered"
 
         # 7. Create Orders (Split into Grocery + Restaurant if mixed cart)
