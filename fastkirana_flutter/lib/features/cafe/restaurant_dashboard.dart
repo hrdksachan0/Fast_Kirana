@@ -110,13 +110,34 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
   static const Color slateBorder = AppDesignSystem.slate200;
   static const Color bgMain = AppDesignSystem.slate50;
 
+  final List<Map<String, String>> _dynamicOutlets = [];
   List<Map<String, String>> get _availableOutlets {
+    if (_dynamicOutlets.isNotEmpty) return _dynamicOutlets;
     final list = RestaurantRegistry.all;
-    final outlets = list.map((r) => {'id': r.id, 'name': r.name}).toList();
+    final outlets = list.map((r) => {
+      'id': r.id,
+      'name': r.name,
+      'ownerPhone': r.ownerPhone ?? '',
+      'commissionRate': (r.commissionRate ?? 25.0).toString(),
+      'isOpen': r.isOpen.toString(),
+      'discountBadge': '',
+      'openTime': r.openTime ?? '10:00',
+      'closeTime': r.closeTime ?? '22:00',
+    }).toList();
     if (outlets.isEmpty && _assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty) {
-      outlets.add({'id': _assignedRestaurantId!, 'name': _restaurantName});
+      outlets.add({
+        'id': _assignedRestaurantId!,
+        'name': _restaurantName,
+        'ownerPhone': '',
+        'commissionRate': '25',
+        'isOpen': 'true',
+        'discountBadge': '',
+        'openTime': '10:00',
+        'closeTime': '22:00',
+      });
     }
-    return outlets;
+    _dynamicOutlets.addAll(outlets);
+    return _dynamicOutlets;
   }
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -430,6 +451,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
                 'name': name,
                 'ownerPhone': item['ownerPhone']?.toString() ?? '',
                 'commissionRate': item['commissionRate']?.toString() ?? '25',
+                'isOpen': (item['isOpen'] == true).toString(),
+                'discountBadge': item['discountBadge']?.toString() ?? '',
+                'openTime': item['openTime']?.toString() ?? '10:00',
+                'closeTime': item['closeTime']?.toString() ?? '22:00',
               };
               if (idx >= 0) {
                 _availableOutlets[idx] = outletData;
@@ -480,6 +505,32 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     }
 
     _commissionRate = _getCommissionRateForOutlet(_assignedRestaurantId, _restaurantName);
+
+    // Sync live outlet settings (busy mode, store open, timings) from server
+    final activeOutlet = _availableOutlets.firstWhere(
+      (o) => o['id'] == _assignedRestaurantId,
+      orElse: () => {},
+    );
+    if (activeOutlet.isNotEmpty) {
+      final badge = (activeOutlet['discountBadge'] ?? '').toString().toUpperCase();
+      final isBusy = badge.contains('RUSH') || badge.contains('BUSY') || badge.contains('SURGE');
+      _isBusyMode = isBusy;
+      if (activeOutlet['isOpen'] != null) {
+        _isStoreOpen = activeOutlet['isOpen'] == 'true';
+      }
+      if (activeOutlet['openTime'] != null && activeOutlet['openTime'].toString().isNotEmpty) {
+        _openTime = activeOutlet['openTime'].toString();
+      }
+      if (activeOutlet['closeTime'] != null && activeOutlet['closeTime'].toString().isNotEmpty) {
+        _closeTime = activeOutlet['closeTime'].toString();
+      }
+      SharedPreferences.getInstance().then((prefs) {
+        if (_assignedRestaurantId != null) {
+          prefs.setBool('busy_mode_$_assignedRestaurantId', isBusy);
+          prefs.setBool('store_open_$_assignedRestaurantId', _isStoreOpen);
+        }
+      });
+    }
 
     if (mounted) setState(() {});
 
@@ -1229,10 +1280,22 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
         _stopPendingAlarm();
         _knownPendingOrderIds.clear();
 
+        final badge = (outlet['discountBadge'] ?? '').toString().toUpperCase();
+        final isBusy = badge.contains('RUSH') || badge.contains('BUSY') || badge.contains('SURGE');
+        final isOpen = outlet['isOpen'] != 'false';
+
         setState(() {
           _assignedRestaurantId = newId;
           _restaurantName = newName;
           _commissionRate = _getCommissionRateForOutlet(newId, newName);
+          _isBusyMode = isBusy;
+          if (outlet['isOpen'] != null) _isStoreOpen = isOpen;
+          if (outlet['openTime'] != null && outlet['openTime'].toString().isNotEmpty) {
+            _openTime = outlet['openTime'].toString();
+          }
+          if (outlet['closeTime'] != null && outlet['closeTime'].toString().isNotEmpty) {
+            _closeTime = outlet['closeTime'].toString();
+          }
           _orders = [];
           _salesOrders = [];
           _menuItems = [];
@@ -1928,11 +1991,17 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       final prefs = await SharedPreferences.getInstance();
       final outletKey = _assignedRestaurantId ?? 'default';
       await prefs.setBool('busy_mode_$outletKey', val);
+
+      // Keep in-memory list updated
+      final idx = _availableOutlets.indexWhere((o) => o['id'] == _assignedRestaurantId);
+      if (idx >= 0) {
+        _availableOutlets[idx]['discountBadge'] = val ? 'HIGH RUSH' : '';
+      }
       
       if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
         final dio = ref.read(dioProvider);
         await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {
-          'discountBadge': val ? 'HIGH RUSH' : null,
+          'discountBadge': val ? 'HIGH RUSH' : '',
         });
         RestaurantRepository.invalidateCache();
         ref.invalidate(restaurantsProvider);
