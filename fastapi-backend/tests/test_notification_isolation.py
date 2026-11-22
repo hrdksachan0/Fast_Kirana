@@ -28,7 +28,9 @@ async def test_admin_pending_notifies_admin_only():
         )
         sent_topics = [call.args[0] for call in mock_topic.call_args_list]
         assert "admin_orders_hub-209206" in sent_topics
-        assert "admin_orders" in sent_topics
+        assert "admin_orders_ghatampur" in sent_topics
+        assert "admin_orders_barharwa" not in sent_topics
+        assert "admin_orders" not in sent_topics
         assert not any(t.startswith("restaurant_") for t in sent_topics)
         assert not any(t.startswith("delivery_orders") for t in sent_topics)
         assert not any(t.startswith("picker_orders") for t in sent_topics)

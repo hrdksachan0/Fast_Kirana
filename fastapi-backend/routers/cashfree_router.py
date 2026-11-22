@@ -1268,33 +1268,40 @@ async def verify_cashfree_payment(
                 from routers.orders import dispatch_isolated_order_fcm_notifications
 
                 target_orders = comb_orders if comb_orders else [order]
-                for o in target_orders:
-                    if background_tasks:
-                        background_tasks.add_task(
-                            dispatch_isolated_order_fcm_notifications,
-                            o.id,
-                            o.readableId,
-                            o.restaurantId,
-                            o.shopName,
-                            float(o.total),
+                primary_o = next((o for o in target_orders if not o.restaurantId), target_orders[0])
+                base_id = str(primary_o.readableId or "").split("-")[0] or primary_o.id[:6].upper()
+                combined_total = sum(float(co.total or 0) for co in target_orders)
+                outlets = " + ".join(dict.fromkeys(co.shopName for co in target_orders if co.shopName)) or "FastMinute Store"
+                is_comb = len(target_orders) > 1
+
+                # Exactly 1 consolidated buzzer to Admin for the entire checkout (strictly hub-isolated)
+                from routers.orders import dispatch_admin_order_buzzer
+                if background_tasks:
+                    background_tasks.add_task(
+                        dispatch_admin_order_buzzer,
+                        primary_o.id,
+                        base_id,
+                        primary_o.storeId,
+                        combined_total,
+                        "ADMIN_PENDING",
+                        True,
+                        outlets,
+                        is_comb
+                    )
+                else:
+                    import asyncio
+                    asyncio.create_task(
+                        dispatch_admin_order_buzzer(
+                            primary_o.id,
+                            base_id,
+                            primary_o.storeId,
+                            combined_total,
                             "ADMIN_PENDING",
-                            o.storeId,
-                            "PAID"
+                            True,
+                            outlets,
+                            is_comb
                         )
-                    else:
-                        import asyncio
-                        asyncio.create_task(
-                            dispatch_isolated_order_fcm_notifications(
-                                o.id,
-                                o.readableId,
-                                o.restaurantId,
-                                o.shopName,
-                                float(o.total),
-                                "ADMIN_PENDING",
-                                o.storeId,
-                                "PAID"
-                            )
-                        )
+                    )
                 from routers.orders import send_whatsapp_alert
                 if comb_orders:
                     combined_total = sum(float(co.total or 0) for co in comb_orders)
@@ -2324,6 +2331,30 @@ async def auto_recover_unplaced_cashfree_order(
         except Exception as wa_e:
             logger.warning(f"[Auto-Recovery] WhatsApp alert failed: {wa_e}")
 
+        # 1. Exactly 1 Consolidated FCM Buzzer to Admin (strictly hub-isolated)
+        try:
+            from routers.orders import dispatch_admin_order_buzzer
+            primary_ord = next((co["order"] for co in created_orders if not co["is_restaurant"]), created_orders[0]["order"])
+            base_rid = str(primary_ord.readableId or "").split("-")[0] or primary_ord.id[:6].upper()
+            comb_total = sum(float(co["order"].total or 0) for co in created_orders)
+            outlets_str = " + ".join(dict.fromkeys(co["shop_name"] for co in created_orders if co.get("shop_name"))) or "FastMinute Store"
+            is_comb_rec = len(created_orders) > 1
+
+            asyncio.create_task(
+                dispatch_admin_order_buzzer(
+                    primary_ord.id,
+                    base_rid,
+                    recovered_store_id,
+                    comb_total,
+                    order_status.value if hasattr(order_status, "value") else str(order_status),
+                    True,
+                    outlets_str,
+                    is_comb_rec
+                )
+            )
+        except Exception as fcm_admin_err:
+            logger.warning(f"[Auto-Recovery] Admin FCM buzzer failed: {fcm_admin_err}")
+
         for co in created_orders:
             co_ord = co["order"]
             co_items = co["items"]
@@ -2331,21 +2362,23 @@ async def auto_recover_unplaced_cashfree_order(
             co_rest_id = co["restaurant_id"]
             co_shop = co["shop_name"]
 
-            # FCM Order Buzzer notification (to admin, store, and picker)
-            try:
-                from routers.orders import dispatch_isolated_order_fcm_notifications
-                asyncio.create_task(dispatch_isolated_order_fcm_notifications(
-                    order_id=co_ord.id,
-                    readable_id=co_ord.readableId,
-                    restaurant_id=co_rest_id,
-                    shop_name=co_shop,
-                    total=float(co_ord.total),
-                    status_val=order_status.value if hasattr(order_status, "value") else str(order_status),
-                    store_id=recovered_store_id,
-                    payment_status="PAID"
-                ))
-            except Exception as fcm_err:
-                logger.warning(f"[Auto-Recovery] FCM order buzzer notification failed: {fcm_err}")
+            # Outlet alerts (Pickers / Kitchen Chefs) if order is auto-approved
+            st_val = order_status.value if hasattr(order_status, "value") else str(order_status)
+            if st_val != "ADMIN_PENDING":
+                try:
+                    from routers.orders import dispatch_isolated_order_fcm_notifications
+                    asyncio.create_task(dispatch_isolated_order_fcm_notifications(
+                        order_id=co_ord.id,
+                        readable_id=co_ord.readableId,
+                        restaurant_id=co_rest_id,
+                        shop_name=co_shop,
+                        total=float(co_ord.total),
+                        status_val=st_val,
+                        store_id=recovered_store_id,
+                        payment_status="PAID"
+                    ))
+                except Exception as fcm_err:
+                    logger.warning(f"[Auto-Recovery] FCM order buzzer notification failed: {fcm_err}")
 
             # WebSocket broadcast
             try:
@@ -2658,22 +2691,27 @@ async def cashfree_webhook(
                 import asyncio
                 target_orders = comb_orders if comb_orders else [order]
 
-                # 1. FCM Push to Darkstore & Restaurant Kitchen
+                # 1. EXACTLY 1 Consolidated FCM Buzzer to Admin (strictly hub-isolated)
                 try:
-                    from routers.orders import dispatch_isolated_order_fcm_notifications
-                    for o in target_orders:
-                        asyncio.create_task(
-                            dispatch_isolated_order_fcm_notifications(
-                                o.id,
-                                o.readableId,
-                                o.restaurantId,
-                                o.shopName,
-                                float(o.total or 0),
-                                "ADMIN_PENDING",
-                                o.storeId,
-                                "PAID"
-                            )
+                    from routers.orders import dispatch_admin_order_buzzer
+                    primary_o = next((o for o in target_orders if not o.restaurantId), target_orders[0])
+                    base_id = str(primary_o.readableId or "").split("-")[0] or primary_o.id[:6].upper()
+                    combined_total = sum(float(co.total or 0) for co in target_orders)
+                    outlets = " + ".join(dict.fromkeys(co.shopName for co in target_orders if co.shopName)) or "FastMinute Store"
+                    is_comb = len(target_orders) > 1
+
+                    asyncio.create_task(
+                        dispatch_admin_order_buzzer(
+                            primary_o.id,
+                            base_id,
+                            primary_o.storeId,
+                            combined_total,
+                            "ADMIN_PENDING",
+                            True,
+                            outlets,
+                            is_comb
                         )
+                    )
                 except Exception as fcm_err:
                     logger.warning(f"[Cashfree Webhook] FCM dispatch notice: {fcm_err}")
 

@@ -109,28 +109,25 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         }
       }
 
-      // Hub-scoped admin topic (all active admins receive exactly this 1 broadcast)
-      const adminTopic = storeId ? `admin_orders_${storeId}` : 'admin_orders'
+      // Hub-scoped admin topic (strictly hub-isolated)
+      const targetStoreId = storeId || 'hub-209206'
       const fcmDispatchPromises: Promise<any>[] = []
 
       fcmDispatchPromises.push(
-        sendTopicWithRetry(fcmMessaging, { topic: adminTopic, ...staffPayload }).catch(() => {})
+        sendTopicWithRetry(fcmMessaging, { topic: `admin_orders_${targetStoreId}`, ...staffPayload }).catch(() => {})
       )
 
-      if (storeId && storeId.includes('209206')) {
+      if (targetStoreId.includes('209206')) {
         fcmDispatchPromises.push(
           sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_ghatampur', ...staffPayload }).catch(() => {})
         )
-      } else if (storeId && storeId.includes('816101')) {
+      } else if (targetStoreId.includes('816101')) {
         fcmDispatchPromises.push(
           sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_barharwa', ...staffPayload }).catch(() => {})
         )
-      }
-
-      // Also broadcast to global admin_orders topic if a specific hub topic was used (received by Super Admin)
-      if (storeId) {
+      } else if (targetStoreId.includes('224122')) {
         fcmDispatchPromises.push(
-          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders', ...staffPayload }).catch(() => {})
+          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_akbarpur', ...staffPayload }).catch(() => {})
         )
       }
 
@@ -141,11 +138,11 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
             user: {
               role: Role.ADMIN,
               OR: [
-                { assignedStoreId: storeId },
-                { assignedStoreId: null },
+                { assignedStoreId: targetStoreId },
                 { phone: { contains: '9170942500' } },
-                ...(storeId && storeId.includes('209206') ? [{ phone: { contains: '7054470303' } }] : []),
-                ...(storeId && storeId.includes('816101') ? [{ phone: { contains: '7633898577' } }] : []),
+                ...(targetStoreId.includes('209206') ? [{ phone: { contains: '7054470303' } }] : []),
+                ...(targetStoreId.includes('816101') ? [{ phone: { contains: '7633898577' } }] : []),
+                ...(targetStoreId.includes('224122') ? [{ phone: { contains: '9696678006' } }] : []),
               ],
             },
           },

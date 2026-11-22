@@ -190,19 +190,31 @@ title.toString().contains('🛵') ||
       final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
       // STRICT HUB ISOLATION:
-      // Super Admin (9170942500, SUPER_ADMIN, or unassigned store) monitors ALL hubs!
+      // Super Admin (9170942500 or SUPER_ADMIN) monitors ALL hubs!
       // Hub Admins (Ghatampur 7054470303, Barharwa 7633898577) receive alerts strictly for their assigned hub!
       final assignedStoreId = prefs.getString('assigned_store_id') ?? await SecureStorage.read('assigned_store_id') ?? '';
       final notifStoreId = (data['storeId'] ?? '').toString().trim();
       final userPhone = (await SecureStorage.read('user_phone')) ?? prefs.getString('user_phone') ?? '';
       final cleanPhone = userPhone.replaceAll(RegExp(r'[^0-9]'), '');
       final tenDigit = cleanPhone.length > 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
-      final isSuperAdmin = tenDigit == '9170942500' || userRole == 'SUPER_ADMIN' || assignedStoreId.isEmpty;
+      final isSuperAdmin = tenDigit == '9170942500' || userRole == 'SUPER_ADMIN';
+      final isBarharwa = tenDigit == '7633898577' || assignedStoreId.contains('816101');
+      final isGhatampur = tenDigit == '7054470303' || assignedStoreId.contains('209206');
 
-      if (!isSuperAdmin && assignedStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
-        if (assignedStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
-          debugPrint('NotificationService: Suppressed alert for different hub admin ($notifStoreId != $assignedStoreId) in background.');
+      if (!isSuperAdmin) {
+        if (isBarharwa && (notifStoreId.contains('209206') || notifStoreId.toLowerCase().contains('ghatampur'))) {
+          debugPrint('NotificationService: Suppressed Ghatampur alert for Barharwa manager in background.');
           return;
+        }
+        if (isGhatampur && (notifStoreId.contains('816101') || notifStoreId.toLowerCase().contains('barharwa'))) {
+          debugPrint('NotificationService: Suppressed Barharwa alert for Ghatampur manager in background.');
+          return;
+        }
+        if (assignedStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
+          if (assignedStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
+            debugPrint('NotificationService: Suppressed alert for different hub admin ($notifStoreId != $assignedStoreId) in background.');
+            return;
+          }
         }
       }
 
@@ -1191,19 +1203,31 @@ title.toString().contains('🛵') ||
         final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
 
         // STRICT HUB ISOLATION:
-        // Super Admin (9170942500, SUPER_ADMIN, or unassigned store) monitors ALL hubs!
+        // Super Admin (9170942500 or SUPER_ADMIN) monitors ALL hubs!
         // Hub Admins (Ghatampur 7054470303, Barharwa 7633898577) receive alerts strictly for their assigned hub!
         final adminStoreId = prefs.getString('assigned_store_id') ?? await SecureStorage.read('assigned_store_id') ?? '';
         final notifStoreId = (data['storeId'] ?? '').toString().trim();
         final adminPhone = prefs.getString('user_phone') ?? await SecureStorage.read('user_phone') ?? '';
         final cleanPhone = adminPhone.replaceAll(RegExp(r'[^0-9]'), '');
         final tenDigit = cleanPhone.length > 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
-        final isSuperAdmin = tenDigit == '9170942500' || userRole == 'SUPER_ADMIN' || adminStoreId.isEmpty;
+        final isSuperAdmin = tenDigit == '9170942500' || userRole == 'SUPER_ADMIN';
+        final isBarharwa = tenDigit == '7633898577' || adminStoreId.contains('816101');
+        final isGhatampur = tenDigit == '7054470303' || adminStoreId.contains('209206');
 
-        if (!isSuperAdmin && adminStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
-          if (adminStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
-            debugPrint('NotificationService: Suppressed alert for different hub admin ($notifStoreId != $adminStoreId) in foreground.');
+        if (!isSuperAdmin) {
+          if (isBarharwa && (notifStoreId.contains('209206') || notifStoreId.toLowerCase().contains('ghatampur'))) {
+            debugPrint('NotificationService: Suppressed Ghatampur alert for Barharwa manager in foreground.');
             return;
+          }
+          if (isGhatampur && (notifStoreId.contains('816101') || notifStoreId.toLowerCase().contains('barharwa'))) {
+            debugPrint('NotificationService: Suppressed Barharwa alert for Ghatampur manager in foreground.');
+            return;
+          }
+          if (adminStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
+            if (adminStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
+              debugPrint('NotificationService: Suppressed alert for different hub admin ($notifStoreId != $adminStoreId) in foreground.');
+              return;
+            }
           }
         }
 
@@ -1959,7 +1983,7 @@ title.toString().contains('🛵') ||
       final isRiderPhone = tenDigit == '9450358388';
 
       final isAdminPhone = isSuperAdminPhone || isGhatampurAdminPhone || isBarharwaAdminPhone;
-      final isMasterAdmin = isSuperAdminPhone || (savedUserRole == 'ADMIN' && (storeId == null || storeId.isEmpty));
+      final isMasterAdmin = isSuperAdminPhone || savedUserRole == 'SUPER_ADMIN';
 
       // Strictly map role & hub based on verified official credentials
       final effectiveRole = isRiderPhone
@@ -2002,9 +2026,9 @@ title.toString().contains('🛵') ||
 
         if (isAdmin) {
           final adminTopics = <String>{
-            'admin_orders',
-            'admin_orders_all',
             if (isMasterAdmin) ...[
+              'admin_orders',
+              'admin_orders_all',
               'admin_orders_ghatampur',
               'admin_orders_barharwa',
               'admin_orders_akbarpur',
@@ -2017,6 +2041,9 @@ title.toString().contains('🛵') ||
             ] else if (effectiveStoreId == 'hub-816101') ...[
               'admin_orders_barharwa',
               'admin_orders_hub-816101',
+            ] else if (effectiveStoreId == 'hub-224122') ...[
+              'admin_orders_akbarpur',
+              'admin_orders_hub-224122',
             ] else if (effectiveStoreId != null && effectiveStoreId.isNotEmpty) ...[
               'admin_orders_$effectiveStoreId',
             ],

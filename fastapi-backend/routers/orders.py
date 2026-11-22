@@ -396,6 +396,99 @@ async def send_pwa_notification_to_user(user_id: str, title: str, body: str, dat
         logger.error(f"Failed to dispatch FCM push notification to user: {str(e)}")
 
 
+async def dispatch_admin_order_buzzer(
+    order_id: str,
+    base_readable: str,
+    store_id: Optional[str],
+    total_amount: float,
+    status_val: str,
+    is_paid: bool,
+    outlets_name: str,
+    is_combined: bool = False,
+):
+    """
+    Dispatches EXACTLY 1 consolidated buzzer notification to Store Admin for a checkout.
+    Strictly isolated by hub:
+      - Ghatampur orders -> admin_orders_ghatampur / admin_orders_hub-209206 (7054470303)
+      - Barharwa orders -> admin_orders_barharwa / admin_orders_hub-816101 (7633898577)
+      - Super Admin HQ (9170942500) monitors all hubs.
+    """
+    try:
+        now_ts = str(int(datetime.utcnow().timestamp() * 1000))
+        target_store_id = store_id or "hub-209206"
+        is_admin_pending = (status_val == "ADMIN_PENDING")
+
+        if is_admin_pending:
+            if is_paid:
+                admin_title = f"💳 Online Paid Order #{base_readable}!"
+                admin_body = f"Order #{base_readable} ({outlets_name}, ₹{total_amount:.2f}) is PAID online. Tap to review & process."
+            else:
+                admin_title = "🚨 New Order Awaiting Approval!"
+                admin_body = f"Order #{base_readable} ({outlets_name}, ₹{total_amount:.2f}) needs admin approval. Tap to review."
+        else:
+            admin_title = f"🚨 New Live Order #{base_readable}!" if not is_combined else f"🚨 New Combined Order #{base_readable}!"
+            admin_body = f"Order #{base_readable} ({outlets_name}, ₹{total_amount:.2f}) received! Tap to review & process."
+
+        admin_data = {
+            "orderId": order_id,
+            "readableId": str(base_readable),
+            "storeId": str(target_store_id),
+            "status": status_val,
+            "paymentStatus": "PAID" if is_paid else "PENDING",
+            "isPaid": "true" if is_paid else "false",
+            "screen": "admin-orders",
+            "type": "NEW_ORDER",
+            "role": "ADMIN",
+            "action": "ORDER_BUZZER",
+            "isCombined": "true" if is_combined else "false",
+            "timestamp": now_ts,
+            "sound": "order_chime",
+        }
+
+        # 1. Topic Broadcast - STRICTLY HUB-ISOLATED
+        # We NEVER broadcast to global 'admin_orders' or 'admin_orders_all' to protect managers of other hubs!
+        admin_topics = set()
+        if "209206" in str(target_store_id):
+            admin_topics.add("admin_orders_ghatampur")
+            admin_topics.add("admin_orders_hub-209206")
+        elif "816101" in str(target_store_id):
+            admin_topics.add("admin_orders_barharwa")
+            admin_topics.add("admin_orders_hub-816101")
+        elif "224122" in str(target_store_id):
+            admin_topics.add("admin_orders_akbarpur")
+            admin_topics.add("admin_orders_hub-224122")
+        elif target_store_id:
+            admin_topics.add(f"admin_orders_{target_store_id}")
+
+        for t in admin_topics:
+            await send_fcm_topic_notification(t, admin_title, admin_body, admin_data)
+
+        # 2. Direct FCM Push to registered Admin device tokens (Hub-Scoped + Super Admin HQ)
+        try:
+            from database import AsyncSessionLocal
+            async with AsyncSessionLocal() as s:
+                adm_conditions = [
+                    User.role == Role.ADMIN,
+                    or_(
+                        User.assignedStoreId == target_store_id,
+                        User.phone.like("%9170942500%"),  # Super Admin HQ
+                        User.phone.like("%7054470303%") if "209206" in str(target_store_id) else False,
+                        User.phone.like("%7633898577%") if "816101" in str(target_store_id) else False,
+                        User.phone.like("%9696678006%") if "224122" in str(target_store_id) else False,
+                    )
+                ]
+                adm_res = await s.execute(
+                    select(FcmToken.token).join(User, FcmToken.userId == User.id).where(and_(*adm_conditions))
+                )
+                adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
+                if adm_toks:
+                    await send_fcm_notification(tokens=adm_toks, title=admin_title, body=admin_body, data=admin_data)
+        except Exception as direct_err:
+            logger.error(f"Failed direct FCM push in dispatch_admin_order_buzzer: {direct_err}")
+    except Exception as e:
+        logger.error(f"Failed dispatch_admin_order_buzzer: {e}")
+
+
 async def dispatch_isolated_order_fcm_notifications(
     order_id: str,
     readable_id: str,
@@ -408,11 +501,11 @@ async def dispatch_isolated_order_fcm_notifications(
 ):
     """
     Dispatches order notifications with absolute isolation & strict order lifecycle:
-    1. If ADMIN_PENDING: ONLY notify Admin for manual approval. (Do NOT alert restaurant/picker/rider).
+    1. If ADMIN_PENDING: ONLY notify Admin for manual approval via hub-isolated dispatch_admin_order_buzzer.
     2. If APPROVED (PENDING / CONFIRMED):
        - Restaurant Order: Alert Restaurant/Chef (restaurant_{id}). (Do NOT alert rider yet).
        - Grocery Order: Alert Picker/Vendor (picker_orders_{store_id}). (Do NOT alert rider yet).
-       - Admin: Alert Admin (admin_orders).
+       (Admin is already alerted ONCE at checkout level; do NOT duplicate).
     """
     try:
         now_ts = str(int(datetime.utcnow().timestamp() * 1000))
@@ -422,108 +515,21 @@ async def dispatch_isolated_order_fcm_notifications(
 
         # ── CASE 1: MANUAL ADMIN APPROVAL REQUIRED ──
         if is_admin_pending:
-            if is_paid:
-                admin_title = f"💳 Online Paid Order #{readable_id}!"
-                admin_body = f"Order #{readable_id} ({safe_shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) is PAID online. Tap to review & process."
-            else:
-                admin_title = "🚨 New Order Awaiting Approval!"
-                admin_body = f"Order #{readable_id} ({safe_shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) needs admin approval. Tap to review."
-            admin_data = {
-                "orderId": order_id,
-                "readableId": str(readable_id),
-                "storeId": str(store_id or ""),
-                "restaurantId": str(restaurant_id or ""),
-                "status": status_val,
-                "paymentStatus": "PAID" if is_paid else "PENDING",
-                "isPaid": "true" if is_paid else "false",
-                "screen": "admin-orders",
-                "type": "NEW_ORDER",
-                "role": "ADMIN",
-                "timestamp": now_ts,
-            }
-            if store_id:
-                await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_title, admin_body, admin_data)
-                if "209206" in str(store_id):
-                    await send_fcm_topic_notification("admin_orders_ghatampur", admin_title, admin_body, admin_data)
-                elif "816101" in str(store_id):
-                    await send_fcm_topic_notification("admin_orders_barharwa", admin_title, admin_body, admin_data)
-            await send_fcm_topic_notification("admin_orders", admin_title, admin_body, admin_data)
-            await send_fcm_topic_notification("admin_orders_all", admin_title, admin_body, admin_data)
-
-            # Direct FCM push to registered Admin device tokens (Hub-Scoped + Superadmin HQ)
-            try:
-                from database import AsyncSessionLocal
-                async with AsyncSessionLocal() as s:
-                    adm_conditions = [
-                        User.role == Role.ADMIN,
-                        or_(
-                            User.assignedStoreId == store_id,
-                            User.assignedStoreId.is_(None),
-                            User.phone.like("%9170942500%"),
-                            User.phone.like("%7054470303%") if "209206" in str(store_id or "") else False,
-                            User.phone.like("%7633898577%") if "816101" in str(store_id or "") else False,
-                        )
-                    ]
-                    adm_res = await s.execute(
-                        select(FcmToken.token).join(User, FcmToken.userId == User.id).where(and_(*adm_conditions))
-                    )
-                    adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
-                    if adm_toks:
-                        await send_fcm_notification(tokens=adm_toks, title=admin_title, body=admin_body, data=admin_data)
-            except Exception as direct_err:
-                logger.error(f"Failed direct FCM push to admin tokens: {direct_err}")
+            clean_base = str(readable_id).split("-")[0].lstrip("#")
+            await dispatch_admin_order_buzzer(
+                order_id=order_id,
+                base_readable=clean_base,
+                store_id=store_id,
+                total_amount=total,
+                status_val=status_val,
+                is_paid=is_paid,
+                outlets_name=safe_shop_name or (f"Hub {store_id}" if store_id else "Store"),
+                is_combined=False,
+            )
             return  # Stop here! Do not notify restaurant/picker/rider until approved
 
         # ── CASE 2: AUTO-APPROVED / CONFIRMED ──
-        # Always alert Admin for new incoming live orders!
-        admin_live_title = f"🔔 New Live Order #{readable_id}!"
-        admin_live_body = f"Order #{readable_id} ({safe_shop_name or (f'Hub {store_id}' if store_id else 'Store')}, ₹{total:.2f}) received. Tap to manage."
-        admin_live_data = {
-            "orderId": order_id,
-            "readableId": str(readable_id),
-            "storeId": str(store_id or ""),
-            "restaurantId": str(restaurant_id or ""),
-            "status": status_val,
-            "paymentStatus": "PAID" if is_paid else "PENDING",
-            "isPaid": "true" if is_paid else "false",
-            "screen": "admin-orders",
-            "type": "NEW_ORDER",
-            "role": "ADMIN",
-            "timestamp": now_ts,
-            "sound": "order_chime",
-        }
-        if store_id:
-            await send_fcm_topic_notification(f"admin_orders_{store_id}", admin_live_title, admin_live_body, admin_live_data)
-            if "209206" in str(store_id):
-                await send_fcm_topic_notification("admin_orders_ghatampur", admin_live_title, admin_live_body, admin_live_data)
-            elif "816101" in str(store_id):
-                await send_fcm_topic_notification("admin_orders_barharwa", admin_live_title, admin_live_body, admin_live_data)
-        await send_fcm_topic_notification("admin_orders", admin_live_title, admin_live_body, admin_live_data)
-        await send_fcm_topic_notification("admin_orders_all", admin_live_title, admin_live_body, admin_live_data)
-
-        # Direct FCM push to hub admin & superadmin
-        try:
-            from database import AsyncSessionLocal
-            async with AsyncSessionLocal() as s:
-                adm_conditions = [
-                    User.role == Role.ADMIN,
-                    or_(
-                        User.assignedStoreId == store_id,
-                        User.assignedStoreId.is_(None),
-                        User.phone.like("%9170942500%"),
-                        User.phone.like("%7054470303%") if "209206" in str(store_id or "") else False,
-                        User.phone.like("%7633898577%") if "816101" in str(store_id or "") else False,
-                    )
-                ]
-                adm_res = await s.execute(
-                    select(FcmToken.token).join(User, FcmToken.userId == User.id).where(and_(*adm_conditions))
-                )
-                adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
-                if adm_toks:
-                    await send_fcm_notification(tokens=adm_toks, title=admin_live_title, body=admin_live_body, data=admin_live_data)
-        except Exception as direct_err:
-            logger.error(f"Failed direct FCM push to admin tokens in case 2: {direct_err}")
-
+        # Outlet-level routing for Pickers & Restaurant Chefs (Admin was already alerted at checkout)
         if restaurant_id:
             # Alert Restaurant/Chef to start cooking (Rider is notified when food is packed/prepared)
             rest_title = f"👨‍🍳 New Order for {safe_shop_name or 'Kitchen'}!"
@@ -3153,46 +3159,23 @@ async def create_order(
             address.phone if address else None
         )
 
-        # ALWAYS dispatch buzzer to Admin for EVERY new order (both ADMIN_PENDING and AUTO-APPROVED PENDING)
+        # ALWAYS dispatch EXACTLY 1 buzzer to Admin for the checkout (strictly hub-isolated)
         outlets = " + ".join(dict.fromkeys(o.shopName for o in created_orders if o.shopName)) or "FastMinute Store"
         is_combined = len(created_orders) > 1
-        admin_title = "🚨 New Order Received!" if not is_admin_pending else ("🚨 New Combined Order Awaiting Approval!" if is_combined else "🚨 New Order Awaiting Approval!")
-        admin_body = f"Order #{base_readable} ({outlets}, ₹{total_combined_amount:.2f}) received! Tap to review & process."
-        admin_data = {
-            "orderId": cust_order_for_notif.id,
-            "readableId": base_readable,
-            "storeId": str(cust_order_for_notif.storeId or ""),
-            "status": cust_order_for_notif.status.value,
-            "paymentStatus": "PAID" if is_online_paid else "PENDING",
-            "isPaid": "true" if is_online_paid else "false",
-            "screen": "admin-orders",
-            "type": "NEW_ORDER",
-            "role": "ADMIN",
-            "action": "ORDER_BUZZER",
-            "isCombined": "true" if is_combined else "false",
-            "timestamp": str(int(datetime.utcnow().timestamp() * 1000)),
-        }
-        admin_topics = {"admin_orders", "admin_orders_all", "admin_orders_ghatampur"}
-        if cust_order_for_notif.storeId:
-            admin_topics.add(f"admin_orders_{cust_order_for_notif.storeId}")
-        for t in admin_topics:
-            background_tasks.add_task(send_fcm_topic_notification, t, admin_title, admin_body, admin_data)
-
-        # Direct FCM push to registered Admin device tokens (Guaranteed buzzer delivery)
-        try:
-            adm_res = await db.execute(
-                select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
-                    or_(User.role == Role.ADMIN, User.phone.like("%7054470303%"))
-                )
-            )
-            adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
-            if adm_toks:
-                background_tasks.add_task(send_fcm_notification, adm_toks, admin_title, admin_body, admin_data)
-        except Exception as direct_err:
-            logger.error(f"Failed direct FCM push to admin tokens on order place: {direct_err}")
+        background_tasks.add_task(
+            dispatch_admin_order_buzzer,
+            cust_order_for_notif.id,
+            base_readable,
+            cust_order_for_notif.storeId or store_id,
+            total_combined_amount,
+            cust_order_for_notif.status.value,
+            is_online_paid,
+            outlets,
+            is_combined,
+        )
 
         if not is_admin_pending:
-            # Auto-approved order: ALSO dispatch isolated outlet alerts to Darkstore pickers and Restaurant chefs
+            # Auto-approved order: Dispatch isolated outlet alerts to Darkstore pickers and Restaurant chefs (Pickers/Chefs ONLY)
             for order in created_orders:
                 background_tasks.add_task(
                     dispatch_isolated_order_fcm_notifications,
@@ -3595,6 +3578,8 @@ async def get_order_details(
         Order.readableId == id,
         Order.id == clean_id,
         Order.readableId == clean_id,
+        Order.cfOrderId == id,
+        Order.cfOrderId == clean_id,
         Order.readableId.like(f"{clean_id}-%"),
     ]
     if len(clean_id) >= 15:
