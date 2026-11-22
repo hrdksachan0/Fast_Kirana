@@ -3263,9 +3263,10 @@ async def create_order(
 
 @router.get("")
 async def list_orders(
-    all: bool = False,
+    is_all: bool = Query(False, alias="all"),
     storeId: Optional[str] = Query(None),
     userId: Optional[str] = Query(None),
+    phone: Optional[str] = Query(None),
     current_user: Optional[dict] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -3277,10 +3278,10 @@ async def list_orders(
         role = (current_user.get("role") or "").upper() if current_user else None
         is_staff = role in ["ADMIN", "CHEF", "PICKER", "DELIVERY"]
 
-        if not user_id and not is_staff:
+        if not user_id and not is_staff and not phone:
             return []
 
-        if is_staff and all:
+        if is_staff and is_all:
             is_superadmin = role in ["SUPER_ADMIN", "SUPERADMIN"]
             assigned_store = current_user.get("assignedStoreId") if current_user and not is_superadmin else None
             effective_store = assigned_store or storeId
@@ -3365,11 +3366,11 @@ async def list_orders(
 
         # Normal user fetches their orders
         email = (current_user.get("email") or "").lower().strip() if current_user else ""
-        raw_phone = current_user.get("phone") if current_user else None
-        phone = get_last_10_digits(raw_phone) if raw_phone else ""
+        raw_phone = (current_user.get("phone") if current_user else None) or phone
+        resolved_phone = get_last_10_digits(raw_phone) if raw_phone else ""
 
         # If user_id is provided but email/phone missing from session, fetch user profile from DB
-        if user_id and not email and not phone:
+        if user_id and not email and not resolved_phone:
             try:
                 u_stmt = select(User).where(User.id == user_id)
                 u_res = await db.execute(u_stmt)
@@ -3378,28 +3379,40 @@ async def list_orders(
                     if db_u.email:
                         email = db_u.email.lower().strip()
                     if db_u.phone:
-                        phone = get_last_10_digits(db_u.phone)
+                        resolved_phone = get_last_10_digits(db_u.phone)
             except Exception as e:
                 logger.warning(f"Could not load user profile for user_id={user_id}: {e}")
 
         # Find matching user IDs
-        user_ids = {user_id}
-        if email or phone:
+        user_ids = {user_id} if user_id else set()
+        if email or resolved_phone:
             u_filters = []
             if email:
                 u_filters.append(func.lower(User.email) == email)
-            if phone:
-                u_filters.append(User.phone.like(f"%{phone}"))
+            if resolved_phone:
+                u_filters.append(User.phone.like(f"%{resolved_phone}"))
             
             users_stmt = select(User.id).where(or_(*u_filters))
             users_res = await db.execute(users_stmt)
             user_ids.update(users_res.scalars().all())
 
+        if not user_ids and not resolved_phone:
+            return []
+
         # Query matching orders
         orders_stmt = select(Order).options(
             selectinload(Order.items),
             selectinload(Order.address)
-        ).where(Order.userId.in_(user_ids)).order_by(Order.createdAt.desc())
+        )
+        conds = []
+        if user_ids:
+            conds.append(Order.userId.in_(user_ids))
+        if resolved_phone and len(resolved_phone) >= 10:
+            conds.append(Order.shopPhone.ilike(f"%{resolved_phone}%"))
+
+        if conds:
+            orders_stmt = orders_stmt.where(or_(*conds))
+        orders_stmt = orders_stmt.order_by(Order.createdAt.desc())
         
         orders_res = await db.execute(orders_stmt)
         raw_orders = orders_res.scalars().all()
@@ -3420,8 +3433,9 @@ async def list_orders(
                 return "PACKED"
             if "SHIPPED" in active:
                 return "SHIPPED"
-            if all(s == "DELIVERED" for s in active):
+            if active and not any(s != "DELIVERED" for s in active):
                 return "DELIVERED"
+            return active[0] if active else "PENDING"
             return active[0] if active else "PENDING"
 
         grouped_orders = []
