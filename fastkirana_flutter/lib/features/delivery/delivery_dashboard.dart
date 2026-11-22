@@ -150,6 +150,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   }
 
   Future<void> _initDashboard() async {
+    // Purge any lingering customer live tracking notification from previous session
+    unawaited(NotificationService().clearLiveOrderActivity(''));
     await _loadUserInfo();
     await _loadPersistedOfflineCache();
     _initConnectivityAndOfflineQueue();

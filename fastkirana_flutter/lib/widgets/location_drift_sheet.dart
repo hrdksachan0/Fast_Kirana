@@ -50,11 +50,15 @@ class LocationDriftSheet extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF0F172A), // Dark Executive Slate Bento Foundation
+        color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        border: Border(
-          top: BorderSide(color: Color(0xFF334155), width: 1.2),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 24,
+            offset: Offset(0, -6),
+          ),
+        ],
       ),
       padding: EdgeInsets.fromLTRB(
         18,
@@ -73,7 +77,7 @@ class LocationDriftSheet extends StatelessWidget {
               height: 4.5,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF475569),
+                color: const Color(0xFFCBD5E1),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -84,17 +88,17 @@ class LocationDriftSheet extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                colors: [Color(0xFFFFF1F2), Color(0xFFFFF7ED)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xFF334155), width: 1.0),
+              border: Border.all(color: const Color(0xFFFECDD3), width: 1.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
+                  color: const Color(0xFFE11D48).withValues(alpha: 0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -106,14 +110,14 @@ class LocationDriftSheet extends StatelessWidget {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: const Color(0x26EF4444),
+                    color: const Color(0xFFFFE4E6),
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: const Color(0x66EF4444), width: 1.2),
+                    border: Border.all(color: const Color(0xFFFDA4AF), width: 1.2),
                   ),
                   child: const Center(
                     child: Icon(
                       Icons.radar_rounded,
-                      color: Color(0xFFF87171),
+                      color: Color(0xFFE11D48),
                       size: 24,
                     ),
                   ),
@@ -128,16 +132,16 @@ class LocationDriftSheet extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: const Color(0x33EF4444),
+                              color: const Color(0xFFFEE2E2),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0x55EF4444)),
+                              border: Border.all(color: const Color(0xFFFECDD3)),
                             ),
                             child: Text(
                               'LOCATION MISMATCH',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 9.0,
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFFFCA5A5),
+                                color: const Color(0xFFE11D48),
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -146,15 +150,16 @@ class LocationDriftSheet extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF334155),
+                              color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
                             child: Text(
                               '~${driftDistanceKm.toStringAsFixed(1)} km away',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10.0,
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFFE2E8F0),
+                                color: const Color(0xFF475569),
                               ),
                             ),
                           ),
@@ -166,7 +171,7 @@ class LocationDriftSheet extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: Responsive.scaledFontSize(context, 16.0),
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: const Color(0xFF0F172A),
                           letterSpacing: -0.3,
                         ),
                       ),
@@ -176,7 +181,7 @@ class LocationDriftSheet extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF94A3B8),
+                          color: const Color(0xFF64748B),
                           height: 1.3,
                         ),
                       ),
@@ -190,16 +195,23 @@ class LocationDriftSheet extends StatelessWidget {
           const SizedBox(height: 12),
 
           // ── Bento Location Comparison Cards ──
-          // 1. Detected Location Card (Live GPS)
+          // 1. Detected Location Card (Live GPS - Light Theme, No Timing)
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: isServiceable ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isServiceable ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                 width: 1.2,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: (isServiceable ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -207,13 +219,13 @@ class LocationDriftSheet extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: isServiceable ? const Color(0x3310B981) : const Color(0x33F59E0B),
+                    color: isServiceable ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Icon(
                       Icons.my_location_rounded,
-                      color: isServiceable ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
+                      color: isServiceable ? const Color(0xFF059669) : const Color(0xFFD97706),
                       size: 18,
                     ),
                   ),
@@ -230,40 +242,25 @@ class LocationDriftSheet extends StatelessWidget {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 9.0,
                               fontWeight: FontWeight.w800,
-                              color: isServiceable ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
+                              color: isServiceable ? const Color(0xFF059669) : const Color(0xFFD97706),
                               letterSpacing: 0.5,
                             ),
                           ),
                           const Spacer(),
-                          if (isServiceable)
+                          if (!isServiceable)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0x2610B981),
+                                color: const Color(0xFFFEF3C7),
                                 borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
                               ),
                               child: Text(
-                                '⚡ 10-15 Min Zone',
+                                'Outside Delivery Zone',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 9.0,
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF34D399),
-                                ),
-                              ),
-                            )
-                          else
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0x26F59E0B),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'Outside Express Zone',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 9.0,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFFFBBF24),
+                                  color: const Color(0xFFB45309),
                                 ),
                               ),
                             ),
@@ -275,7 +272,7 @@ class LocationDriftSheet extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: Responsive.scaledFontSize(context, 13.5),
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
                       Text(
@@ -283,7 +280,7 @@ class LocationDriftSheet extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF94A3B8),
+                          color: const Color(0xFF64748B),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -297,13 +294,13 @@ class LocationDriftSheet extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          // 2. Previously Selected Address Card
+          // 2. Previously Selected Address Card (Light Theme)
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF131B2E),
+              color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF1E293B)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Row(
               children: [
@@ -331,7 +328,7 @@ class LocationDriftSheet extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: Responsive.scaledFontSize(context, 12.0),
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFFE2E8F0),
+                          color: const Color(0xFF1E293B),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -339,9 +336,20 @@ class LocationDriftSheet extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Text(
-                  'Active',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w700),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Active',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF475569),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -363,8 +371,8 @@ class LocationDriftSheet extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Color(0xFF334155), width: 1.2),
-                        backgroundColor: const Color(0xFF1E293B),
+                        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
+                        backgroundColor: const Color(0xFFF8FAFC),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -374,7 +382,7 @@ class LocationDriftSheet extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: Responsive.scaledFontSize(context, 12.5),
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFFCBD5E1),
+                          color: const Color(0xFF334155),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -415,8 +423,8 @@ class LocationDriftSheet extends StatelessWidget {
                         backgroundColor: isServiceable ? const Color(0xFF10B981) : const Color(0xFFE11D48),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 4,
-                        shadowColor: (isServiceable ? const Color(0xFF10B981) : const Color(0xFFE11D48)).withValues(alpha: 0.4),
+                        elevation: 3,
+                        shadowColor: (isServiceable ? const Color(0xFF10B981) : const Color(0xFFE11D48)).withValues(alpha: 0.25),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),

@@ -41,15 +41,35 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
   String _selectedReason = 'Placed order by mistake';
   bool _isCancelled = false;
 
-  final List<String> _cancelReasons = [
-    'Placed order by mistake',
-    'Selected wrong delivery address',
-    'Forgot to add some items',
-    'Delay in store verification',
-    'Change of mind / Not needed now',
+  final List<Map<String, String>> _cancelReasonItems = [
+    {
+      'title': 'Placed order by mistake',
+      'emoji': '⚡',
+      'subtitle': 'Accidental checkout or timing issue',
+    },
+    {
+      'title': 'Selected wrong delivery address',
+      'emoji': '📍',
+      'subtitle': 'Need to send to a different location',
+    },
+    {
+      'title': 'Forgot to add some items',
+      'emoji': '🛍️',
+      'subtitle': 'Want to add more grocery items to cart',
+    },
+    {
+      'title': 'Delay in store verification',
+      'emoji': '⏱️',
+      'subtitle': 'Order taking longer than estimated',
+    },
+    {
+      'title': 'Change of mind / Not needed now',
+      'emoji': '💭',
+      'subtitle': 'Decided to purchase at another time',
+    },
   ];
 
-  static const Color primaryRed = Color(0xFFDC2626);
+  static const Color primaryRed = Color(0xFFE11D48);
   static const Color slateDark = Color(0xFF0F172A);
   static const Color slateMuted = Color(0xFF64748B);
 
@@ -57,11 +77,18 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x26000000),
+            blurRadius: 28,
+            offset: Offset(0, -6),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -73,7 +100,7 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
             Center(
               child: Container(
                 margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 42,
+                width: 44,
                 height: 4.5,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE2E8F0),
@@ -82,21 +109,28 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
               ),
             ),
 
-            // Header Row
+            // Luxury Header Row
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 6, 16, 12),
+              padding: const EdgeInsets.fromLTRB(18, 6, 16, 14),
               child: Row(
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFFECACA)),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFE4E6), Color(0xFFFEE2E2)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: const Color(0xFFFECDD3),
+                        width: 1.2,
+                      ),
                     ),
                     child: const Center(
-                      child: Icon(Icons.cancel_outlined, color: primaryRed, size: 20),
+                      child: Icon(Icons.cancel_rounded, color: primaryRed, size: 22),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -107,14 +141,15 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
                         Text(
                           'Cancel Order ${widget.displayId}',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 14.5),
+                            fontSize: Responsive.scaledFontSize(context, 15),
                             fontWeight: FontWeight.w900,
                             color: slateDark,
-                            letterSpacing: -0.2,
+                            letterSpacing: -0.3,
                           ),
                         ),
+                        const SizedBox(height: 1.5),
                         Text(
-                          'Select reason to help us improve',
+                          'Select reason to help us improve service',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 11),
                             fontWeight: FontWeight.w500,
@@ -126,9 +161,10 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded, color: slateMuted, size: 20),
+                    icon: const Icon(Icons.close_rounded, color: slateMuted, size: 18),
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFF1F5F9),
+                      backgroundColor: const Color(0xFFF8FAFC),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
                       minimumSize: const Size(32, 32),
                       padding: EdgeInsets.zero,
                     ),
@@ -139,52 +175,128 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
 
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
 
-            // Reason Options List
+            // High-End Reason Options List
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
-                children: _cancelReasons.map((reason) {
-                  final isSelected = _selectedReason == reason;
+                children: _cancelReasonItems.map((item) {
+                  final title = item['title']!;
+                  final emoji = item['emoji']!;
+                  final subtitle = item['subtitle']!;
+                  final isSelected = _selectedReason == title;
+
                   return GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      setState(() => _selectedReason = reason);
+                      setState(() => _selectedReason = title);
                     },
                     behavior: HitTestBehavior.opaque,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
                       margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFFEF2F2) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
+                        color: isSelected ? const Color(0xFFFFF5F6) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFFFCA5A5) : const Color(0xFFE2E8F0),
-                          width: isSelected ? 1.4 : 1,
+                          color: isSelected ? const Color(0xFFF43F5E) : const Color(0xFFE2E8F0),
+                          width: isSelected ? 1.5 : 1.1,
                         ),
+                        boxShadow: [
+                          if (isSelected)
+                            BoxShadow(
+                              color: const Color(0xFFE11D48).withValues(alpha: 0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            )
+                          else
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.015),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          Expanded(
-                            child: Text(
-                              reason,
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 12),
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                color: isSelected ? const Color(0xFF991B1B) : slateDark,
+                          // Left Accent Pill when selected
+                          if (isSelected)
+                            Container(
+                              width: 3.5,
+                              height: 32,
+                              margin: const EdgeInsets.only(right: 10),
+                              decoration: BoxDecoration(
+                                color: primaryRed,
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
-                          ),
+
+                          // Emoji Icon Box
                           Container(
-                            width: 18,
-                            height: 18,
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFFFFE4E6) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(9),
+                              border: Border.all(
+                                color: isSelected ? const Color(0xFFFECDD3) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              emoji,
+                              style: const TextStyle(fontSize: 15),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+
+                          // Title & Micro Subtitle
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    color: isSelected ? const Color(0xFF9F1239) : slateDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 1),
+                                Text(
+                                  subtitle,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w500,
+                                    color: isSelected ? const Color(0xFFE11D48).withValues(alpha: 0.8) : const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Right Selection Radio Indicator
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: 20,
+                            height: 20,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isSelected ? primaryRed : Colors.transparent,
                               border: Border.all(
                                 color: isSelected ? primaryRed : const Color(0xFFCBD5E1),
-                                width: 1.5,
+                                width: isSelected ? 1.5 : 1.5,
                               ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: primaryRed.withValues(alpha: 0.35),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ]
+                                  : null,
                             ),
                             child: isSelected
                                 ? const Center(
@@ -200,30 +312,53 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
               ),
             ),
 
-            // Refund Notice Banner (If paid online)
+            // Trust Refund Notice Banner (If paid online)
             if (widget.isPaid)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
                 child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0FDF4),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0xFFBBF7D0)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.currency_rupee_rounded, size: 16, color: Color(0xFF16A34A)),
-                      const SizedBox(width: 8),
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.currency_rupee_rounded, size: 14, color: Color(0xFF16A34A)),
+                      ),
+                      const SizedBox(width: 9),
                       Expanded(
-                        child: Text(
-                          '₹${widget.totalAmount.toStringAsFixed(0)} will be refunded back to your original payment method in 2-4 business days.',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF166534),
-                            height: 1.25,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Instant Refund Guarantee',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF166534),
+                              ),
+                            ),
+                            Text(
+                              '₹${widget.totalAmount.toStringAsFixed(0)} will be refunded back to your original payment method in 2-4 business days.',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10),
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF15803D),
+                                height: 1.25,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -237,14 +372,21 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    'SWIPE RED TOGGLE TO CONFIRM',
-                    style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 9.5),
-                      fontWeight: FontWeight.w900,
-                      color: slateMuted,
-                      letterSpacing: 0.8,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.swipe_right_rounded, size: 13, color: Color(0xFF94A3B8)),
+                      const SizedBox(width: 5),
+                      Text(
+                        'SWIPE RED TOGGLE TO CONFIRM',
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF94A3B8),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   SwiggySlideToCancel(
@@ -265,7 +407,7 @@ class _SwiggyCancelBottomSheetState extends State<SwiggyCancelBottomSheet> {
   }
 }
 
-/// Draggable Red Slider Toggle ("Slide to Cancel >>>")
+/// Draggable Luxury Red Slider Toggle ("SLIDE TO CANCEL »»")
 class SwiggySlideToCancel extends StatefulWidget {
   final VoidCallback onCancelled;
 
@@ -283,8 +425,8 @@ class _SwiggySlideToCancelState extends State<SwiggySlideToCancel>
   late AnimationController _springController;
   late Animation<double> _springAnimation;
 
-  static const double _thumbWidth = 48.0;
-  static const double _trackHeight = 52.0;
+  static const double _thumbWidth = 50.0;
+  static const double _trackHeight = 54.0;
 
   @override
   void initState() {
@@ -354,16 +496,16 @@ class _SwiggySlideToCancelState extends State<SwiggySlideToCancel>
           height: _trackHeight,
           width: totalWidth,
           decoration: BoxDecoration(
-            color: const Color(0xFFFEE2E2),
+            color: const Color(0xFFFFF1F2),
             borderRadius: BorderRadius.circular(_trackHeight / 2),
             border: Border.all(
-              color: const Color(0xFFFECACA),
+              color: const Color(0xFFFECDD3),
               width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFDC2626).withValues(alpha: 0.08),
-                blurRadius: 10,
+                color: const Color(0xFFE11D48).withValues(alpha: 0.08),
+                blurRadius: 12,
                 offset: const Offset(0, 2),
               ),
             ],
@@ -371,7 +513,7 @@ class _SwiggySlideToCancelState extends State<SwiggySlideToCancel>
           child: Stack(
             alignment: Alignment.centerLeft,
             children: [
-              // Dynamic Vivid Red Track Fill
+              // Dynamic Vivid Red Track Fill with Gradient
               AnimatedContainer(
                 duration: _springController.isAnimating
                     ? const Duration(milliseconds: 200)
@@ -379,38 +521,37 @@ class _SwiggySlideToCancelState extends State<SwiggySlideToCancel>
                 width: _thumbWidth + _dragPosition + 3,
                 height: _trackHeight,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFB7185), Color(0xFFE11D48)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
                   borderRadius: BorderRadius.circular(_trackHeight / 2),
                 ),
               ),
 
-              // Track Text Label (Fades as thumb moves)
+              // Track Text Label (Fades smoothly as thumb moves)
               Positioned.fill(
                 child: Center(
                   child: Opacity(
-                    opacity: (1.0 - (progress * 1.5)).clamp(0.0, 1.0),
+                    opacity: (1.0 - (progress * 1.6)).clamp(0.0, 1.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           'SLIDE TO CANCEL',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11.5),
+                            fontSize: Responsive.scaledFontSize(context, 12),
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFFB91C1C),
-                            letterSpacing: 1.2,
+                            color: const Color(0xFFBE123C),
+                            letterSpacing: 1.4,
                           ),
                         ),
                         const SizedBox(width: 4),
                         const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 16,
-                          color: Color(0xFFB91C1C),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 16,
-                          color: Color(0xFFB91C1C),
+                          Icons.keyboard_double_arrow_right_rounded,
+                          size: 18,
+                          color: Color(0xFFBE123C),
                         ),
                       ],
                     ),
@@ -418,7 +559,7 @@ class _SwiggySlideToCancelState extends State<SwiggySlideToCancel>
                 ),
               ),
 
-              // Draggable Red Thumb Knob
+              // Draggable Red Thumb Knob with 3D Border & Shadow
               Positioned(
                 left: 3 + _dragPosition,
                 child: GestureDetector(
@@ -428,16 +569,20 @@ class _SwiggySlideToCancelState extends State<SwiggySlideToCancel>
                       _onHorizontalDragEnd(details, maxDrag),
                   child: Container(
                     width: _thumbWidth - 4,
-                    height: _trackHeight - 6,
+                    height: _trackHeight - 8,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFFDC2626),
-                      border: Border.all(color: Colors.white, width: 2.2),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF43F5E), Color(0xFFBE123C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: Colors.white, width: 2.5),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.22),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                          color: const Color(0xFFBE123C).withValues(alpha: 0.40),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
@@ -449,10 +594,10 @@ class _SwiggySlideToCancelState extends State<SwiggySlideToCancel>
                                 Icons.check_rounded,
                                 key: ValueKey('check'),
                                 color: Colors.white,
-                                size: 22,
+                                size: 24,
                               )
                             : const Icon(
-                                Icons.chevron_right_rounded,
+                                Icons.keyboard_double_arrow_right_rounded,
                                 key: ValueKey('arrow'),
                                 color: Colors.white,
                                 size: 24,

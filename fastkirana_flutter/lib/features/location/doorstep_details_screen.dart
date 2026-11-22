@@ -934,11 +934,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                   Text(
                                     displaySubtitle,
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                                      fontSize: Responsive.scaledFontSize(context, 11),
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF0F172A),
+                                      height: 1.25,
                                     ),
-                                    maxLines: 1,
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],

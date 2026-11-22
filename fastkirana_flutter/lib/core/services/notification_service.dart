@@ -171,6 +171,12 @@ title.toString().contains('🛵') ||
     final notifStoreId = (data['storeId'] ?? '').toString().trim();
     final isRider = userRole == 'DELIVERY' || userRole == 'RIDER' || userRole == 'DELIVERY_PARTNER' || userRole == 'DRIVER';
 
+    // If Rider, strictly suppress customer live tracking notifications & status cards
+    if (isRider && (data['role'] == 'CUSTOMER' || data['type'] == 'ORDER_STATUS_UPDATE' || data['screen'] == 'order-tracking' || data['isLiveTracking'] == 'true')) {
+      debugPrint('NotificationService: Suppressing customer live tracking alert for active rider in background.');
+      return;
+    }
+
     if (isRider && assignedStoreId.isNotEmpty && notifStoreId.isNotEmpty) {
       if (assignedStoreId.toLowerCase() != notifStoreId.toLowerCase()) {
         debugPrint('NotificationService: Suppressing alert in background for different hub rider ($notifStoreId != $assignedStoreId)');
@@ -248,16 +254,17 @@ title.toString().contains('🛵') ||
     }
   } catch (_) {}
 
-  // Detect cancel/reject notifications — those should be quiet and not trigger loud alarm
+  // Detect cancel/reject/delivered notifications — those should be quiet and not trigger loud alarm
   final orderStatus = (data['status'] ?? data['orderStatus'] ?? '').toString().toUpperCase();
-  final isCancelledOrTerminal = orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' ||
+  final isDelivered = orderStatus == 'DELIVERED' || title.toString().toLowerCase().contains('delivered') || (body ?? '').toString().toLowerCase().contains('delivered');
+  final isCancelledOrTerminal = isDelivered || orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' ||
       orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
       title.toString().toLowerCase().contains('cancel') ||
       (body ?? '').toString().toLowerCase().contains('cancel');
 
   // If order was cancelled/rejected/failed/delivered, immediately dismiss any ongoing lock-screen live tracker
   // BEFORE checking `notification != null`, because Android OS displays `message.notification` directly.
-  if (orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' || orderStatus == 'FAILED' || orderStatus == 'DELIVERED') {
+  if (isCancelledOrTerminal) {
     try {
       final plugin = FlutterLocalNotificationsPlugin();
       await plugin.cancel(NotificationService.LIVE_TRACKING_NOTIF_ID, tag: NotificationService.LIVE_TRACKING_TAG);
@@ -265,7 +272,6 @@ title.toString().contains('🛵') ||
       final rawOid = (data['orderId'] ?? data['id'] ?? '').toString().trim();
       final rawRid = (data['readableId'] ?? '').toString().trim();
       if (rawOid.isNotEmpty || rawRid.isNotEmpty) {
-        final plugin = FlutterLocalNotificationsPlugin();
         await NotificationService.clearOrderNotificationsById(
           rawOid,
           readableId: rawRid.isNotEmpty ? rawRid : null,
@@ -323,12 +329,12 @@ title.toString().contains('🛵') ||
     OrderAlarmService.instance.stopAlarm(closeModal: false);
   }
 
-  final isOrderStatusUpdate = !isCancelledOrTerminal && !isOrderAlert && (
+  // Live order tracking activity is strictly for active IN-PROGRESS orders (NOT delivered or cancelled!)
+  final isOrderStatusUpdate = !isCancelledOrTerminal && !isDelivered && !isOrderAlert && (
       isCustomerNotification ||
       !isStaff ||
       orderStatus == 'OUT_FOR_DELIVERY' ||
       orderStatus == 'DISPATCHED' ||
-      orderStatus == 'DELIVERED' ||
       orderStatus == 'CONFIRMED' ||
       orderStatus == 'PREPARING' ||
       orderStatus == 'COOKING' ||
@@ -338,12 +344,10 @@ title.toString().contains('🛵') ||
       data['type'] == 'ORDER_STATUS_UPDATE' ||
       title.toString().toLowerCase().contains('out for delivery') ||
       title.toString().toLowerCase().contains('dispatched') ||
-      title.toString().toLowerCase().contains('delivered') ||
       title.toString().toLowerCase().contains('on the way') ||
       title.toString().toLowerCase().contains('arriving') ||
       (body ?? '').toString().toLowerCase().contains('out for delivery') ||
       (body ?? '').toString().toLowerCase().contains('dispatched') ||
-      (body ?? '').toString().toLowerCase().contains('delivered') ||
       (body ?? '').toString().toLowerCase().contains('on the way') ||
       (body ?? '').toString().toLowerCase().contains('arriving'));
 
@@ -402,27 +406,28 @@ title.toString().contains('🛵') ||
       const InitializationSettings initSettings = InitializationSettings(android: androidInit);
       await localNotifications.initialize(initSettings);
 
-      // Blinkit/Zepto Standard: Single dedicated slot for customer live tracking
-      final notifId = isOrderStatusUpdate
+      // Blinkit/Zepto Standard: Single dedicated slot for customer live tracking ONLY when active in-progress
+      final isLiveSlot = isOrderStatusUpdate && !isDelivered;
+      final notifId = isLiveSlot
           ? NotificationService.LIVE_TRACKING_NOTIF_ID
           : ((cleanOrderId != null && cleanOrderId.isNotEmpty)
               ? NotificationService.getOrderNotifId(cleanOrderId)
               : (message.messageId?.hashCode ?? message.hashCode));
-      final tag = isOrderStatusUpdate
+      final tag = isLiveSlot
           ? NotificationService.LIVE_TRACKING_TAG
           : ((cleanOrderId != null && cleanOrderId.isNotEmpty) ? 'order_$cleanOrderId' : null);
 
-      // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
-      // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
+      // UNIFY CHANNEL: Active customer live tracking uses Live Tracking Channel.
+      // Delivered / Completed orders use standard FastMinute Alerts channel so live activity closes cleanly!
       final channelId = isOrderAlert
           ? 'fastminute_order_alarm_v3'
-          : (isOrderStatusUpdate ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
+          : (isLiveSlot ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
       final channelName = isOrderAlert
           ? 'Store & Order Buzz Alerts'
-          : (isOrderStatusUpdate ? 'Live Order Status & Dynamic Tracking' : 'FastMinute Alerts');
+          : (isLiveSlot ? 'Live Order Status & Dynamic Tracking' : 'FastMinute Alerts');
       final channelDesc = isOrderAlert
           ? 'Loud alarm for store, admin, kitchen orders even when phone is locked.'
-          : (isOrderStatusUpdate
+          : (isLiveSlot
               ? 'Persistent lock-screen live activity with real-time delivery progress.'
               : 'Notifications for order updates and tracking.');
 
@@ -437,15 +442,13 @@ title.toString().contains('🛵') ||
         progress = 80;
       } else if (rawStatus == 'ARRIVING_SOON') {
         progress = 95;
-      } else if (rawStatus == 'DELIVERED') {
-        progress = 100;
       } else if (rawStatus == 'PENDING' || rawStatus == 'ADMIN_PENDING' || rawStatus == 'PLACED') {
         progress = 15;
       }
 
       String cleanTitle;
       String cleanBodyText = body.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
-      if (isOrderStatusUpdate && cleanOrderId != null && cleanOrderId.isNotEmpty) {
+      if (cleanOrderId != null && cleanOrderId.isNotEmpty) {
         if (rawStatus == 'PENDING' || rawStatus == 'ADMIN_PENDING' || rawStatus == 'PLACED') {
           cleanTitle = '#$cleanOrderId • Verifying ⏳';
           cleanBodyText = 'Ghatampur Central Hub is checking freshness & stock';
@@ -464,7 +467,7 @@ title.toString().contains('🛵') ||
         } else if (rawStatus == 'ARRIVING_SOON') {
           cleanTitle = '#$cleanOrderId • Arriving Soon ⚡';
           cleanBodyText = 'Rider has reached your area and is arriving at your doorstep!';
-        } else if (rawStatus == 'DELIVERED') {
+        } else if (isDelivered || rawStatus == 'DELIVERED') {
           cleanTitle = '#$cleanOrderId • Delivered! 🎉';
           cleanBodyText = 'Your FastMinute order was delivered fresh. Enjoy!';
         } else {
@@ -489,11 +492,12 @@ title.toString().contains('🛵') ||
         priority: Priority.high,
         tag: tag,
         fullScreenIntent: isOrderAlert,
-        ongoing: (isOrderStatusUpdate && rawStatus != 'DELIVERED' && rawStatus != 'CANCELLED'),
+        ongoing: (isLiveSlot && !isDelivered),
+        autoCancel: true,
         onlyAlertOnce: true,
-        showProgress: !isOrderAlert && progress != null,
+        showProgress: isLiveSlot && progress != null,
         maxProgress: 100,
-        progress: !isOrderAlert ? (progress ?? 0) : 0,
+        progress: isLiveSlot ? (progress ?? 0) : 0,
         color: const Color(0xFF00A344),
         colorized: true,
         subText: null, // STRICTLY NULL: prevents Android OS from appending truncated text ("Packe...") to header line!
@@ -509,7 +513,7 @@ title.toString().contains('🛵') ||
         styleInformation: BigTextStyleInformation(
           cleanBodyText,
           contentTitle: cleanTitle,
-          summaryText: isOrderStatusUpdate ? 'FastMinute Live' : null,
+          summaryText: isLiveSlot ? 'FastMinute Live' : null,
         ),
       );
 
@@ -518,6 +522,14 @@ title.toString().contains('🛵') ||
               ? (data['role'] == 'DELIVERY' || data['type'] == 'DELIVERY_ASSIGNED' ? '/delivery' : '/admin-orders')
               : (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders'));
 
+      // If delivered, cancel active live activity notification slot first!
+      if (isDelivered) {
+        try {
+          await localNotifications.cancel(NotificationService.LIVE_TRACKING_NOTIF_ID, tag: NotificationService.LIVE_TRACKING_TAG);
+          await localNotifications.cancel(NotificationService.LIVE_TRACKING_NOTIF_ID);
+        } catch (_) {}
+      }
+
       await localNotifications.show(
         notifId,
         cleanTitle,
@@ -525,6 +537,13 @@ title.toString().contains('🛵') ||
         NotificationDetails(android: androidDetails),
         payload: routeUrl.toString(),
       );
+
+      // Auto-cancel delivery celebration card after 15 seconds so tray stays clean
+      if (isDelivered) {
+        Future.delayed(const Duration(seconds: 15), () {
+          localNotifications.cancel(notifId, tag: tag);
+        });
+      }
     } catch (e) {
       debugPrint("Background notification show error: $e");
     }
@@ -637,6 +656,10 @@ class NotificationService {
     if (kIsWeb) return;
     try {
       final targetPlugin = plugin ?? FlutterLocalNotificationsPlugin();
+      // Always cancel the persistent Live Tracking slot first
+      await targetPlugin.cancel(LIVE_TRACKING_NOTIF_ID, tag: LIVE_TRACKING_TAG).catchError((_) {});
+      await targetPlugin.cancel(LIVE_TRACKING_NOTIF_ID).catchError((_) {});
+
       final ids = getCandidateOrderNotifIds(orderId, readableId: readableId);
       final base = getBaseOrderNumber(readableId != null && readableId.trim().isNotEmpty ? readableId : orderId);
       final cleanRid = readableId?.replaceAll('#', '').trim() ?? '';
@@ -644,6 +667,7 @@ class NotificationService {
 
       final tags = <String?>[
         null,
+        LIVE_TRACKING_TAG,
         if (base.isNotEmpty) 'order_$base',
         if (cleanRid.isNotEmpty && cleanRid != base) 'order_$cleanRid',
         if (cleanRid.isNotEmpty) 'order_${cleanRid.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '')}',
@@ -1349,20 +1373,21 @@ title.toString().contains('🛵') ||
       return;
     }
 
-    // Detect cancel/reject notifications — these should NOT trigger loud alarm
-    final isCancelledOrTerminal = orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' ||
-        orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
-        title.toString().toLowerCase().contains('cancel') ||
-        body.toString().toLowerCase().contains('cancel');
-
-    if (orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' || orderStatus == 'FAILED' || orderStatus == 'DELIVERED') {
-      await clearLiveOrderActivity(
-        (data['orderId'] ?? data['id'] ?? '').toString(),
-        readableId: data['readableId']?.toString(),
-      );
-    }
-
     final isStaff = await NotificationService.isStaffUser();
+
+    // Explicit customer tracking notifications must NEVER trigger loud alarms or buzzers
+    final isCustomerNotification =
+        data['role'] == 'CUSTOMER' ||
+        data['screen'] == 'order-tracking' ||
+        data['isLiveTracking'] == 'true' ||
+        data['type'] == 'ORDER_PLACED' ||
+        data['type'] == 'ORDER_STATUS_UPDATE';
+
+    // If active staff/rider, suppress customer tracking alerts so rider doesn't see customer tracking cards
+    if (isStaff && (isCustomerNotification || data['type'] == 'ORDER_STATUS_UPDATE' || data['screen'] == 'order-tracking' || data['isLiveTracking'] == 'true')) {
+      debugPrint('NotificationService: Suppressing customer live tracking alert for active staff/rider in foreground.');
+      return;
+    }
 
     final isStaffOrAdminMessage =
         data['screen'] == 'admin-orders' ||
@@ -1386,13 +1411,23 @@ title.toString().contains('🛵') ||
       return;
     }
 
-    // Explicit customer tracking notifications must NEVER trigger loud alarms or buzzers
-    final isCustomerNotification =
-        data['role'] == 'CUSTOMER' ||
-        data['screen'] == 'order-tracking' ||
-        data['isLiveTracking'] == 'true' ||
-        data['type'] == 'ORDER_PLACED' ||
-        data['type'] == 'ORDER_STATUS_UPDATE';
+    // Detect cancel/reject/delivered notifications — these should NOT trigger loud alarm
+    final isDelivered = orderStatus == 'DELIVERED' ||
+        title.toString().toLowerCase().contains('delivered') ||
+        body.toString().toLowerCase().contains('delivered');
+
+    final isCancelledOrTerminal = isDelivered ||
+        orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' ||
+        orderStatus == 'FAILED' || orderStatus == 'REFUNDED' ||
+        title.toString().toLowerCase().contains('cancel') ||
+        body.toString().toLowerCase().contains('cancel');
+
+    if (orderStatus == 'CANCELLED' || orderStatus == 'REJECTED' || orderStatus == 'FAILED' || isDelivered) {
+      await clearLiveOrderActivity(
+        (data['orderId'] ?? data['id'] ?? '').toString(),
+        readableId: data['readableId']?.toString(),
+      );
+    }
 
     // Rider Loud Buzzer: STRICTLY & ONLY when a delivery order is newly assigned to this rider!
     final isDeliveryRiderAlert = !isCustomerNotification && isStaff && (
@@ -1442,12 +1477,11 @@ title.toString().contains('🛵') ||
         title.toString().toLowerCase().contains('new approved order') ||
         title.toString().toLowerCase().contains('awaiting approval'))));
 
-    final isOrderStatusUpdate = !isCancelledOrTerminal && !isOrderAlert && (
+    final isOrderStatusUpdate = !isCancelledOrTerminal && !isDelivered && !isOrderAlert && (
         isCustomerNotification ||
         !isStaff ||
         orderStatus == 'OUT_FOR_DELIVERY' ||
         orderStatus == 'DISPATCHED' ||
-        orderStatus == 'DELIVERED' ||
         orderStatus == 'CONFIRMED' ||
         orderStatus == 'PREPARING' ||
         orderStatus == 'COOKING' ||
@@ -1457,42 +1491,40 @@ title.toString().contains('🛵') ||
         data['type'] == 'ORDER_STATUS_UPDATE' ||
         title.toString().toLowerCase().contains('out for delivery') ||
         title.toString().toLowerCase().contains('dispatched') ||
-        title.toString().toLowerCase().contains('delivered') ||
         title.toString().toLowerCase().contains('on the way') ||
         title.toString().toLowerCase().contains('arriving') ||
         body.toString().toLowerCase().contains('out for delivery') ||
         body.toString().toLowerCase().contains('dispatched') ||
-        body.toString().toLowerCase().contains('delivered') ||
         body.toString().toLowerCase().contains('on the way') ||
         body.toString().toLowerCase().contains('arriving'));
 
-    // Blinkit/Zepto Standard: Single dedicated slot for customer live tracking
-    final notifId = isOrderStatusUpdate
+    // Blinkit/Zepto Standard: Single dedicated slot for customer live tracking ONLY when active in-progress
+    final isLiveSlot = isOrderStatusUpdate && !isDelivered;
+    final notifId = isLiveSlot
         ? NotificationService.LIVE_TRACKING_NOTIF_ID
         : ((cleanOrderId != null && cleanOrderId.isNotEmpty)
             ? NotificationService.getOrderNotifId(cleanOrderId)
             : (isCartAlert ? 8888 : ('${title}_$body'.hashCode & 0x7FFFFFFF)));
-    final tag = isOrderStatusUpdate
+    final tag = isLiveSlot
         ? NotificationService.LIVE_TRACKING_TAG
         : ((cleanOrderId != null && cleanOrderId.isNotEmpty)
             ? 'order_$cleanOrderId'
             : (isCartAlert ? 'cart_alert' : 'general_alert'));
 
     // UNIFY CHANNEL: Customer order tracking updates MUST use the Live Tracking Channel!
-    // This guarantees Android mutates the single active card in-place instead of creating 2 duplicate notifications.
     if (isOrderAlert) {
       unawaited(playOrderChime(orderId: cleanOrderId, continuous: true));
     }
 
     final channelId = isOrderAlert
         ? 'fastminute_order_alarm_v3'
-        : (isOrderStatusUpdate ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
+        : (isLiveSlot ? 'fastkirana_live_tracking_v1' : 'fastkirana_alerts');
     final channelName = isOrderAlert
         ? 'Store & Order Buzz Alerts'
-        : (isOrderStatusUpdate ? 'Live Order Status & Dynamic Tracking' : 'FastMinute Alerts');
+        : (isLiveSlot ? 'Live Order Status & Dynamic Tracking' : 'FastMinute Alerts');
     final channelDesc = isOrderAlert
         ? 'Loud alarm for store, admin, and kitchen orders even when phone is locked.'
-        : (isOrderStatusUpdate
+        : (isLiveSlot
             ? 'Persistent lock-screen live activity with real-time delivery progress.'
             : 'Notifications for order updates and tracking.');
 
@@ -1507,15 +1539,13 @@ title.toString().contains('🛵') ||
       progress = 80;
     } else if (orderStatus == 'ARRIVING_SOON') {
       progress = 95;
-    } else if (orderStatus == 'DELIVERED') {
-      progress = 100;
     } else if (orderStatus == 'PENDING' || orderStatus == 'ADMIN_PENDING' || orderStatus == 'PLACED') {
       progress = 15;
     }
 
     String cleanTitle;
     String cleanBodyText = body.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
-    if (isOrderStatusUpdate && cleanOrderId != null && cleanOrderId.isNotEmpty) {
+    if (cleanOrderId != null && cleanOrderId.isNotEmpty) {
       if (orderStatus == 'PENDING' || orderStatus == 'ADMIN_PENDING' || orderStatus == 'PLACED') {
         cleanTitle = '#$cleanOrderId • Verifying ⏳';
         cleanBodyText = 'Ghatampur Central Hub is checking freshness & stock';
@@ -1534,7 +1564,7 @@ title.toString().contains('🛵') ||
       } else if (orderStatus == 'ARRIVING_SOON') {
         cleanTitle = '#$cleanOrderId • Arriving Soon ⚡';
         cleanBodyText = 'Rider has reached your area and is arriving at your doorstep!';
-      } else if (orderStatus == 'DELIVERED') {
+      } else if (isDelivered || orderStatus == 'DELIVERED') {
         cleanTitle = '#$cleanOrderId • Delivered! 🎉';
         cleanBodyText = 'Your FastMinute order was delivered fresh. Enjoy!';
       } else {
@@ -1555,6 +1585,14 @@ title.toString().contains('🛵') ||
             ? (message.data['role'] == 'DELIVERY' || message.data['type'] == 'DELIVERY_ASSIGNED' ? '/delivery' : '/admin-orders')
             : (cleanOrderId != null ? '/orders/$cleanOrderId/track' : '/orders'));
 
+    // If delivered, cancel active live activity notification slot first!
+    if (isDelivered) {
+      try {
+        await _localNotifications?.cancel(NotificationService.LIVE_TRACKING_NOTIF_ID, tag: NotificationService.LIVE_TRACKING_TAG);
+        await _localNotifications?.cancel(NotificationService.LIVE_TRACKING_NOTIF_ID);
+      } catch (_) {}
+    }
+
     _localNotifications?.show(
       notifId,
       cleanTitle,
@@ -1569,11 +1607,12 @@ title.toString().contains('🛵') ||
           priority: Priority.high,
           tag: tag,
           showWhen: true,
-          ongoing: (isOrderStatusUpdate && orderStatus != 'DELIVERED' && orderStatus != 'CANCELLED'),
+          ongoing: (isLiveSlot && !isDelivered),
+          autoCancel: true,
           onlyAlertOnce: true,
-          showProgress: !isOrderAlert && progress != null,
+          showProgress: isLiveSlot && progress != null,
           maxProgress: 100,
-          progress: !isOrderAlert ? (progress ?? 0) : 0,
+          progress: isLiveSlot ? (progress ?? 0) : 0,
           color: const Color(0xFF00A344),
           colorized: true,
           subText: null, // STRICTLY NULL: prevents Android OS from appending truncated text ("Packe...") to header line!
@@ -1581,7 +1620,7 @@ title.toString().contains('🛵') ||
           styleInformation: BigTextStyleInformation(
             cleanBodyText,
             contentTitle: cleanTitle,
-            summaryText: isOrderStatusUpdate ? 'FastMinute Live' : null,
+            summaryText: isLiveSlot ? 'FastMinute Live' : null,
           ),
           playSound: isOrderAlert,
           sound: isOrderAlert ? const RawResourceAndroidNotificationSound('order_chime') : null,
@@ -1590,7 +1629,7 @@ title.toString().contains('🛵') ||
           vibrationPattern: isOrderAlert
               ? Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000])
               : null,
-          actions: isOrderStatusUpdate && cleanOrderId != null && cleanOrderId.isNotEmpty
+          actions: isLiveSlot && cleanOrderId != null && cleanOrderId.isNotEmpty
               ? [
                   const AndroidNotificationAction(
                     'open_live_track',
@@ -1609,6 +1648,13 @@ title.toString().contains('🛵') ||
       ),
       payload: routeUrl.toString(),
     );
+
+    // Auto-cancel delivery celebration card after 15 seconds so tray stays clean
+    if (isDelivered) {
+      Future.delayed(const Duration(seconds: 15), () {
+        _localNotifications?.cancel(notifId, tag: tag);
+      });
+    }
   }
 
   bool _shouldShowNotification(String category) {
@@ -1668,26 +1714,30 @@ title.toString().contains('🛵') ||
       _lastLiveActivityTimestamp = 0;
       await clearLiveOrderActivity(order.id, readableId: order.readableId);
       if (order.status == OrderStatus.delivered) {
-        // Show one-time celebration delivery notification with pleasant chime
+        // Show one-time celebration delivery notification with pleasant chime (on FastMinute Alerts, NOT Live Tracking slot!)
         try {
+          final celebrationNotifId = NotificationService.getOrderNotifId(baseNum);
+          final celebrationTag = 'order_$baseNum';
           final androidDelivered = AndroidNotificationDetails(
-            'fastkirana_live_tracking_v1',
-            'Live Order Status & Dynamic Tracking',
+            'fastkirana_alerts',
+            'FastMinute Alerts',
             channelDescription: 'Real-time alerts for delivered orders.',
             importance: Importance.high,
             priority: Priority.high,
             playSound: false,
             sound: null,
             enableVibration: false,
+            ongoing: false,
+            autoCancel: true,
             icon: '@mipmap/ic_launcher',
             color: const Color(0xFF00A344),
             colorized: true,
-            tag: notifTag,
+            tag: celebrationTag,
             subText: null,
             styleInformation: BigTextStyleInformation(
               'Your FastMinute order was delivered. Thank you for shopping fresh with us! 🎉',
               contentTitle: '🎉 Order Delivered! • $displayTag',
-              summaryText: 'Delivered',
+              summaryText: null,
             ),
           );
           const iosDelivered = DarwinNotificationDetails(
@@ -1697,12 +1747,15 @@ title.toString().contains('🛵') ||
             subtitle: 'Delivered Successfully 🎉',
           );
           await _localNotifications?.show(
-            notifId,
+            celebrationNotifId,
             '🎉 Order Delivered! • $displayTag',
             'Your FastMinute order was delivered. Enjoy!',
             NotificationDetails(android: androidDelivered, iOS: iosDelivered),
             payload: '/orders/${order.readableId ?? order.id}/track',
           );
+          Future.delayed(const Duration(seconds: 15), () {
+            _localNotifications?.cancel(celebrationNotifId, tag: celebrationTag);
+          });
         } catch (_) {}
       }
       return;
@@ -2280,7 +2333,10 @@ title.toString().contains('🛵') ||
   Future<void> clearAllNotifications() async {
     if (kIsWeb) return;
     try {
-      await _localNotifications?.cancelAll();
+      final p = _localNotifications ?? FlutterLocalNotificationsPlugin();
+      await p.cancel(LIVE_TRACKING_NOTIF_ID, tag: LIVE_TRACKING_TAG).catchError((_) {});
+      await p.cancel(LIVE_TRACKING_NOTIF_ID).catchError((_) {});
+      await p.cancelAll().catchError((_) {});
     } catch (e, _) {
       LoggerService.error('NotificationService: clearAllNotifications', e);
     }
