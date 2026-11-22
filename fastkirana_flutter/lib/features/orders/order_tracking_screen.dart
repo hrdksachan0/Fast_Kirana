@@ -1263,7 +1263,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           Marker(
             markerId: const MarkerId('store_darkstore'),
             position: _storePosition!,
-            anchor: const Offset(0.5, 0.8),
+            anchor: const Offset(0.5, 0.92),
             icon: _storeMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           ),
         );
@@ -1273,7 +1273,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Marker(
           markerId: const MarkerId('store_restaurant'),
           position: _restaurantPosition!,
-          anchor: const Offset(0.5, 0.8),
+          anchor: const Offset(0.5, 0.92),
           icon: _restaurantMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
         ),
       );
@@ -1285,7 +1285,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Marker(
           markerId: const MarkerId('store'),
           position: _storePosition!,
-          anchor: const Offset(0.5, 0.8),
+          anchor: const Offset(0.5, 0.92),
           icon: isRest
               ? (_restaurantMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet))
               : (_storeMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)),
@@ -1299,7 +1299,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Marker(
           markerId: const MarkerId('customer'),
           position: _customerPosition!,
-          anchor: const Offset(0.5, 0.8),
+          anchor: const Offset(0.5, 0.92),
           icon: _customerMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         ),
       );
