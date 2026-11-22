@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../../core/theme/design_system.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/customer_sound_service.dart';
+import '../../../core/services/supabase_service.dart';
 import '../../../providers/store_settings_provider.dart';
 
 /// Doorstep Dynamic UPI QR Bottom Sheet with Auto-Detection, Virtual Soundbox & Fallback Control
@@ -42,7 +44,10 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
   bool _isCombined = false;
   double _combinedTotal = 0.0;
   String _displayId = '';
+  String _riderName = '';
   Timer? _pollTimer;
+  Timer? _autoCompleteTimer;
+  RealtimeChannel? _realtimeChannel;
   bool _isCompleting = false;
 
   @override
@@ -50,11 +55,36 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
     super.initState();
     _fetchQrData();
     _startPolling();
+    _subscribeRealtime();
+  }
+
+  void _subscribeRealtime() {
+    try {
+      final sb = SupabaseService.client;
+      if (sb == null) return;
+      final chName = 'order-payment-${widget.orderId}';
+      _realtimeChannel = sb.channel(chName);
+      _realtimeChannel!.onBroadcast(
+        event: 'PAYMENT_RECEIVED',
+        callback: (payload) {
+          debugPrint('[DoorstepQR] Realtime PAYMENT_RECEIVED broadcast caught: $payload');
+          if (mounted && !_isPaid) {
+            _onPaymentReceived();
+          }
+        },
+      ).subscribe();
+    } catch (e) {
+      debugPrint('[DoorstepQR] Error subscribing to Supabase realtime: $e');
+    }
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _autoCompleteTimer?.cancel();
+    if (_realtimeChannel != null) {
+      SupabaseService.unsubscribe(_realtimeChannel);
+    }
     super.dispose();
   }
 
@@ -78,6 +108,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
               (data['amount'] as num?)?.toDouble() ??
               widget.total;
           _displayId = data['readableId']?.toString() ?? widget.orderNum;
+          _riderName = data['riderName']?.toString() ?? '';
           _isLoading = false;
         });
 
@@ -125,6 +156,9 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
   }
 
   void _onPaymentReceived() {
+    if (_isPaid) return;
+    _pollTimer?.cancel();
+
     // 1. Double Celebratory Vibration (Haptic Pulse)
     try {
       HapticFeedback.heavyImpact();
@@ -142,6 +176,32 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
       setState(() {
         _isPaid = true;
       });
+
+      // Auto-complete delivery after brief celebration window for zero-friction rider experience
+      _autoCompleteTimer?.cancel();
+      _autoCompleteTimer = Timer(const Duration(milliseconds: 2400), () {
+        if (mounted && _isPaid && !_isCompleting) {
+          _completeDelivery();
+        }
+      });
+    }
+  }
+
+  Future<void> _completeDelivery() async {
+    if (_isCompleting) return;
+    setState(() => _isCompleting = true);
+    _autoCompleteTimer?.cancel();
+    try {
+      await widget.onConfirmPaid({
+        'paymentMethod': 'ONLINE',
+        'paymentStatus': 'PAID',
+        'paymentCollectedBy': 'ONLINE',
+        'isRiderCash': false,
+        'notes': 'Paid via Doorstep Razorpay QR (Verified)',
+      });
+    } catch (e) {
+      debugPrint('[DoorstepQR] Complete delivery error: $e');
+      if (mounted) setState(() => _isCompleting = false);
     }
   }
 
@@ -210,7 +270,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Order #$_effectiveDisplayId • ₹${_effectiveTotal.toStringAsFixed(0)}',
+                      'Order #$_effectiveDisplayId • ₹${_effectiveTotal.toStringAsFixed(0)}${_riderName.isNotEmpty ? " • 🛵 $_riderName" : ""}',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w700,
@@ -321,18 +381,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
             ),
             const SizedBox(height: 18),
             ElevatedButton(
-              onPressed: _isCompleting
-                  ? null
-                  : () async {
-                      setState(() => _isCompleting = true);
-                      await widget.onConfirmPaid({
-                        'paymentMethod': 'ONLINE',
-                        'paymentStatus': 'PAID',
-                        'paymentCollectedBy': 'ONLINE',
-                        'isRiderCash': false,
-                        'notes': 'Paid via Doorstep Razorpay QR',
-                      });
-                    },
+              onPressed: _isCompleting ? null : _completeDelivery,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppDesignSystem.success,
                 minimumSize: const Size(double.infinity, 48),
@@ -514,15 +563,15 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                       child: activeQr.startsWith('data:image')
                           ? Image.memory(
                               base64Decode(activeQr.split(',').last),
-                              width: 220,
-                              height: 220,
+                              width: 240,
+                              height: 240,
                               fit: BoxFit.contain,
                               errorBuilder: (c, e, s) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
                             )
                           : CachedNetworkImage(
                               imageUrl: activeQr,
-                              width: 220,
-                              height: 220,
+                              width: 240,
+                              height: 240,
                               placeholder: (c, u) => const Center(child: CircularProgressIndicator(color: AppDesignSystem.success)),
                               errorWidget: (c, u, e) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
                             ),

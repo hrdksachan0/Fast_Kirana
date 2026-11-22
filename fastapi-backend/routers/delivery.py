@@ -435,7 +435,9 @@ async def _get_or_create_razorpay_doorstep_qr(
     key_id: Optional[str] = None,
     key_secret: Optional[str] = None,
     customer_name: Optional[str] = None,
-    customer_phone: Optional[str] = None
+    customer_phone: Optional[str] = None,
+    rider_name: Optional[str] = None,
+    rider_phone: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Creates or reuses cached single-use Razorpay Dynamic UPI QR code with locked order amount.
@@ -460,10 +462,11 @@ async def _get_or_create_razorpay_doorstep_qr(
         log.warning(f"Invalid amount for doorstep QR: {total_amount}")
         return {}
 
-    cache_key = f"rzp_doorstep_qr_sq:{order_id}:{amount_paise}"
+    clean_rider_tag = (rider_name or "norider").replace(" ", "_")[:20]
+    cache_key = f"rzp_doorstep_qr_v4:{order_id}:{amount_paise}:{clean_rider_tag}"
     try:
         cached = await get_cache(cache_key)
-        if cached and isinstance(cached, dict) and cached.get("image_url") and "rzp.io" not in cached.get("image_url", ""):
+        if cached and isinstance(cached, dict) and cached.get("image_url"):
             return cached
     except Exception:
         pass
@@ -476,13 +479,16 @@ async def _get_or_create_razorpay_doorstep_qr(
         "usage": "single_use",
         "fixed_amount": True,
         "payment_amount": amount_paise,
-        "description": f"FastMinute Order #{base_display}",
+        "description": f"FastMinute #{base_display} • Rider: {rider_name}"[:40] if rider_name else f"FastMinute Order #{base_display}"[:40],
         "notes": {
             "order_id": str(order_id)[:40],
             "readable_id": str(base_display)[:40],
             "combined_id": str(combined_id or "")[:40],
+            "sub_order_ids": ",".join(sub_order_ids)[:100] if sub_order_ids else "",
             "customer_name": str(customer_name or "")[:40],
             "customer_phone": str(customer_phone or "")[:15],
+            "rider_name": str(rider_name or "")[:40],
+            "rider_phone": str(rider_phone or "")[:15],
             "purpose": "doorstep_delivery"
         }
     }
@@ -498,21 +504,15 @@ async def _get_or_create_razorpay_doorstep_qr(
             if resp.status_code in (200, 201):
                 data = resp.json()
                 qr_id = str(data.get("id") or "")
-                standee_url = data.get("image_url") or ""
-
-                # Build clean, high-resolution square QR code image URL for seamless scanner reading
-                short_id = qr_id.replace("qr_", "")
-                clean_upi_uri = f"upi://pay?am={total_amount:.2f}&cu=INR&mc=5811&mode=22&pa=fastkirana781706.rzp@rxairtel&pn=Fastkirana&tn=Payment%20To%20Fastkirana&tr={short_id}qrv2"
-                clean_square_qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={urllib.parse.quote(clean_upi_uri)}"
+                official_qr_url = data.get("image_url") or ""
 
                 qr_info = {
                     "id": qr_id,
-                    "image_url": clean_square_qr_url,
-                    "standee_url": standee_url,
-                    "upi_uri": clean_upi_uri,
+                    "image_url": official_qr_url,
+                    "standee_url": official_qr_url,
                     "status": data.get("status")
                 }
-                log.info(f"✅ Created Razorpay Doorstep QR {data.get('id')} for Order #{base_display} (₹{total_amount})")
+                log.info(f"✅ Created Official Razorpay Doorstep QR {data.get('id')} for Order #{base_display} (₹{total_amount})")
                 try:
                     await set_cache(cache_key, qr_info, ttl=1800)
                 except Exception:
@@ -542,7 +542,7 @@ async def get_doorstep_qr(
     from sqlalchemy.orm import joinedload
     stmt = (
         select(Order)
-        .options(joinedload(Order.user), joinedload(Order.address))
+        .options(joinedload(Order.user), joinedload(Order.address), joinedload(Order.deliveryUser))
         .where(or_(Order.id == id, Order.readableId == id))
     )
     res = await db.execute(stmt)
@@ -559,6 +559,23 @@ async def get_doorstep_qr(
     if not cust_phone and order.address:
         cust_name = cust_name or str(order.address.name or "").strip()
         cust_phone = str(order.address.phone or "").strip()
+
+    # Detect assigned delivery rider details for Razorpay notes attribution
+    rider_name = ""
+    rider_phone = ""
+    if order.deliveryUser:
+        rider_name = str(order.deliveryUser.name or "").strip()
+        rider_phone = str(order.deliveryUser.phone or "").strip()
+    elif order.deliveryUserId:
+        r_u_stmt = select(User).where(User.id == order.deliveryUserId)
+        r_u_res = await db.execute(r_u_stmt)
+        r_user = r_u_res.scalars().first()
+        if r_user:
+            rider_name = str(r_user.name or "").strip()
+            rider_phone = str(r_user.phone or "").strip()
+    if not rider_name and current_user.get("role") == "DELIVERY":
+        rider_name = str(current_user.get("name") or "").strip()
+        rider_phone = str(current_user.get("phone") or "").strip()
 
     # Detect companion orders if this is part of a combined order (e.g. Grocery + Restaurant)
     companions = []
@@ -624,7 +641,9 @@ async def get_doorstep_qr(
         key_id=db_rzp_key,
         key_secret=db_rzp_sec,
         customer_name=cust_name,
-        customer_phone=cust_phone
+        customer_phone=cust_phone,
+        rider_name=rider_name,
+        rider_phone=rider_phone
     )
 
     # 3. Active In-Flight Verification: If order is still UNPAID, check if Razorpay QR was paid!
@@ -645,8 +664,23 @@ async def get_doorstep_qr(
                     qr_state = chk_resp.json()
                     is_paid = (
                         (qr_state.get("status") == "closed" and qr_state.get("close_reason") == "paid") or
-                        ((qr_state.get("payments_count_received") or 0) > 0)
+                        ((qr_state.get("payments_count_received") or 0) > 0) or
+                        ((qr_state.get("payments_amount_received") or 0) > 0)
                     )
+                    # Fallback payment check if count/status not yet updated on QR entity
+                    if not is_paid:
+                        try:
+                            pay_resp = await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}/payments", auth=auth)
+                            if pay_resp.status_code == 200:
+                                p_data = pay_resp.json()
+                                items = p_data.get("items") or []
+                                for p_item in items:
+                                    if p_item.get("status") in ["captured", "authorized"]:
+                                        is_paid = True
+                                        break
+                        except Exception:
+                            pass
+
                     if is_paid:
                         ref_text = f"Doorstep Razorpay QR Paid ({qr_id})"
                         for o in all_orders:
@@ -660,12 +694,16 @@ async def get_doorstep_qr(
                         # Broadcast instant real-time event to Rider & Admin
                         try:
                             from utils.supabase_broadcast import broadcast_supabase_realtime
+                            topics = ["orders", f"order:{order.id}"]
+                            if order.deliveryUserId:
+                                topics.append(f"rider_{order.deliveryUserId}")
                             await broadcast_supabase_realtime(
-                                topics=["orders", f"order:{order.id}"],
+                                topics=topics,
                                 event="PAYMENT_RECEIVED",
                                 payload={
                                     "orderId": order.id,
                                     "paymentStatus": "PAID",
+                                    "paymentMethod": "ONLINE",
                                     "amount": total_amount,
                                     "isCombined": bool(companions),
                                     "subOrderIds": sub_order_ids
@@ -697,7 +735,9 @@ async def get_doorstep_qr(
         "upiUri": rzp_qr_info.get("upi_uri") or upi_uri,
         "paymentStatus": order.paymentStatus.value,
         "paymentMethod": order.paymentMethod.value,
-        "gateway": "razorpay" if razorpay_qr_url else "direct_upi"
+        "gateway": "razorpay" if razorpay_qr_url else "direct_upi",
+        "riderName": rider_name,
+        "riderPhone": rider_phone
     }
 
 

@@ -4248,13 +4248,24 @@ async def update_order(
         safe_photo = None
         cash_amount_custom = payload.get("cashAmount")
 
-        # Admin / Staff delivery handling:
-        if is_admin and not is_delivery:
+        # Rider / Staff delivery attribution:
+        if is_delivery:
+            # Explicitly attribute delivered order to the active delivery rider
+            order.deliveryUserId = user_id
+        elif is_admin:
             # When admin delivers directly, do NOT attribute to any rider unless admin explicitly passed deliveryUserId
             if "deliveryUserId" in payload:
-                order.deliveryUserId = delivery_user_id
-            else:
+                raw_duid = payload.get("deliveryUserId")
+                if raw_duid and str(raw_duid).strip().upper() not in ["", "UNASSIGNED", "NONE", "NULL"]:
+                    order.deliveryUserId = str(raw_duid).strip()
+                else:
+                    order.deliveryUserId = None
+            elif not order.deliveryUserId:
                 order.deliveryUserId = None
+        elif "deliveryUserId" in payload:
+            raw_duid = payload.get("deliveryUserId")
+            if raw_duid and str(raw_duid).strip().upper() not in ["", "UNASSIGNED", "NONE", "NULL"]:
+                order.deliveryUserId = str(raw_duid).strip()
 
         # Determine actual payment method on delivery:
         # Preserve COD unless customer was already paid online or paid via doorstep UPI QR
@@ -4494,6 +4505,7 @@ async def update_order(
             companion.notes = order.notes
         if target_status == OrderStatus.DELIVERED:
             companion.paymentStatus = PaymentStatus.PAID
+            companion.paymentMethod = order.paymentMethod
             companion.deliveredAt = datetime.utcnow()
             companion.status = OrderStatus.DELIVERED
             companion.updatedAt = datetime.utcnow()

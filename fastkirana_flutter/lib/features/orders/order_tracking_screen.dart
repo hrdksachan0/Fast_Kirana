@@ -209,7 +209,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     try {
       _confettiController.dispose();
     } catch (_) {}
-    _mapController?.dispose();
+    try {
+      _mapController?.dispose();
+    } catch (_) {}
+    _mapController = null;
     _audioPlayer.dispose();
     for (final ch in _supabaseChannels) {
       SupabaseService.unsubscribe(ch);
@@ -228,6 +231,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   Future<void> _handleCashfreeSuccess(String cfOrderId, {bool alreadyVerified = false}) async {
+    if (!mounted || _isDisposed) return;
     HapticFeedback.heavyImpact();
     setState(() => _isProcessingPayment = true);
     try {
@@ -499,6 +503,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   Future<void> _fetchLiveOrder() async {
+    if (!mounted || _isDisposed) return;
     try {
       final repo = OrderRepository(ref.read(dioProvider));
       var cleanId = widget.orderId.trim();
@@ -1461,7 +1466,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (points.isEmpty) return;
 
       if (points.length == 1) {
-        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(points.first, 15.5));
+        _safeAnimateCamera(CameraUpdate.newLatLngZoom(points.first, 15.5));
         return;
       }
 
@@ -1488,19 +1493,29 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         northeast: LatLng(maxLat + latMargin, maxLng + lngMargin),
       );
 
-      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+      _safeAnimateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
     } catch (e) {
-      debugPrint('[OrderTracking] _fitMapBounds error: ');
+      debugPrint('[OrderTracking] _fitMapBounds error: $e');
+    }
+  }
+
+  Future<void> _safeAnimateCamera(CameraUpdate update) async {
+    if (!mounted || _isDisposed || _mapController == null) return;
+    try {
+      await _mapController?.animateCamera(update);
+    } catch (e) {
+      // Platform channel disconnected or animation cancelled during route transition
+      debugPrint('[OrderTracking] animateCamera suppressed: $e');
     }
   }
 
   void _followRiderWithCamera() {
-    if (_mapController == null || _riderPosition == null || !mounted) return;
+    if (_mapController == null || _riderPosition == null || !mounted || _isDisposed) return;
     if (_order?.status == OrderStatus.shipped && _customerPosition != null) {
       // During active delivery, dynamically frame both the moving rider and customer home snuggly
       _fitMapBounds();
     } else {
-      _mapController!.animateCamera(
+      _safeAnimateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
             target: _riderPosition!,
@@ -1824,11 +1839,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                             },
                             onZoomIn: () {
                               HapticFeedback.lightImpact();
-                              _mapController?.animateCamera(CameraUpdate.zoomIn());
+                              _safeAnimateCamera(CameraUpdate.zoomIn());
                             },
                             onZoomOut: () {
                               HapticFeedback.lightImpact();
-                              _mapController?.animateCamera(CameraUpdate.zoomOut());
+                              _safeAnimateCamera(CameraUpdate.zoomOut());
                             },
                             onFitBounds: () {
                               HapticFeedback.lightImpact();

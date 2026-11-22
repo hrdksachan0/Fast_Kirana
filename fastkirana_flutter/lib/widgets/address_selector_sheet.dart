@@ -12,9 +12,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 
-
-import '../core/config/app_config.dart';
-
 import '../core/services/location_service.dart';
 
 import '../data/models/address.dart';
@@ -125,31 +122,14 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
       );
 
       if (details != null && mounted) {
-
         final currentAddr = ref.read(selectedAddressProvider);
-
         if (currentAddr != null) {
-
           widget.onAddressSelected(currentAddr);
-
-          Navigator.pop(context, currentAddr);
-
-        }
-
-
-
-        if (!details.isServiceable) {
-
+          if (mounted) Navigator.pop(context, currentAddr);
+        } else if (!details.isServiceable) {
           UnserviceableLocationBanner.showUnserviceableModal(context, ref, details.distanceKm);
-
-        } else {
-
-          showLocationFeedback(ref, ' km');
-
         }
-
         return;
-
       }
 
     } catch (e) { LoggerService.error("Bare catch", e); }
@@ -171,27 +151,10 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
       );
 
       if (newAddress != null && mounted) {
-
-        final distKm = LocationService.getDistanceKm(
-
-          newAddress.latitude ?? AppConfig.darkstoreLat,
-
-          newAddress.longitude ?? AppConfig.darkstoreLng,
-
-        );
-
         ref.read(selectedAddressProvider.notifier).state = newAddress;
-
         widget.onAddressSelected(newAddress);
-
+        if (!mounted) return;
         Navigator.pop(context, newAddress);
-
-        if (distKm > LocationService.maxDeliveryRadiusKm) {
-
-          UnserviceableLocationBanner.showUnserviceableModal(context, ref, distKm);
-
-        }
-
       }
 
     }
@@ -333,41 +296,18 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
 
             child: InkWell(
-
               onTap: () async {
-
-                Navigator.pop(context);
-
                 final newAddress = await Navigator.push<Address>(
-
                   context,
-
                   FadeSlideRoute(page: const MapPickerScreen()),
-
                 );
 
-                if (newAddress != null && context.mounted) {
-
-                  final distKm = LocationService.getDistanceKm(
-
-                    newAddress.latitude ?? AppConfig.darkstoreLat,
-
-                    newAddress.longitude ?? AppConfig.darkstoreLng,
-
-                  );
-
+                if (newAddress != null && mounted) {
                   ref.read(selectedAddressProvider.notifier).state = newAddress;
-
                   widget.onAddressSelected(newAddress);
-
-                  if (distKm > LocationService.maxDeliveryRadiusKm) {
-
-                    UnserviceableLocationBanner.showUnserviceableModal(context, ref, distKm);
-
-                  }
-
+                  if (!mounted) return;
+                  Navigator.pop(context, newAddress);
                 }
-
               },
 
               borderRadius: BorderRadius.circular(14),
@@ -591,43 +531,19 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                 // 2. Add New Address (Map Picker)
 
                 Expanded(
-
                   child: Bounceable(
-
                     onTap: () async {
-
-                      Navigator.pop(context);
-
                       final newAddress = await Navigator.push<Address>(
-
                         context,
-
                         FadeSlideRoute(page: const MapPickerScreen()),
-
                       );
 
-                      if (newAddress != null && context.mounted) {
-
-                        final distKm = LocationService.getDistanceKm(
-
-                          newAddress.latitude ?? AppConfig.darkstoreLat,
-
-                          newAddress.longitude ?? AppConfig.darkstoreLng,
-
-                        );
-
+                      if (newAddress != null && mounted) {
                         ref.read(selectedAddressProvider.notifier).state = newAddress;
-
                         widget.onAddressSelected(newAddress);
-
-                        if (distKm > LocationService.maxDeliveryRadiusKm) {
-
-                          UnserviceableLocationBanner.showUnserviceableModal(context, ref, distKm);
-
-                        }
-
+                        if (!mounted) return;
+                        Navigator.pop(context, newAddress);
                       }
-
                     },
 
                     child: Container(
@@ -909,20 +825,9 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                       onTap: () {
 
                         HapticFeedback.selectionClick();
-
                         ref.read(selectedAddressProvider.notifier).selectAddress(addr);
-
                         widget.onAddressSelected(addr);
-
-                        Navigator.pop(context, addr);
-
-
-
-                        if (!isServiceable) {
-
-                          UnserviceableLocationBanner.showUnserviceableModal(context, ref, distKm);
-
-                        }
+                        if (mounted) Navigator.pop(context, addr);
 
                       },
 

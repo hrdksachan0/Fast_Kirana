@@ -164,17 +164,43 @@ final selectedAddressProvider = StateNotifierProvider<SelectedAddressNotifier, A
   return SelectedAddressNotifier(ref);
 });
 
-/// Ephemeral feedback provider to show transient confirmation in Header (DoorDash/Instacart style)
-final recentLocationFeedbackProvider = StateProvider<String?>((ref) => null);
+/// Ephemeral feedback notifier to show transient confirmation in Header (DoorDash/Instacart style)
+class LocationFeedbackNotifier extends StateNotifier<String?> {
+  Timer? _timer;
 
-Timer? _locationFeedbackTimer;
+  LocationFeedbackNotifier() : super(null);
 
-/// Triggers a brief, non-obtrusive confirmation badge in the header that automatically dissolves.
+  void trigger(String feedback) {
+    final clean = feedback.trim();
+    if (clean.isEmpty || !RegExp(r'\d').hasMatch(clean)) return;
+    _timer?.cancel();
+    state = clean;
+    _timer = Timer(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        state = null;
+      }
+    });
+  }
+
+  void clear() {
+    _timer?.cancel();
+    if (mounted) state = null;
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+}
+
+final recentLocationFeedbackProvider =
+    StateNotifierProvider<LocationFeedbackNotifier, String?>((ref) {
+  return LocationFeedbackNotifier();
+});
+
+/// Backward-compatible helper that delegates to LocationFeedbackNotifier
 void showLocationFeedback(WidgetRef ref, String feedbackText) {
-  _locationFeedbackTimer?.cancel();
-  ref.read(recentLocationFeedbackProvider.notifier).state = feedbackText;
-  _locationFeedbackTimer = Timer(const Duration(milliseconds: 2500), () {
-    ref.read(recentLocationFeedbackProvider.notifier).state = null;
-  });
+  ref.read(recentLocationFeedbackProvider.notifier).trigger(feedbackText);
 }
 

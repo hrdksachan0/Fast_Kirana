@@ -195,6 +195,31 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                   color: const Color(0xFFE11D48),
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          // Line 2: Location title + dropdown arrow + Distance Feedback Pill right next to it!
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  displayLoc,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(
+                                        context, 14.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: AppDesignSystem.textPrimary,
+                                    height: 1.15,
+                                    letterSpacing: 0,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              const Icon(Icons.keyboard_arrow_down_rounded,
+                                  size: 18, color: AppDesignSystem.textPrimary),
                               AnimatedSize(
                                 duration: const Duration(milliseconds: 300),
                                 curve: Curves.easeInOutCubic,
@@ -218,11 +243,15 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                       ),
                                     );
                                   },
-                                  child: recentFeedback != null
+                                  child: (recentFeedback != null &&
+                                          recentFeedback.trim().isNotEmpty &&
+                                          recentFeedback.trim() != 'km' &&
+                                          !recentFeedback.startsWith(' km') &&
+                                          RegExp(r'\d').hasMatch(recentFeedback))
                                       ? Container(
                                           key: const ValueKey('header_feedback_active'),
                                           margin: const EdgeInsets.only(left: 6),
-                                          padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFECFDF5),
                                             borderRadius: BorderRadius.circular(6),
@@ -243,7 +272,7 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                               Text(
                                                 recentFeedback,
                                                 style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 9.5,
+                                                  fontSize: 10,
                                                   fontWeight: FontWeight.w800,
                                                   color: const Color(0xFF065F46),
                                                 ),
@@ -254,31 +283,6 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                       : const SizedBox.shrink(key: ValueKey('header_feedback_empty')),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          // Line 2: Location title + dropdown arrow + Hub indicator pill
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  displayLoc,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: Responsive.scaledFontSize(
-                                        context, 14.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: AppDesignSystem.textPrimary,
-                                    height: 1.15,
-                                    letterSpacing: 0,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 3),
-                              const Icon(Icons.keyboard_arrow_down_rounded,
-                                  size: 18, color: AppDesignSystem.textPrimary),
                             ],
                           ),
                         ],

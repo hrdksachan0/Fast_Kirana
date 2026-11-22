@@ -6,7 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/utils/app_connectivity.dart';
 
 /// Blinkit / Apple Dynamic Island style floating capsule pill.
-/// Floats gracefully at the top center with zero content overlap and auto-dismisses smoothly.
+/// Floats gracefully below the status bar (safe from camera punch hole & icons)
+/// and auto-dismisses smoothly without permanently blocking the top UI.
 class ZeptoConnectivityPill extends ConsumerStatefulWidget {
   final VoidCallback? onRetry;
   const ZeptoConnectivityPill({super.key, this.onRetry});
@@ -20,6 +21,7 @@ class _ZeptoConnectivityPillState extends ConsumerState<ZeptoConnectivityPill>
     with SingleTickerProviderStateMixin {
   bool? _wasOnline;
   bool _showRecovery = false;
+  bool _showOffline = false;
   bool _isChecking = false;
   Timer? _dismissTimer;
 
@@ -42,18 +44,29 @@ class _ZeptoConnectivityPillState extends ConsumerState<ZeptoConnectivityPill>
       final online = connection.isOnline;
       if (online == _wasOnline) return;
       final recovered = _wasOnline == false && online;
+      final wentOffline = _wasOnline == true && !online;
       _wasOnline = online;
       _dismissTimer?.cancel();
       
       if (mounted) {
-        setState(() => _showRecovery = recovered);
+        setState(() {
+          _showRecovery = recovered;
+          _showOffline = wentOffline;
+        });
       }
       
       if (recovered) {
         widget.onRetry?.call();
-        _dismissTimer = Timer(const Duration(milliseconds: 2400), () {
+        _dismissTimer = Timer(const Duration(milliseconds: 2500), () {
           if (mounted) {
             setState(() => _showRecovery = false);
+          }
+        });
+      } else if (wentOffline) {
+        // Auto-dismiss offline floating pill after 4 seconds so it doesn't obstruct headers
+        _dismissTimer = Timer(const Duration(milliseconds: 4000), () {
+          if (mounted) {
+            setState(() => _showOffline = false);
           }
         });
       }
@@ -82,16 +95,17 @@ class _ZeptoConnectivityPillState extends ConsumerState<ZeptoConnectivityPill>
 
   @override
   Widget build(BuildContext context) {
-    final isOffline = _wasOnline == false;
-    final visible = isOffline || _showRecovery;
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final visible = _showOffline || _showRecovery;
 
     return Positioned(
-      top: 10,
-      left: 0,
-      right: 0,
+      // Respect hardware status bar & camera notch: guarantee 8px buffer below status bar
+      top: topPadding > 0 ? (topPadding + 8) : 12,
+      left: 16,
+      right: 16,
       child: Center(
         child: AnimatedSlide(
-          offset: visible ? Offset.zero : const Offset(0, -1.2),
+          offset: visible ? Offset.zero : const Offset(0, -1.5),
           duration: const Duration(milliseconds: 320),
           curve: Curves.easeOutBack,
           child: AnimatedOpacity(
@@ -100,7 +114,7 @@ class _ZeptoConnectivityPillState extends ConsumerState<ZeptoConnectivityPill>
             child: Material(
               color: Colors.transparent,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0F172A), // Sleek deep slate/black
                   borderRadius: BorderRadius.circular(24),

@@ -424,6 +424,7 @@ async def razorpay_webhook(
             target_order_id = combined_notes.get("order_id")
             sub_order_ids_str = combined_notes.get("sub_order_ids")
             combined_id = combined_notes.get("combined_id")
+            readable_id = combined_notes.get("readable_id")
 
             target_ids = []
             if sub_order_ids_str:
@@ -431,13 +432,19 @@ async def razorpay_webhook(
             elif target_order_id:
                 target_ids = [target_order_id]
 
-            if target_ids or combined_id:
-                query = select(Order).where(
-                    or_(
-                        Order.id.in_(target_ids) if target_ids else False,
-                        (Order.combinedId == combined_id) if combined_id else False
-                    )
-                )
+            filters = []
+            if target_ids:
+                filters.append(Order.id.in_(target_ids))
+                filters.append(Order.readableId.in_(target_ids))
+            if combined_id:
+                filters.append(Order.combinedId == combined_id)
+            if readable_id:
+                clean_rid = str(readable_id).strip()
+                filters.append(Order.readableId == clean_rid)
+                filters.append(Order.readableId.ilike(f"{clean_rid}%"))
+
+            if filters:
+                query = select(Order).where(or_(*filters))
                 res = await db.execute(query)
                 matched_orders = res.scalars().all()
 
@@ -455,12 +462,16 @@ async def razorpay_webhook(
                     try:
                         from utils.supabase_broadcast import broadcast_supabase_realtime
                         for o in matched_orders:
+                            topics = ["orders", f"order:{o.id}"]
+                            if o.deliveryUserId:
+                                topics.append(f"rider_{o.deliveryUserId}")
                             await broadcast_supabase_realtime(
-                                topics=["orders", f"order:{o.id}"],
+                                topics=topics,
                                 event="PAYMENT_RECEIVED",
                                 payload={
                                     "orderId": o.id,
                                     "paymentStatus": "PAID",
+                                    "paymentMethod": "ONLINE",
                                     "amount": amt,
                                     "paymentId": p_id,
                                     "isCombined": len(matched_orders) > 1,

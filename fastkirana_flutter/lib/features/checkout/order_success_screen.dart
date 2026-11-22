@@ -68,7 +68,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   Timer? _syncTimer;
   Timer? _autoRedirectTimer;
   Timer? _countdownTimer;
-  int _secondsRemaining = 2;
+  int _secondsRemaining = 5;
   bool _hasNavigated = false;
 
   @override
@@ -265,6 +265,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   }
 
   Future<void> _fetchLiveOrderStatus() async {
+    if (!mounted) return;
     final rawId = widget.orderId ?? widget.order?.id ?? widget.order?.readableId;
     if (rawId == null || rawId.isEmpty) return;
 

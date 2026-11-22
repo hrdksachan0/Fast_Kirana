@@ -184,7 +184,9 @@ class AppConnectivityObserver extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _epoch++;
-    _subscription?.cancel();
+    try {
+      _subscription?.cancel();
+    } catch (_) {}
     _offlineTimer?.cancel();
     _pollTimer?.cancel();
     if (_lifecycle != null) WidgetsBinding.instance.removeObserver(_lifecycle!);

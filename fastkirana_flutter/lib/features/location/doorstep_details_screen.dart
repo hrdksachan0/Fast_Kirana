@@ -394,11 +394,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Receiver Details',
+                      'RECEIVER DETAILS',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12.5),
+                        fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w800,
-                        color: slateDark,
+                        color: const Color(0xFF475569),
+                        letterSpacing: 0.4,
                       ),
                     ),
                     if (_useAccountDetails)
@@ -408,111 +409,122 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                           setState(() => _useAccountDetails = false);
                         },
                         child: Text(
-                          '+ Order for someone else',
+                          '+ Someone else',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 12),
+                            fontSize: Responsive.scaledFontSize(context, 11.5),
                             fontWeight: FontWeight.w700,
-                            color: primaryOrange,
+                            color: const Color(0xFFEA580C),
                           ),
                         ),
                       ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
                 _useAccountDetails
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppDesignSystem.green50,
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppDesignSystem.green200),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                           boxShadow: [
                             BoxShadow(
-                              color: AppDesignSystem.green600.withValues(alpha: 0.04),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
                             ),
                           ],
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: AppDesignSystem.green100,
-                                shape: BoxShape.circle,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              border: Border(
+                                left: BorderSide(color: Color(0xFF10B981), width: 3.5),
                               ),
-                              child: const Icon(Icons.check_rounded, color: AppDesignSystem.green600, size: 16),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
+                            padding: const EdgeInsets.fromLTRB(10, 9, 12, 9),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFD1FAE5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.check_rounded, color: Color(0xFF059669), size: 14),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        accountName,
-                                        style: GoogleFonts.inter(
-                                          fontSize: Responsive.scaledFontSize(context, 13.5),
-                                          fontWeight: FontWeight.w800,
-                                          color: AppDesignSystem.slate900,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: AppDesignSystem.green100,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          'YOU',
-                                          style: GoogleFonts.inter(
-                                            fontSize: Responsive.scaledFontSize(context, 9),
-                                            fontWeight: FontWeight.w900,
-                                            color: AppDesignSystem.green600,
+                                      Row(
+                                        children: [
+                                          Text(
+                                            accountName,
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 12.5),
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF0F172A),
+                                            ),
                                           ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFDCFCE7),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'YOU',
+                                              style: GoogleFonts.inter(
+                                                fontSize: Responsive.scaledFontSize(context, 9),
+                                                fontWeight: FontWeight.w800,
+                                                color: const Color(0xFF166534),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '$accountPhone • Updates sent here',
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 11),
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF64748B),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '📞 $accountPhone • Updates sent here',
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 11.5),
-                                      fontWeight: FontWeight.w600,
-                                      color: AppDesignSystem.green700,
+                                ),
+                                Bounceable(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() => _useAccountDetails = false);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: Text(
+                                      'Edit',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 11),
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF334155),
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                            Bounceable(
-                              onTap: () {
-                                HapticFeedback.selectionClick();
-                                setState(() => _useAccountDetails = false);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppDesignSystem.emerald200),
                                 ),
-                                child: Text(
-                                  'Edit',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 11.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: AppDesignSystem.green600,
-                                  ),
-                                ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       )
                     : Container(
@@ -703,11 +715,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
 
                 // 2. LOCATION DETAILS CARD (Swiggy Style)
                 Text(
-                  'Location Details',
+                  'LOCATION DETAILS',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w800,
-                    color: slateDark,
+                    color: const Color(0xFF475569),
+                    letterSpacing: 0.4,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -738,9 +751,9 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                         ),
                         child: Row(
                           children: [
-                            _buildCategoryPill('House', Icons.home_outlined),
-                            _buildCategoryPill('Office', Icons.business_outlined),
-                            _buildCategoryPill('Other', Icons.near_me_outlined),
+                            _buildCategoryPill('House', '🏠'),
+                            _buildCategoryPill('Office', '🏢'),
+                            _buildCategoryPill('Other', '📍'),
                           ],
                         ),
                       ),
@@ -845,7 +858,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                 ),
                                 decoration: InputDecoration(
                                   isDense: true,
-                                  hintText: 'Tap to enter House no, Flat, Floor, Landmark...',
+                                  hintText: 'Enter your address',
                                   hintStyle: GoogleFonts.inter(
                                     fontSize: Responsive.scaledFontSize(context, 12.5),
                                     fontWeight: FontWeight.w500,
@@ -889,17 +902,19 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(5),
+                              width: 26,
+                              height: 26,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFF7ED),
+                                color: const Color(0xFFFFEDD5),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.location_on_rounded, size: 16, color: primaryOrange),
+                              alignment: Alignment.center,
+                              child: const Text('📍', style: TextStyle(fontSize: 13)),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -907,11 +922,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Area / Locality',
+                                    'AREA / LOCALITY',
                                     style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 10),
+                                      fontSize: Responsive.scaledFontSize(context, 9.5),
                                       fontWeight: FontWeight.w600,
-                                      color: AppDesignSystem.slate500,
+                                      color: const Color(0xFF64748B),
+                                      letterSpacing: 0.3,
                                     ),
                                   ),
                                   const SizedBox(height: 1),
@@ -920,10 +936,9 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                     style: GoogleFonts.inter(
                                       fontSize: Responsive.scaledFontSize(context, 11.5),
                                       fontWeight: FontWeight.w700,
-                                      color: slateDark,
+                                      color: const Color(0xFF0F172A),
                                     ),
-                                    maxLines: 2,
-                                    softWrap: true,
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
@@ -960,12 +975,12 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
                         child: Row(
                           children: [
-                            const Icon(Icons.bookmark_outline_rounded, size: 17, color: Color(0xFF64748B)),
+                            const Text('🔖', style: TextStyle(fontSize: 14)),
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextField(
@@ -998,22 +1013,14 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                 const SizedBox(height: 12),
 
                 // 3. DELIVERY INSTRUCTIONS (Swiggy Style)
-                Row(
-                  children: [
-                    Text(
-                      'Delivery Instructions',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12.5),
-                        fontWeight: FontWeight.w800,
-                        color: slateDark,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '(Recommended)',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 11), color: slateMuted),
-                    ),
-                  ],
+                Text(
+                  'DELIVERY INSTRUCTIONS (OPTIONAL)',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF475569),
+                    letterSpacing: 0.4,
+                  ),
                 ),
                 const SizedBox(height: 6),
 
@@ -1024,7 +1031,6 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                     _buildInstructionChip('🚪 Leave at door'),
                     _buildInstructionChip('🔔 Don\'t ring bell'),
                     _buildInstructionChip('📞 Call before delivery'),
-                    _buildInstructionChip('🤫 Baby sleeping / Avoid calling'),
                   ],
                 ),
               ],
@@ -1095,7 +1101,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     );
   }
 
-  Widget _buildCategoryPill(String category, IconData icon) {
+  Widget _buildCategoryPill(String category, String emoji) {
     final isSelected = _selectedCategory == category;
 
     return Expanded(
@@ -1105,24 +1111,29 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 6.5),
           decoration: BoxDecoration(
-            color: isSelected ? AppDesignSystem.slate900 : Colors.transparent,
+            color: isSelected ? const Color(0xFF0F172A) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 15,
-                color: isSelected ? Colors.white : AppDesignSystem.slate500,
-              ),
+              Text(emoji, style: const TextStyle(fontSize: 13)),
               const SizedBox(width: 5),
               Text(
                 category,
                 style: GoogleFonts.inter(
                   fontSize: Responsive.scaledFontSize(context, 11.5),
-                  fontWeight: FontWeight.w800,
-                  color: isSelected ? Colors.white : AppDesignSystem.slate500,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
                 ),
               ),
             ],
@@ -1213,21 +1224,28 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppDesignSystem.orange50 : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? const Color(0xFFFEF2F2) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? primaryOrange : AppDesignSystem.slate200,
-            width: isSelected ? 1.4 : 1.0,
+            color: isSelected ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0),
+            width: 1.0,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Text(
           text,
           style: GoogleFonts.inter(
             fontSize: Responsive.scaledFontSize(context, 11),
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? primaryOrange : slateDark,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            color: isSelected ? const Color(0xFFDC2626) : const Color(0xFF334155),
           ),
         ),
       ),

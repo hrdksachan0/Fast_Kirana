@@ -1,6 +1,5 @@
 import '../core/theme/design_system.dart';
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../../core/services/logger_service.dart';
 import 'package:flutter/services.dart';
@@ -28,13 +27,23 @@ class FloatingOrderTrackingBar extends ConsumerStatefulWidget {
   ConsumerState<FloatingOrderTrackingBar> createState() => _FloatingOrderTrackingBarState();
 }
 
-class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTrackingBar> {
+class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTrackingBar>
+    with SingleTickerProviderStateMixin {
   Timer? _refreshTimer;
   RealtimeChannel? _ordersSubscription;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.35, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     _setupRealtimeAndPolling();
   }
 
@@ -97,6 +106,7 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
 
   @override
   void dispose() {
+    _pulseController.dispose();
     _refreshTimer?.cancel();
     if (_ordersSubscription != null) {
       try {
@@ -104,6 +114,45 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
       } catch (e, _) { LoggerService.error('FloatingOrderTrackingBar: silent catch', e); }
     }
     super.dispose();
+  }
+
+  double _getOrderProgress(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.adminPending:
+      case OrderStatus.pending:
+        return 0.20;
+      case OrderStatus.confirmed:
+        return 0.45;
+      case OrderStatus.packed:
+        return 0.72;
+      case OrderStatus.shipped:
+        return 0.92;
+      case OrderStatus.delivered:
+        return 1.0;
+      case OrderStatus.cancelled:
+        return 0.0;
+    }
+  }
+
+  String _getOrderSubtitle(Order order) {
+    switch (order.status) {
+      case OrderStatus.shipped:
+        return '🛵 Delivery partner on the way';
+      case OrderStatus.packed:
+        return '📦 Order packed & awaiting pickup';
+      case OrderStatus.confirmed:
+        return '⚡ Order confirmed • Preparing';
+      case OrderStatus.adminPending:
+        return '⏳ Verifying order details';
+      case OrderStatus.pending:
+        return '⏳ Order received • Confirming';
+      default:
+        final shop = order.shopName;
+        if (shop != null && shop.isNotEmpty) {
+          return shop.toLowerCase().contains('dark') ? '🏪 FastMinute Dark Store' : '🏪 $shop';
+        }
+        return '🏪 FastMinute Dark Store';
+    }
   }
 
   @override
@@ -124,6 +173,62 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
 
     final screenWidth = MediaQuery.of(context).size.width;
     final barWidth = (screenWidth * 0.92).clamp(280.0, 420.0);
+
+    // Dynamic styling based on order status
+    final Color dotColor;
+    final Color statusBgColor;
+    final Color statusBorderColor;
+    final Color statusTextColor;
+    final List<Color> iconGradient;
+    final Color iconBorder;
+    final String iconEmoji;
+
+    switch (latestOrder.status) {
+      case OrderStatus.shipped:
+        dotColor = const Color(0xFF0284C7);
+        statusBgColor = const Color(0xFFF0F9FF);
+        statusBorderColor = const Color(0xFFBAE6FD);
+        statusTextColor = const Color(0xFF0369A1);
+        iconGradient = const [Color(0xFFE0F2FE), Color(0xFFBAE6FD)];
+        iconBorder = const Color(0xFF7DD3FC);
+        iconEmoji = '🛵';
+        break;
+      case OrderStatus.packed:
+        dotColor = const Color(0xFFD97706);
+        statusBgColor = const Color(0xFFFFFBEB);
+        statusBorderColor = const Color(0xFFFDE68A);
+        statusTextColor = const Color(0xFFB45309);
+        iconGradient = const [Color(0xFFFEF3C7), Color(0xFFFDE68A)];
+        iconBorder = const Color(0xFFFCD34D);
+        iconEmoji = '📦';
+        break;
+      case OrderStatus.adminPending:
+        dotColor = const Color(0xFFEA580C);
+        statusBgColor = const Color(0xFFFFF7ED);
+        statusBorderColor = const Color(0xFFFED7AA);
+        statusTextColor = const Color(0xFFC2410C);
+        iconGradient = const [Color(0xFFFFEDD5), Color(0xFFFED7AA)];
+        iconBorder = const Color(0xFFFDBA74);
+        iconEmoji = '⏳';
+        break;
+      case OrderStatus.pending:
+        dotColor = const Color(0xFFD97706);
+        statusBgColor = const Color(0xFFFFFBEB);
+        statusBorderColor = const Color(0xFFFDE68A);
+        statusTextColor = const Color(0xFFB45309);
+        iconGradient = const [Color(0xFFFEF3C7), Color(0xFFFDE68A)];
+        iconBorder = const Color(0xFFFCD34D);
+        iconEmoji = '⏳';
+        break;
+      default: // confirmed / others
+        dotColor = const Color(0xFF16A34A);
+        statusBgColor = const Color(0xFFF0FDF4);
+        statusBorderColor = const Color(0xFFBBF7D0);
+        statusTextColor = const Color(0xFF15803D);
+        iconGradient = const [Color(0xFFDCFCE7), Color(0xFFBBF7D0)];
+        iconBorder = const Color(0xFF86EFAC);
+        iconEmoji = '⚡';
+    }
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 450),
@@ -156,58 +261,107 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                   FadeSlideRoute(page: OrderTrackingScreen(orderId: latestOrder.readableId ?? latestOrder.id)),
                 );
               },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.08),
-                          blurRadius: 20,
-                          offset: const Offset(0, 6),
-                        ),
-                        BoxShadow(
-                          color: const Color(0xFF00A344).withValues(alpha: 0.06),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    // 1. Deep ambient drop shadow lifting tracking bar off product list
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.16),
+                      blurRadius: 22,
+                      offset: const Offset(0, 8),
+                      spreadRadius: 0,
                     ),
-                    child: Row(
+                    // 2. Direct crisp elevation shadow
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                      spreadRadius: 0,
+                    ),
+                    // 3. Subtle live accent aura
+                    BoxShadow(
+                      color: dotColor.withValues(alpha: 0.12),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                      spreadRadius: -2,
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(17),
+                  child: Stack(
+                    children: [
+                      // Top live order micro-progress line
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 2.5,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final progress = _getOrderProgress(latestOrder.status);
+                            return Container(
+                              width: constraints.maxWidth,
+                              color: const Color(0xFFF1F5F9),
+                              alignment: Alignment.centerLeft,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 600),
+                                curve: Curves.easeOutCubic,
+                                width: constraints.maxWidth * progress,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      dotColor.withValues(alpha: 0.8),
+                                      dotColor,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Main Bar Content
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+                        child: Row(
                   children: [
                     // 1. Left Animated Status Icon Badge
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        color: AppDesignSystem.statusDelivered,
+                        gradient: LinearGradient(
+                          colors: iconGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppDesignSystem.emerald200,
-                          width: 1,
+                          color: iconBorder,
+                          width: 1.2,
                         ),
                       ),
                       child: Center(
                         child: Text(
-                          latestOrder.status == OrderStatus.shipped
-                              ? '🛵'
-                              : (latestOrder.status == OrderStatus.packed ? '📦' : '⚡'),
-                          style: TextStyle(fontSize: Responsive.scaledFontSize(context, 17)),
+                          iconEmoji,
+                          style: TextStyle(
+                            fontSize: Responsive.scaledFontSize(context, 18),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 9),
 
-                    // 2. Middle Content (Line 1: Order ID + Status Pill | Line 2: Store / ETA)
+                    // 2. Middle Content (Line 1: Order ID + Status Pill | Line 2: Contextual Status Subtitle)
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,40 +392,45 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                               ),
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: latestOrder.status == OrderStatus.adminPending
-                                      ? const Color(0xFFFFF7ED)
-                                      : AppDesignSystem.statusDelivered,
+                                  color: statusBgColor,
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: latestOrder.status == OrderStatus.adminPending
-                                        ? const Color(0xFFFED7AA)
-                                        : AppDesignSystem.emerald200,
+                                    color: statusBorderColor,
+                                    width: 1,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Container(
-                                      width: 5,
-                                      height: 5,
-                                      decoration: BoxDecoration(
-                                        color: latestOrder.status == OrderStatus.adminPending
-                                            ? const Color(0xFFEA580C)
-                                            : AppDesignSystem.success,
-                                        shape: BoxShape.circle,
-                                      ),
+                                    AnimatedBuilder(
+                                      animation: _pulseAnimation,
+                                      builder: (context, child) {
+                                        return Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: dotColor,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: dotColor.withValues(alpha: 0.6 * _pulseAnimation.value),
+                                                blurRadius: 4 + 4 * _pulseAnimation.value,
+                                                spreadRadius: 1 * _pulseAnimation.value,
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 4.5),
                                     Text(
                                       latestOrder.status.displayName,
                                       style: GoogleFonts.inter(
                                         fontSize: Responsive.scaledFontSize(context, 10),
                                         fontWeight: FontWeight.w800,
-                                        color: latestOrder.status == OrderStatus.adminPending
-                                            ? const Color(0xFFC2410C)
-                                            : AppDesignSystem.emerald600,
+                                        color: statusTextColor,
                                       ),
                                     ),
                                   ],
@@ -279,43 +438,37 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                               ),
                             ],
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 2.5),
 
-                          // Line 2: Store / Outlet Name
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '🏪 ${latestOrder.shopName != null && latestOrder.shopName!.isNotEmpty ? (latestOrder.shopName!.toLowerCase().contains('dark') ? 'FastMinute Dark Store' : latestOrder.shopName!) : (latestOrder.restaurantId != null ? 'Restaurant' : 'FastMinute Dark Store')}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10),
-                                    fontWeight: FontWeight.w600,
-                                    color: AppDesignSystem.slate500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                          // Line 2: Contextual Status Subtitle
+                          Text(
+                            _getOrderSubtitle(latestOrder),
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 10.5),
+                              fontWeight: FontWeight.w600,
+                              color: AppDesignSystem.slate600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
 
-                    // 3. Right: Compact Emerald Track Pill Button
+                    // 3. Right: Compact Vibrant Track Pill Button
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [AppDesignSystem.accent, AppDesignSystem.accentDark],
+                          colors: [Color(0xFF00B047), Color(0xFF008A38)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppDesignSystem.accent.withValues(alpha: 0.3),
+                            color: const Color(0xFF00B047).withValues(alpha: 0.38),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -327,26 +480,28 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
                           Text(
                             'Track',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               letterSpacing: 0.2,
                             ),
                           ),
-                          const SizedBox(width: 3),
-                          const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 12),
+                          const SizedBox(width: 3.5),
+                          const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 13),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     ),
   ),
+),
+),
 );
   }
 }
