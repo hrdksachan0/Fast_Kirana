@@ -684,38 +684,56 @@ OutletLocation getOutletLocation({
     }
   }
 
-  // 6. Dynamic Food Order / Non-Darkstore Outlet Fallback (Never mislabel food outlet as dark store!)
-  final isFoodOrder = (orderType?.toUpperCase() == 'RESTAURANT') ||
-      (restaurantId != null && restaurantId.trim().isNotEmpty) ||
-      (rawOrderMap != null &&
-          ((rawOrderMap['readableId']?.toString().toUpperCase().endsWith('-R') ?? false) ||
-              (rawOrderMap['orderType']?.toString().toUpperCase() == 'RESTAURANT') ||
-              (rawOrderMap['restaurantId'] != null && rawOrderMap['restaurantId'].toString().trim().isNotEmpty)));
+  // 6. Check for Explicit Grocery Order (NEVER misidentify FastMinute Grocery or Hub as restaurant!)
+  final isGroceryExplicit = (orderType?.toUpperCase() == 'GROCERY') ||
+      (rawOrderMap?['orderType']?.toString().toUpperCase() == 'GROCERY') ||
+      (rawOrderMap?['readableId']?.toString().toUpperCase().endsWith('-G') ?? false) ||
+      (shopName != null &&
+          (shopName.toLowerCase().contains('grocery') ||
+              shopName.toLowerCase().contains('dark store') ||
+              shopName.toLowerCase().contains('darkstore') ||
+              shopName.toLowerCase().contains('fastkirana') ||
+              shopName.toLowerCase().contains('fastminute') ||
+              shopName.toLowerCase().contains('central hub')));
 
-  final isCustomShop = shopName != null &&
+  // 7. Dynamic Food Order / Restaurant Outlet Fallback
+  final isFoodOrder = !isGroceryExplicit &&
+      ((orderType?.toUpperCase() == 'RESTAURANT') ||
+          (restaurantId != null && restaurantId.trim().isNotEmpty && restaurantId != 'null') ||
+          (rawOrderMap != null &&
+              ((rawOrderMap['readableId']?.toString().toUpperCase().endsWith('-R') ?? false) ||
+                  (rawOrderMap['orderType']?.toString().toUpperCase() == 'RESTAURANT') ||
+                  (rawOrderMap['restaurantId'] != null &&
+                      rawOrderMap['restaurantId'].toString().trim().isNotEmpty &&
+                      rawOrderMap['restaurantId'] != 'null'))));
+
+  final isCustomShop = !isGroceryExplicit &&
+      shopName != null &&
       shopName.trim().isNotEmpty &&
-      !shopName.toLowerCase().contains('dark store') &&
-      !shopName.toLowerCase().contains('fastkirana dark') &&
-      !shopName.toLowerCase().contains('fastkirana store');
+      RestaurantRegistry.find(shopName) != null;
 
   if (isFoodOrder || isCustomShop) {
-    final resolvedName = (isCustomShop ? shopName.trim() : null) ??
+    final matchedRest = RestaurantRegistry.find(restaurantId) ?? RestaurantRegistry.find(shopName);
+    final resolvedName = matchedRest?.name ?? (isCustomShop ? shopName!.trim() : null) ??
         (restaurantId != null ? 'Restaurant ($restaurantId)' : 'Food Kitchen');
 
-    final resolvedPhone = rawOrderMap?['shopPhone']?.toString().trim();
-    final resolvedAddress = rawOrderMap?['shopAddress']?.toString().trim() ??
+    final resolvedPhone = matchedRest?.phone ?? matchedRest?.ownerPhone ?? rawOrderMap?['shopPhone']?.toString().trim();
+    final resolvedAddress = matchedRest?.address ??
+        rawOrderMap?['shopAddress']?.toString().trim() ??
         rawOrderMap?['restaurantAddress']?.toString().trim() ??
         (resolvedName.toLowerCase().contains('pizza')
             ? 'Station Road Ghatampur'
-            : 'Ghatampur Market, UP');
+            : 'Main Market, Ghatampur, UP');
 
-    final double? shopLat = (rawOrderMap?['shopLat'] as num?)?.toDouble() ??
+    final double? shopLat = matchedRest?.lat ??
+        (rawOrderMap?['shopLat'] as num?)?.toDouble() ??
         (resolvedName.toLowerCase().contains('pizza') ? 26.1484783 : null);
-    final double? shopLng = (rawOrderMap?['shopLng'] as num?)?.toDouble() ??
+    final double? shopLng = matchedRest?.lng ??
+        (rawOrderMap?['shopLng'] as num?)?.toDouble() ??
         (resolvedName.toLowerCase().contains('pizza') ? 80.1667542 : null);
 
     return OutletLocation(
-      id: restaurantId ?? 'restaurant-outlet',
+      id: matchedRest?.id ?? restaurantId ?? 'restaurant-outlet',
       name: resolvedName,
       lat: shopLat ?? darkstoreLocation.lat,
       lng: shopLng ?? darkstoreLocation.lng,
@@ -725,7 +743,7 @@ OutletLocation getOutletLocation({
     );
   }
 
-  // 7. Default to FastKirana Dark Store ONLY for Grocery orders
+  // 8. Default to FastMinute Central Darkstore for Grocery orders
   return darkstoreLocation;
 }
 

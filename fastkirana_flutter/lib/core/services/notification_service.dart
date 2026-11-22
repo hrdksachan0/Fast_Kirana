@@ -696,6 +696,9 @@ class NotificationService {
 
   /// Stored target link for cold-launch from a tapped notification
   static String? pendingDeepLinkUrl;
+  static String? _lastNavigatedLink;
+  static int _lastNavigatedEpoch = 0;
+  static Timer? _pendingNavTimer;
 
   /// Centralized link router for push notification taps and deep links
   static void navigateToLink(String rawUrl) {
@@ -732,31 +735,64 @@ class NotificationService {
       link = '/$link';
     }
 
-    debugPrint('[NotificationService] Navigating to link: $link');
+    // 3. Normalize route aliases to canonical paths
+    if (link == '/admin' || link == '/admin/orders' || link == '/admin/dashboard' || link == '/store-manager') {
+      link = '/admin-orders';
+    }
 
-    final nav = AppRouter.navigatorKey.currentState;
-    if (nav == null) {
-      debugPrint('[NotificationService] Navigator not ready, queued pending link: $link');
-      pendingDeepLinkUrl = link;
-      for (final delayMs in [300, 700, 1500, 2500]) {
-        Future.delayed(Duration(milliseconds: delayMs), () {
-          final retryNav = AppRouter.navigatorKey.currentState;
-          if (retryNav != null && pendingDeepLinkUrl == link) {
-            pendingDeepLinkUrl = null;
-            debugPrint('[NotificationService] Executing delayed navigation to: $link');
-            try {
-              retryNav.pushNamed(link);
-            } catch (e) {
-              debugPrint('[NotificationService] Delayed navigation error: $e');
-            }
-          }
-        });
-      }
+    // 4. Strict Debounce: Drop duplicate navigation calls within 2000ms
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (_lastNavigatedLink == link && (now - _lastNavigatedEpoch) < 2000) {
+      debugPrint('[NotificationService] Suppressed duplicate navigation to $link (debounced)');
       return;
     }
 
+    // 5. Route Guard: Never push duplicate screen if user is ALREADY viewing that screen
+    final currentRoute = AppRouteObserver.currentRoute;
+    if (currentRoute != null) {
+      if (currentRoute == link) {
+        debugPrint('[NotificationService] Already on route $link, skipping redundant push');
+        return;
+      }
+      if (link == '/admin-orders' && (currentRoute == '/admin-orders' || currentRoute.startsWith('/admin'))) {
+        debugPrint('[NotificationService] Already on admin screen ($currentRoute), skipping redundant push');
+        return;
+      }
+    }
+
+    final nav = AppRouter.navigatorKey.currentState;
+    if (nav == null) {
+      debugPrint('[NotificationService] Navigator not ready, storing pending link: $link');
+      pendingDeepLinkUrl = link;
+      
+      // Single controlled timer instead of uncoordinated loop of timers
+      _pendingNavTimer?.cancel();
+      _pendingNavTimer = Timer(const Duration(milliseconds: 600), () {
+        final retryNav = AppRouter.navigatorKey.currentState;
+        if (retryNav != null && pendingDeepLinkUrl == link) {
+          pendingDeepLinkUrl = null;
+          navigateToLink(link);
+        }
+      });
+      return;
+    }
+
+    _pendingNavTimer?.cancel();
+    _pendingNavTimer = null;
+    pendingDeepLinkUrl = null;
+
+    _lastNavigatedLink = link;
+    _lastNavigatedEpoch = now;
+
+    debugPrint('[NotificationService] Navigating to link: $link');
+
     try {
-      nav.pushNamed(link);
+      // For major root-level staff destinations, avoid stacking duplicate instances on top of each other
+      if (link == '/admin-orders' || link == '/delivery' || link == '/kitchen') {
+        nav.pushNamedAndRemoveUntil(link, (route) => route.settings.name == '/home' || route.isFirst);
+      } else {
+        nav.pushNamed(link);
+      }
     } catch (e) {
       debugPrint('[NotificationService] Navigation failed: $e');
     }
