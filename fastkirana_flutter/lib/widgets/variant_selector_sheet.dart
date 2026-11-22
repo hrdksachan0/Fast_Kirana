@@ -400,9 +400,40 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                               );
                             }
 
-                            // 3+ variants: Horizontal Carousel / Slider with BIG cards
-                            final double cardWidth = (constraints.maxWidth * 0.44).clamp(145.0, 165.0);
-                            const double spacing = 10.0;
+                            if (variants.length == 3) {
+                              // Exactly 3 variants: Display all 3 side-by-side on screen without horizontal scroll
+                              const spacing = 8.0;
+                              final availableWidth = constraints.maxWidth;
+                              final cardWidth = (availableWidth - 2 * spacing) / 3;
+
+                              return SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: List.generate(variants.length, (index) {
+                                      final v = variants[index];
+                                      final isSelected = index == _selectedVariantIndex;
+                                      final isSoldOut = v.stock <= 0;
+
+                                      return Padding(
+                                        padding: EdgeInsets.only(right: index < variants.length - 1 ? spacing : 0),
+                                        child: SizedBox(
+                                          width: cardWidth,
+                                          child: _buildFoodVariantItem(context, v, index, isSelected, isSoldOut, true, isVeg),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            // 4+ variants: Show 3 full cards + 4th card peeking horizontally
+                            const double spacing = 8.0;
+                            final double cardWidth = ((constraints.maxWidth - 2 * spacing) / 3.15).clamp(100.0, 125.0);
 
                             return SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
@@ -754,6 +785,13 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
     bool isCompact,
     bool isVeg,
   ) {
+    final hasImg = widget.product.imageUrl != null && widget.product.imageUrl!.isNotEmpty;
+    final imgUrl = hasImg
+        ? (widget.product.imageUrl!.startsWith('/')
+            ? 'https://www.fastkirana.in${widget.product.imageUrl!}'
+            : widget.product.imageUrl!)
+        : null;
+
     return InkWell(
       onTap: isSoldOut
           ? null
@@ -763,12 +801,15 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 _selectedVariantIndex = index;
               });
             },
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(isCompact ? 14 : 16),
       child: Container(
-        padding: EdgeInsets.all(isCompact ? 8 : 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 6 : 10,
+          vertical: isCompact ? 7 : 10,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFFFF9FA) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(isCompact ? 14 : 16),
           border: Border.all(
             color: isSelected ? const Color(0xFFE20A22) : const Color(0xFFE2E8F0),
             width: isSelected ? 1.8 : 1.0,
@@ -785,10 +826,11 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            // 1. Top Row: Veg/Non-Veg Badge & Radio Indicator
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _VegNonVegBadge(isVeg: isVeg, size: isCompact ? 13 : 15),
+                _VegNonVegBadge(isVeg: isVeg, size: isCompact ? 12 : 14),
                 Container(
                   width: isCompact ? 16 : 18,
                   height: isCompact ? 16 : 18,
@@ -816,18 +858,55 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+
+            const SizedBox(height: 6),
+
+            // 2. Food / Dish Image Thumbnail
+            Container(
+              height: isCompact ? 60 : 74,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: imgUrl != null
+                    ? Transform.scale(
+                        scale: 1.05,
+                        child: CachedNetworkImage(
+                          imageUrl: imgUrl,
+                          fit: BoxFit.contain,
+                          memCacheWidth: 200,
+                          memCacheHeight: 200,
+                          errorWidget: (_, __, ___) => Center(
+                            child: Text(isVeg ? '🍕' : '🍗', style: TextStyle(fontSize: isCompact ? 24 : 30)),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(isVeg ? '🍕' : '🍗', style: TextStyle(fontSize: isCompact ? 24 : 30)),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            // 3. Variant / Portion Name
             Text(
               v.name,
               style: GoogleFonts.inter(
-                fontSize: isCompact ? 12 : 13.5,
+                fontSize: isCompact ? 11.5 : 13,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
                 color: isSoldOut ? const Color(0xFF9CA3AF) : const Color(0xFF0F172A),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+
+            const SizedBox(height: 2),
+
+            // 4. Price & MRP Row
             if (isSoldOut)
               Text(
                 'Sold Out',
@@ -838,13 +917,31 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 ),
               )
             else
-              Text(
-                '₹${v.price.toInt()}',
-                style: GoogleFonts.inter(
-                  fontSize: isCompact ? 13.5 : 15,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0F172A),
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '₹${v.price.toInt()}',
+                    style: GoogleFonts.inter(
+                      fontSize: isCompact ? 13 : 14.5,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  if (v.mrp > v.price) ...[
+                    const SizedBox(width: 3),
+                    Text(
+                      '₹${v.mrp.toInt()}',
+                      style: GoogleFonts.inter(
+                        fontSize: isCompact ? 9.5 : 11,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.lineThrough,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
+                ],
               ),
           ],
         ),
