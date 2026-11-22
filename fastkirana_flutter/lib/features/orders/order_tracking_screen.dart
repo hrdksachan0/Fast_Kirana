@@ -110,6 +110,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   late AnimationController _riderAnimController;
   // Animation controller for flowing/pulsing animated Polyline tween
   late AnimationController _polyTweenController;
+  // Ambient breathing pulse for live status card and radar aura
+  late AnimationController _heroPulseController;
+  late Animation<double> _heroPulseAnim;
   final List<LatLng> _coveredPolylinePoints = [];
   LatLng? _prevRiderPosition;
   LatLng? _targetRiderPosition;
@@ -143,6 +146,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..addListener(_onPolyTweenTick);
+
+    _heroPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+
+    _heroPulseAnim = Tween<double>(begin: 0.94, end: 1.06).animate(
+      CurvedAnimation(parent: _heroPulseController, curve: Curves.easeInOut),
+    );
 
     if (widget.initialOrder != null) {
       _order = widget.initialOrder;
@@ -190,6 +202,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     } catch (_) {}
     try {
       _polyTweenController.dispose();
+    } catch (_) {}
+    try {
+      _heroPulseController.dispose();
     } catch (_) {}
     try {
       _confettiController.dispose();
@@ -989,25 +1004,21 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  /// Polyline tween animation tick: modulates dash and gap lengths dynamically during active delivery
+  /// Polyline tween animation tick: modulates soft ambient glow pulse beneath the solid line
   void _onPolyTweenTick() {
     if (!mounted || _polylines.isEmpty) return;
     if (_order?.status != OrderStatus.shipped && _order?.status != OrderStatus.packed) return;
 
     final t = _polyTweenController.value;
-    final dashLen = 8.0 + 6.0 * math.sin(t * 2 * math.pi);
-    final gapLen = 6.0 + 3.0 * math.cos(t * 2 * math.pi);
+    final alpha = (0.16 + 0.12 * math.sin(t * 2 * math.pi)).clamp(0.12, 0.32);
 
-    final activeRoute = _polylines.firstWhereOrNull((p) => p.polylineId.value == 'delivery_route');
-    if (activeRoute != null) {
+    final shadowRoute = _polylines.firstWhereOrNull((p) => p.polylineId.value == 'delivery_route_shadow');
+    if (shadowRoute != null) {
       setState(() {
-        _polylines.removeWhere((p) => p.polylineId.value == 'delivery_route');
+        _polylines.removeWhere((p) => p.polylineId.value == 'delivery_route_shadow');
         _polylines.add(
-          activeRoute.copyWith(
-            patternsParam: [
-              PatternItem.dash(dashLen.clamp(6.0, 16.0)),
-              PatternItem.gap(gapLen.clamp(4.0, 10.0)),
-            ],
+          shadowRoute.copyWith(
+            colorParam: const Color(0xFF00C853).withValues(alpha: alpha),
           ),
         );
       });
@@ -1059,31 +1070,23 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         );
       }
 
-      final t = _polyTweenController.value;
-      final dashLen = 8.0 + 6.0 * math.sin(t * 2 * math.pi);
-      final gapLen = 6.0 + 3.0 * math.cos(t * 2 * math.pi);
-
       _polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: remainingPoints,
-          color: const Color(0xFF00A344), // Swiggy/Zomato vibrant emerald active line
+          color: const Color(0xFF00C853), // Electric emerald solid active line (Zero cut dashes!)
           width: 5,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
-          patterns: [
-            PatternItem.dash(dashLen.clamp(6.0, 16.0)),
-            PatternItem.gap(gapLen.clamp(4.0, 10.0)),
-          ],
         ),
       );
       _polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route_shadow'),
           points: remainingPoints,
-          color: const Color(0xFF00A344).withValues(alpha: 0.22),
-          width: 9,
+          color: const Color(0xFF00C853).withValues(alpha: 0.22),
+          width: 10,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
@@ -1193,20 +1196,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: _roadPolylinePoints,
-          color: const Color(0xFF2563EB),
-          width: 4,
+          color: const Color(0xFF00C853), // Electric emerald continuous route (Zero cuts/dashes!)
+          width: 5,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
-          patterns: [PatternItem.dash(12), PatternItem.gap(8)],
         ),
       );
       _polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route_shadow'),
           points: _roadPolylinePoints,
-          color: const Color(0xFF2563EB).withValues(alpha: 0.18),
-          width: 8,
+          color: const Color(0xFF00C853).withValues(alpha: 0.24),
+          width: 10,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
@@ -1359,17 +1361,16 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           ),
         );
       }
-      // Main route line (Swiggy / Zomato vibrant emerald line)
+      // Main route line (Electric emerald continuous ribbon)
       polylines.add(
         Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: polylineCoords,
-          color: const Color(0xFF00A344),
+          color: const Color(0xFF00C853),
           width: 5,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
-          patterns: [PatternItem.dash(12), PatternItem.gap(8)],
         ),
       );
       // Subtle ambient shadow line underneath
@@ -1377,8 +1378,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         Polyline(
           polylineId: const PolylineId('delivery_route_shadow'),
           points: polylineCoords,
-          color: const Color(0xFF00A344).withValues(alpha: 0.22),
-          width: 9,
+          color: const Color(0xFF00C853).withValues(alpha: 0.24),
+          width: 10,
           jointType: JointType.round,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
@@ -1778,275 +1779,321 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           ),
                         ),
 
-                        // ── 2. BOTTOM SLIDING CONTENT SHEET (56% height when collapsed) ──
+                        // ── 2. BOTTOM SLIDING CONTENT SHEET (Animated Slide & Fade Transition) ──
                         if (!_isMapExpanded)
                           Expanded(
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color(0x140F172A),
-                                    blurRadius: 18,
-                                    offset: Offset(0, -4),
-                                  ),
-                                ],
-                              ),
-                              child: SingleChildScrollView(
-                                physics: const BouncingScrollPhysics(),
-                                padding: EdgeInsets.fromLTRB(
-                                  Responsive.horizontalPadding(context).clamp(12.0, 20.0),
-                                  6,
-                                  Responsive.horizontalPadding(context).clamp(12.0, 20.0),
-                                  36,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    // Subtle Drag Handle Pill
-                                    Center(
-                                      child: Container(
-                                        width: 38,
-                                        height: 4.5,
-                                        margin: const EdgeInsets.only(top: 4, bottom: 10),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFCBD5E1),
-                                          borderRadius: BorderRadius.circular(3),
-                                        ),
+                            child: AnimatedSlide(
+                              offset: _isMapExpanded ? const Offset(0, 1) : Offset.zero,
+                              duration: const Duration(milliseconds: 320),
+                              curve: Curves.easeInOutCubic,
+                              child: AnimatedOpacity(
+                                opacity: _isMapExpanded ? 0.0 : 1.0,
+                                duration: const Duration(milliseconds: 240),
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x140F172A),
+                                        blurRadius: 18,
+                                        offset: Offset(0, -4),
                                       ),
-                                    ),
-
-                                    // Offline Network Recovery Banner
-                                    OfflineBanner(
-                                      onRetry: () {
-                                        _fetchLiveOrder();
-                                      },
-                                      offlineText: 'Offline • Live tracking paused',
-                                      onlineText: 'Back Online • Live tracking updated',
-                                    ),
-
-                                    // Pay Online Banner (if unpaid COD)
-                                    if (!isPaid && !isDelivered && _order?.deliveryMethod != 'PICKUP') ...[
-                                      TrackingPaymentCard(
-                                        order: _order,
-                                        isProcessingPayment: _isProcessingPayment,
-                                        statusStep: statusStep,
-                                        onPayOnline: _payOrderOnline,
-                                        onSwitchToCOD: _confirmAndSwitchToCOD,
-                                      ),
-                                      const SizedBox(height: 12),
                                     ],
-
-                                    // 🌟 Hero Live Status & Accurate ETA Card (Blinkit/Zepto Ultra-Clean White Style)
-                                    Builder(
-                                      builder: (context) {
-                                        String heroTitle;
-                                        String heroSubtitle;
-                                        IconData heroIcon;
-                                        Color heroAccent;
-                                        String statusBadgeText;
-
-                                        final riderName = _order?.deliveryBoyName?.trim().isNotEmpty == true
-                                            ? _order!.deliveryBoyName!.trim()
-                                            : (_order?.deliveryUser?.name?.trim().isNotEmpty == true
-                                                ? _order!.deliveryUser!.name!.trim()
-                                                : '');
-
-                                        if (statusStep >= 3) {
-                                          // Out for Delivery (SHIPPED)
-                                          heroAccent = const Color(0xFF16A34A);
-                                          heroIcon = Icons.two_wheeler_rounded;
-                                          statusBadgeText = 'ON THE WAY';
-
-                                          if (_etaText.isNotEmpty && _etaText != 'Delivered 🎉') {
-                                            heroTitle = _etaText == 'Arriving now' ? 'Arriving Now!' : 'Arriving in $_etaText';
-                                            final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
-                                            heroSubtitle = riderName.isNotEmpty
-                                                ? (isAtDoorstep
-                                                    ? '$riderName has arrived at your doorstep • Live GPS'
-                                                    : '$riderName is on the way • ${_distanceText.isNotEmpty ? '$_distanceText • ' : ''}Live GPS')
-                                                : (_distanceText.isNotEmpty
-                                                    ? (isAtDoorstep
-                                                        ? 'Rider has arrived at your doorstep • Live GPS'
-                                                        : (_distanceText.toLowerCase().contains('away')
-                                                            ? '$_distanceText • Live GPS Tracking'
-                                                            : '$_distanceText away • Live GPS Tracking'))
-                                                    : 'Rider is on the way to your doorstep');
-                                          } else if (_order?.estimatedDelivery != null && _order!.estimatedDelivery!.isAfter(DateTime.now())) {
-                                            final est = _order!.estimatedDelivery!;
-                                            final hourMin = "${est.hour > 12 ? est.hour - 12 : (est.hour == 0 ? 12 : est.hour)}:${est.minute.toString().padLeft(2, '0')} ${est.hour >= 12 ? 'PM' : 'AM'}";
-                                            heroTitle = 'Expected by $hourMin';
-                                            heroSubtitle = riderName.isNotEmpty
-                                                ? '$riderName is delivering your order'
-                                                : 'Rider is heading to your doorstep';
-                                          } else {
-                                            heroTitle = 'Out for Delivery';
-                                            final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
-                                            heroSubtitle = riderName.isNotEmpty
-                                                ? (isAtDoorstep
-                                                    ? '$riderName has arrived at your doorstep • Live GPS'
-                                                    : '$riderName is on the way • ${_distanceText.isNotEmpty ? _distanceText : 'Live GPS'}')
-                                                : (_distanceText.isNotEmpty
-                                                    ? (isAtDoorstep
-                                                        ? 'Rider has arrived at your doorstep • Live GPS'
-                                                        : (_distanceText.toLowerCase().contains('away')
-                                                            ? '$_distanceText • On the way'
-                                                            : '$_distanceText away • On the way'))
-                                                    : 'Rider is heading to your doorstep');
-                                          }
-                                        } else if (statusStep == 2) {
-                                          // Packed / Rider Assigned
-                                          heroAccent = const Color(0xFF0284C7);
-                                          heroIcon = Icons.inventory_2_rounded;
-                                          statusBadgeText = 'PACKED';
-                                          heroTitle = 'Order Packed';
-                                          heroSubtitle = riderName.isNotEmpty
-                                              ? '$riderName is assigned & picking up package'
-                                              : 'Delivery partner is picking up your package';
-                                        } else if (statusStep == 1) {
-                                          // Confirmed & Preparing
-                                          heroAccent = const Color(0xFF059669);
-                                          heroIcon = Icons.check_circle_outline_rounded;
-                                          statusBadgeText = 'CONFIRMED';
-                                          heroTitle = 'Order Confirmed';
-                                          heroSubtitle = 'Store accepted your order & preparing dispatch';
-                                        } else {
-                                          // Admin & Store Verification (statusStep == 0)
-                                          heroAccent = const Color(0xFFD97706);
-                                          heroIcon = Icons.fact_check_outlined;
-                                          statusBadgeText = 'VERIFYING';
-                                          heroTitle = 'Store Verification';
-                                          final rawShop = _order?.shopName?.trim();
-                                          final storeName = (rawShop != null && rawShop.isNotEmpty)
-                                              ? rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute')
-                                              : 'Ghatampur Hub';
-                                          heroSubtitle = '$storeName is verifying stock & freshness';
-                                        }
-
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(
-                                              color: heroAccent.withValues(alpha: 0.28),
-                                              width: 1.2,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: heroAccent.withValues(alpha: 0.08),
-                                                blurRadius: 16,
-                                                offset: const Offset(0, 3),
-                                              ),
-                                              BoxShadow(
-                                                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 1),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 38,
-                                                height: 38,
-                                                decoration: BoxDecoration(
-                                                  color: heroAccent.withValues(alpha: 0.10),
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: heroAccent.withValues(alpha: 0.22),
-                                                    width: 1.2,
-                                                  ),
-                                                ),
-                                                child: Center(
-                                                  child: Icon(heroIcon, color: heroAccent, size: 20),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Wrap(
-                                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                                      spacing: 6,
-                                                      runSpacing: 3,
-                                                      children: [
-                                                        Text(
-                                                          heroTitle,
-                                                          style: GoogleFonts.inter(
-                                                            fontSize: Responsive.scaledFontSize(context, 14.5),
-                                                            fontWeight: FontWeight.w900,
-                                                            color: const Color(0xFF0F172A),
-                                                            letterSpacing: -0.3,
-                                                          ),
-                                                        ),
-                                                        Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                          decoration: BoxDecoration(
-                                                            color: heroAccent.withValues(alpha: 0.12),
-                                                            borderRadius: BorderRadius.circular(6),
-                                                          ),
-                                                          child: Text(
-                                                            statusBadgeText,
-                                                            style: GoogleFonts.inter(
-                                                              fontSize: Responsive.scaledFontSize(context, 9.0),
-                                                              fontWeight: FontWeight.w800,
-                                                              color: heroAccent,
-                                                              letterSpacing: 0.4,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Row(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Container(
-                                                          margin: const EdgeInsets.only(top: 4),
-                                                          width: 5,
-                                                          height: 5,
-                                                          decoration: BoxDecoration(
-                                                            color: heroAccent,
-                                                            shape: BoxShape.circle,
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: heroAccent.withValues(alpha: 0.5),
-                                                                blurRadius: 3,
-                                                                spreadRadius: 1,
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        const SizedBox(width: 5),
-                                                        Expanded(
-                                                          child: Text(
-                                                            heroSubtitle,
-                                                            style: GoogleFonts.inter(
-                                                              fontSize: Responsive.scaledFontSize(context, 11.0),
-                                                              fontWeight: FontWeight.w600,
-                                                              color: const Color(0xFF475569),
-                                                              letterSpacing: -0.1,
-                                                              height: 1.25,
-                                                            ),
-                                                            maxLines: 2,
-                                                            overflow: TextOverflow.ellipsis,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
+                                  ),
+                                  child: SingleChildScrollView(
+                                    physics: const BouncingScrollPhysics(),
+                                    padding: EdgeInsets.fromLTRB(
+                                      Responsive.horizontalPadding(context).clamp(12.0, 20.0),
+                                      6,
+                                      Responsive.horizontalPadding(context).clamp(12.0, 20.0),
+                                      36,
                                     ),
-                                    const SizedBox(height: 12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        // Subtle Animated Drag Handle Pill
+                                        Center(
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 250),
+                                            width: 38,
+                                            height: 4.5,
+                                            margin: const EdgeInsets.only(top: 4, bottom: 10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFCBD5E1),
+                                              borderRadius: BorderRadius.circular(3),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.04),
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Offline Network Recovery Banner
+                                        OfflineBanner(
+                                          onRetry: () {
+                                            _fetchLiveOrder();
+                                          },
+                                          offlineText: 'Offline • Live tracking paused',
+                                          onlineText: 'Back Online • Live tracking updated',
+                                        ),
+
+                                        // Pay Online Banner (if unpaid COD)
+                                        if (!isPaid && !isDelivered && _order?.deliveryMethod != 'PICKUP') ...[
+                                          TrackingPaymentCard(
+                                            order: _order,
+                                            isProcessingPayment: _isProcessingPayment,
+                                            statusStep: statusStep,
+                                            onPayOnline: _payOrderOnline,
+                                            onSwitchToCOD: _confirmAndSwitchToCOD,
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
+
+                                        // 🌟 Hero Live Status & Accurate ETA Card (Blinkit/Zepto Ultra-Clean White Style)
+                                        Builder(
+                                          builder: (context) {
+                                            String heroTitle;
+                                            String heroSubtitle;
+                                            IconData heroIcon;
+                                            Color heroAccent;
+                                            String statusBadgeText;
+
+                                            final riderName = _order?.deliveryBoyName?.trim().isNotEmpty == true
+                                                ? _order!.deliveryBoyName!.trim()
+                                                : (_order?.deliveryUser?.name?.trim().isNotEmpty == true
+                                                    ? _order!.deliveryUser!.name!.trim()
+                                                    : '');
+
+                                            if (statusStep >= 3) {
+                                              // Out for Delivery (SHIPPED)
+                                              heroAccent = const Color(0xFF16A34A);
+                                              heroIcon = Icons.two_wheeler_rounded;
+                                              statusBadgeText = 'ON THE WAY';
+
+                                              if (_etaText.isNotEmpty && _etaText != 'Delivered 🎉') {
+                                                heroTitle = _etaText == 'Arriving now' ? 'Arriving Now!' : 'Arriving in $_etaText';
+                                                final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
+                                                heroSubtitle = riderName.isNotEmpty
+                                                    ? (isAtDoorstep
+                                                        ? '$riderName has arrived at your doorstep • Live GPS'
+                                                        : '$riderName is on the way • ${_distanceText.isNotEmpty ? '$_distanceText • ' : ''}Live GPS')
+                                                    : (_distanceText.isNotEmpty
+                                                        ? (isAtDoorstep
+                                                            ? 'Rider has arrived at your doorstep • Live GPS'
+                                                            : (_distanceText.toLowerCase().contains('away')
+                                                                ? '$_distanceText • Live GPS Tracking'
+                                                                : '$_distanceText away • Live GPS Tracking'))
+                                                        : 'Rider is on the way to your doorstep');
+                                              } else if (_order?.estimatedDelivery != null && _order!.estimatedDelivery!.isAfter(DateTime.now())) {
+                                                final est = _order!.estimatedDelivery!;
+                                                final hourMin = "${est.hour > 12 ? est.hour - 12 : (est.hour == 0 ? 12 : est.hour)}:${est.minute.toString().padLeft(2, '0')} ${est.hour >= 12 ? 'PM' : 'AM'}";
+                                                heroTitle = 'Expected by $hourMin';
+                                                heroSubtitle = riderName.isNotEmpty
+                                                    ? '$riderName is delivering your order'
+                                                    : 'Rider is heading to your doorstep';
+                                              } else {
+                                                heroTitle = 'Out for Delivery';
+                                                final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
+                                                heroSubtitle = riderName.isNotEmpty
+                                                    ? (isAtDoorstep
+                                                        ? '$riderName has arrived at your doorstep • Live GPS'
+                                                        : '$riderName is on the way • ${_distanceText.isNotEmpty ? _distanceText : 'Live GPS'}')
+                                                    : (_distanceText.isNotEmpty
+                                                        ? (isAtDoorstep
+                                                            ? 'Rider has arrived at your doorstep • Live GPS'
+                                                            : (_distanceText.toLowerCase().contains('away')
+                                                                ? '$_distanceText • On the way'
+                                                                : '$_distanceText away • On the way'))
+                                                        : 'Rider is heading to your doorstep');
+                                              }
+                                            } else if (statusStep == 2) {
+                                              // Packed / Rider Assigned
+                                              heroAccent = const Color(0xFF0284C7);
+                                              heroIcon = Icons.inventory_2_rounded;
+                                              statusBadgeText = 'PACKED';
+                                              heroTitle = 'Order Packed';
+                                              heroSubtitle = riderName.isNotEmpty
+                                                  ? '$riderName is assigned & picking up package'
+                                                  : 'Delivery partner is picking up your package';
+                                            } else if (statusStep == 1) {
+                                              // Confirmed & Preparing
+                                              heroAccent = const Color(0xFF059669);
+                                              heroIcon = Icons.check_circle_outline_rounded;
+                                              statusBadgeText = 'CONFIRMED';
+                                              heroTitle = 'Order Confirmed';
+                                              heroSubtitle = 'Store accepted your order & preparing dispatch';
+                                            } else {
+                                              // Admin & Store Verification (statusStep == 0)
+                                              heroAccent = const Color(0xFFD97706);
+                                              heroIcon = Icons.fact_check_outlined;
+                                              statusBadgeText = 'VERIFYING';
+                                              heroTitle = 'Store Verification';
+                                              final rawShop = _order?.shopName?.trim();
+                                              final storeName = (rawShop != null && rawShop.isNotEmpty)
+                                                  ? rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute')
+                                                  : 'Ghatampur Hub';
+                                              heroSubtitle = '$storeName is verifying stock & freshness';
+                                            }
+
+                                            return Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(16),
+                                                border: Border.all(
+                                                  color: heroAccent.withValues(alpha: 0.28),
+                                                  width: 1.2,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: heroAccent.withValues(alpha: 0.08),
+                                                    blurRadius: 16,
+                                                    offset: const Offset(0, 3),
+                                                  ),
+                                                  BoxShadow(
+                                                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                                    blurRadius: 6,
+                                                    offset: const Offset(0, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  // Live Animated Breathing Icon Aura
+                                                  AnimatedBuilder(
+                                                    animation: _heroPulseAnim,
+                                                    builder: (context, _) => Transform.scale(
+                                                      scale: _heroPulseAnim.value,
+                                                      child: Container(
+                                                        width: 38,
+                                                        height: 38,
+                                                        decoration: BoxDecoration(
+                                                          color: heroAccent.withValues(alpha: 0.12),
+                                                          shape: BoxShape.circle,
+                                                          border: Border.all(
+                                                            color: heroAccent.withValues(alpha: 0.28),
+                                                            width: 1.2,
+                                                          ),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: heroAccent.withValues(alpha: 0.20),
+                                                              blurRadius: 8 * _heroPulseAnim.value,
+                                                              spreadRadius: 1.0,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Center(
+                                                          child: Icon(heroIcon, color: heroAccent, size: 20),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Wrap(
+                                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                                          spacing: 6,
+                                                          runSpacing: 3,
+                                                          children: [
+                                                            AnimatedSwitcher(
+                                                              duration: const Duration(milliseconds: 300),
+                                                              transitionBuilder: (child, anim) => FadeTransition(
+                                                                opacity: anim,
+                                                                child: SlideTransition(
+                                                                  position: Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero).animate(anim),
+                                                                  child: child,
+                                                                ),
+                                                              ),
+                                                              child: Text(
+                                                                heroTitle,
+                                                                key: ValueKey(heroTitle),
+                                                                style: GoogleFonts.inter(
+                                                                  fontSize: Responsive.scaledFontSize(context, 14.5),
+                                                                  fontWeight: FontWeight.w900,
+                                                                  color: const Color(0xFF0F172A),
+                                                                  letterSpacing: -0.3,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                              decoration: BoxDecoration(
+                                                                color: heroAccent.withValues(alpha: 0.12),
+                                                                borderRadius: BorderRadius.circular(6),
+                                                              ),
+                                                              child: Text(
+                                                                statusBadgeText,
+                                                                style: GoogleFonts.inter(
+                                                                  fontSize: Responsive.scaledFontSize(context, 9.0),
+                                                                  fontWeight: FontWeight.w800,
+                                                                  color: heroAccent,
+                                                                  letterSpacing: 0.4,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(height: 2),
+                                                        Row(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            AnimatedBuilder(
+                                                              animation: _heroPulseAnim,
+                                                              builder: (context, _) => Container(
+                                                                margin: const EdgeInsets.only(top: 4),
+                                                                width: 5.5,
+                                                                height: 5.5,
+                                                                decoration: BoxDecoration(
+                                                                  color: heroAccent,
+                                                                  shape: BoxShape.circle,
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                      color: heroAccent.withValues(alpha: 0.5 * _heroPulseAnim.value),
+                                                                      blurRadius: 4 * _heroPulseAnim.value,
+                                                                      spreadRadius: 1.2,
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(width: 5),
+                                                            Expanded(
+                                                              child: AnimatedSwitcher(
+                                                                duration: const Duration(milliseconds: 300),
+                                                                child: Text(
+                                                                  heroSubtitle,
+                                                                  key: ValueKey(heroSubtitle),
+                                                                  style: GoogleFonts.inter(
+                                                                    fontSize: Responsive.scaledFontSize(context, 11.0),
+                                                                    fontWeight: FontWeight.w600,
+                                                                    color: const Color(0xFF475569),
+                                                                    letterSpacing: -0.1,
+                                                                    height: 1.25,
+                                                                  ),
+                                                                  maxLines: 2,
+                                                                  overflow: TextOverflow.ellipsis,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
 
                                     // Store Preparing Card (displayed during preparing / confirmed stages)
                                     if (statusStep < 3) ...[
@@ -2158,8 +2205,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                               ),
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                      ),
+                  ],
+                ),
 
           // Minimalist Luxury CRED-Style Celebration Confetti
           Align(

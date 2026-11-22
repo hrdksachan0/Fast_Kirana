@@ -67,50 +67,6 @@ class TrackingMapView extends StatelessWidget {
     this.onToggleExpand,
   });
 
-  Widget _buildRouteStep({
-    required String emoji,
-    required String label,
-    required Color color,
-    required BuildContext context,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.9),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 11)),
-          const SizedBox(width: 4),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 85),
-            child: Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: Responsive.scaledFontSize(context, 10.0),
-                fontWeight: FontWeight.w800,
-                color: color,
-                letterSpacing: -0.1,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArrow() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 3),
-      child: Icon(Icons.chevron_right_rounded, size: 13, color: Color(0xFF64748B)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final rawShop = order?.shopName ?? 'FastMinute Store';
@@ -124,6 +80,21 @@ class TrackingMapView extends StatelessWidget {
     final String badgeSubtitle = isOutForDelivery
         ? (distanceText.isNotEmpty ? '$distanceText • Live GPS' : 'FastMinute Express')
         : 'Direct Store to Home Route';
+
+    // Outlet display name
+    final rawName = primaryOutlet?.name ?? shopName;
+    String displayStoreName = rawName;
+    final lower = displayStoreName.toLowerCase();
+    if (lower.contains('dark store') || lower.contains('fastkirana') || lower.contains('fastminute')) {
+      displayStoreName = 'FastMinute';
+    } else if (lower.contains('a.s') || lower.contains('as ')) {
+      displayStoreName = 'A.S. Rest';
+    } else if (lower.contains('wedson')) {
+      displayStoreName = 'Wedson';
+    } else if (lower.contains('bal udyan') || lower.contains('baludyan')) {
+      displayStoreName = 'Bal Udyan';
+    }
+    final isRest = primaryOutlet?.isRestaurant == true;
 
     return RepaintBoundary(
       child: Stack(
@@ -168,7 +139,7 @@ class TrackingMapView extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.18),
+                      Colors.black.withValues(alpha: 0.16),
                       Colors.transparent,
                     ],
                   ),
@@ -184,7 +155,7 @@ class TrackingMapView extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.95),
+                color: Colors.white.withValues(alpha: 0.96),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
                 boxShadow: [
@@ -243,7 +214,7 @@ class TrackingMapView extends StatelessWidget {
             ),
           ),
 
-          // ── 4. Floating Action Controls (Bottom-Right of Map) ──
+          // ── 4. Floating Action Controls Column (Bottom-Right of Map) ──
           Positioned(
             bottom: 14,
             right: 14,
@@ -258,7 +229,7 @@ class TrackingMapView extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.95),
+                        color: Colors.white.withValues(alpha: 0.96),
                         shape: BoxShape.circle,
                         border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
                         boxShadow: [
@@ -308,101 +279,151 @@ class TrackingMapView extends StatelessWidget {
             ),
           ),
 
-          // ── 5. Compact Floating Route Trail Pill (Bottom-Left of Map) ──
+          // ── 5. Structured, Unified Route Progress Pill (Bottom Safe Dock, never collides with FAB) ──
           Positioned(
             bottom: 14,
             left: 14,
+            right: 68, // Leaves 68px safe clearance for the FABs on the right!
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.94),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
+                color: Colors.white.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(19),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: order?.isCombined == true
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildRouteStep(
-                          emoji: '🛒',
-                          label: 'Darkstore',
-                          color: const Color(0xFF15803D),
-                          context: context,
+              child: Row(
+                children: [
+                  // Origin Store Icon & Label
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: (isRest ? const Color(0xFF7C3AED) : const Color(0xFF059669)).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
                         ),
-                        _buildArrow(),
-                        _buildRouteStep(
-                          emoji: '🍽️',
-                          label: restaurantOutlet?.name ?? 'Kitchen',
-                          color: const Color(0xFF7C3AED),
-                          context: context,
+                        child: Center(
+                          child: Icon(
+                            isRest ? Icons.restaurant_rounded : Icons.storefront_rounded,
+                            size: 11,
+                            color: isRest ? const Color(0xFF7C3AED) : const Color(0xFF059669),
+                          ),
                         ),
-                        _buildArrow(),
-                        _buildRouteStep(
-                          emoji: isOutForDelivery ? '🛵' : '📦',
-                          label: isOutForDelivery ? 'Rider' : 'Packed',
-                          color: const Color(0xFFEA580C),
-                          context: context,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        displayStoreName,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
                         ),
-                        _buildArrow(),
-                        _buildRouteStep(
-                          emoji: '🏠',
-                          label: 'Home',
-                          color: const Color(0xFFDC2626),
-                          context: context,
-                        ),
-                      ],
-                    )
-                  : Builder(
-                      builder: (context) {
-                        final rawName = primaryOutlet?.name ?? shopName;
-                        String displayStoreName = rawName;
-                        final lower = displayStoreName.toLowerCase();
-                        if (lower.contains('dark store') || lower.contains('fastkirana') || lower.contains('fastminute')) {
-                          displayStoreName = 'FastMinute';
-                        } else if (lower.contains('a.s') || lower.contains('as ')) {
-                          displayStoreName = 'A.S. Restaurant';
-                        } else if (lower.contains('wedson')) {
-                          displayStoreName = 'Wedson';
-                        } else if (lower.contains('bal udyan') || lower.contains('baludyan')) {
-                          displayStoreName = 'Bal Udyan';
-                        }
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
 
-                        final isRest = primaryOutlet?.isRestaurant == true;
-
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildRouteStep(
-                              emoji: isRest ? '🍽️' : '🏪',
-                              label: displayStoreName,
-                              color: isRest ? const Color(0xFF7C3AED) : const Color(0xFF15803D),
-                              context: context,
+                  // Connecting Progress Bar
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Base road line
+                          Container(
+                            height: 2.5,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(1.5),
                             ),
-                            _buildArrow(),
-                            _buildRouteStep(
-                              emoji: isOutForDelivery ? '🛵' : '📦',
-                              label: isOutForDelivery ? 'On the Way' : 'Preparing',
-                              color: isOutForDelivery ? const Color(0xFFEA580C) : const Color(0xFF0284C7),
-                              context: context,
+                          ),
+                          // Active animated colored line
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: isOutForDelivery ? 0.70 : (statusStep >= 2 ? 0.45 : 0.20),
+                              child: Container(
+                                height: 2.5,
+                                decoration: BoxDecoration(
+                                  color: isOutForDelivery ? const Color(0xFF10B981) : const Color(0xFF0284C7),
+                                  borderRadius: BorderRadius.circular(1.5),
+                                ),
+                              ),
                             ),
-                            _buildArrow(),
-                            _buildRouteStep(
-                              emoji: '🏠',
-                              label: 'Home',
-                              color: const Color(0xFFDC2626),
-                              context: context,
+                          ),
+                          // Middle Icon (Motorbike or Package)
+                          Center(
+                            child: Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: isOutForDelivery ? const Color(0xFF10B981) : const Color(0xFF0284C7),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isOutForDelivery ? const Color(0xFF10B981) : const Color(0xFF0284C7)).withValues(alpha: 0.4),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  isOutForDelivery ? Icons.two_wheeler_rounded : Icons.inventory_2_rounded,
+                                  size: 10,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                          ],
-                        );
-                      },
+                          ),
+                        ],
+                      ),
                     ),
+                  ),
+
+                  // Destination Home Icon & Label
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE11D48).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.home_rounded,
+                            size: 11,
+                            color: Color(0xFFE11D48),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Home',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
