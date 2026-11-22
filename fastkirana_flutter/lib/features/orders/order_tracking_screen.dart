@@ -104,6 +104,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   final CFPaymentGatewayService _cfService = CFPaymentGatewayService();
   bool _isProcessingPayment = false;
   bool _isCancelling = false;
+  bool _isMapExpanded = false;
 
   // Animation controller for smooth rider marker movement
   late AnimationController _riderAnimController;
@@ -125,7 +126,6 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   bool _hasPlayedArrivalChime = false;
 
   static const Color primaryRed = Color(0xFFE20A22);
-  static const Color brandGreen = Color(0xFF00A344);
   static const Color slateDark = Color(0xFF0F172A);
   static const Color slateMuted = Color(0xFF64748B);
 
@@ -571,14 +571,34 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     HapticFeedback.lightImpact();
     final isPaid = _order?.paymentStatus == 'PAID';
     final totalAmount = _order?.total ?? 0.0;
-    final rawReadable = _order?.readableId?.trim();
-    final displayNum = (rawReadable != null && rawReadable.isNotEmpty)
-        ? rawReadable
-        : (_order?.displayId ?? widget.orderId).trim();
-    final cleanRaw = displayNum.replaceAll('#', '').trim();
-    final cleanDisplayId = cleanRaw.isNotEmpty
-        ? (cleanRaw.startsWith('FK-') ? '#$cleanRaw' : '#FK-$cleanRaw')
-        : '#ORDER';
+    String resolveCleanTrackingId() {
+      final rawReadable = _order?.readableId?.trim();
+      if (rawReadable != null &&
+          rawReadable.isNotEmpty &&
+          !rawReadable.toLowerCase().contains('ord') &&
+          rawReadable.length <= 10) {
+        final clean = rawReadable.replaceAll('#', '').replaceAll('FK-', '').trim();
+        return clean.startsWith('FK-') ? '#$clean' : '#FK-$clean';
+      }
+      final rawDisplay = _order?.displayId.replaceAll('#', '').trim() ?? '';
+      if (rawDisplay.isNotEmpty &&
+          !rawDisplay.toLowerCase().contains('ord') &&
+          rawDisplay.length <= 10) {
+        return rawDisplay.startsWith('FK-') ? '#$rawDisplay' : '#FK-$rawDisplay';
+      }
+      final raw = widget.orderId.replaceAll('#', '').replaceAll('FK-', '').trim();
+      final clean = raw.replaceAll('order_', '').replaceAll('ord_', '').replaceAll('_', '').trim();
+      final digits = clean.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length >= 4) {
+        return '#FK-${digits.substring(digits.length - 4)}';
+      }
+      if (clean.length >= 4) {
+        return '#FK-${clean.substring(clean.length - 4).toUpperCase()}';
+      }
+      return '#FK-$clean';
+    }
+
+    final cleanDisplayId = resolveCleanTrackingId();
 
     final cancelReason = await SwiggyCancelBottomSheet.show(
       context: context,
@@ -1480,14 +1500,34 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     final isDelivered = (_order?.status == OrderStatus.delivered || statusStep >= 4) &&
         (_order?.subOrders == null || _order!.subOrders!.isEmpty || _order!.subOrders!.where((s) => s.status != OrderStatus.cancelled).every((s) => s.status == OrderStatus.delivered));
     final isPaid = _order?.paymentStatus == 'PAID';
-    final rawReadable = _order?.readableId?.trim();
-    final displayNum = (rawReadable != null && rawReadable.isNotEmpty)
-        ? rawReadable
-        : (_order?.displayId ?? widget.orderId).trim();
-    final cleanRaw = displayNum.replaceAll('#', '').trim();
-    final cleanDisplayId = cleanRaw.isNotEmpty
-        ? (cleanRaw.startsWith('FK-') ? '#$cleanRaw' : '#FK-$cleanRaw')
-        : '#ORDER';
+    String resolveCleanTrackingId() {
+      final rawReadable = _order?.readableId?.trim();
+      if (rawReadable != null &&
+          rawReadable.isNotEmpty &&
+          !rawReadable.toLowerCase().contains('ord') &&
+          rawReadable.length <= 10) {
+        final clean = rawReadable.replaceAll('#', '').replaceAll('FK-', '').trim();
+        return clean.startsWith('FK-') ? '#$clean' : '#FK-$clean';
+      }
+      final rawDisplay = _order?.displayId.replaceAll('#', '').trim() ?? '';
+      if (rawDisplay.isNotEmpty &&
+          !rawDisplay.toLowerCase().contains('ord') &&
+          rawDisplay.length <= 10) {
+        return rawDisplay.startsWith('FK-') ? '#$rawDisplay' : '#FK-$rawDisplay';
+      }
+      final raw = widget.orderId.replaceAll('#', '').replaceAll('FK-', '').trim();
+      final clean = raw.replaceAll('order_', '').replaceAll('ord_', '').replaceAll('_', '').trim();
+      final digits = clean.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length >= 4) {
+        return '#FK-${digits.substring(digits.length - 4)}';
+      }
+      if (clean.length >= 4) {
+        return '#FK-${clean.substring(clean.length - 4).toUpperCase()}';
+      }
+      return '#FK-$clean';
+    }
+
+    final cleanDisplayId = resolveCleanTrackingId();
     final isPreConfirmation = (_order?.status == OrderStatus.pending || _order?.status == OrderStatus.adminPending);
     // User requested rule: Can freely cancel as long as admin/store has not verified/accepted order
     final canCancel = isPreConfirmation &&
@@ -1620,393 +1660,506 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         children: [
           _isLoading
               ? _buildTrackingSkeleton(context)
-              : ResponsiveContainer(
-                  maxWidth: Responsive.defaultMaxContentWidth,
-                  fillHeight: true,
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context).clamp(12.0, 20.0), 10, Responsive.horizontalPadding(context).clamp(12.0, 20.0), 36),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Offline Network Recovery Banner
-                        OfflineBanner(
-                          onRetry: () {
-                            _fetchLiveOrder();
-                          },
-                          offlineText: 'Offline • Live tracking paused',
-                          onlineText: 'Back Online • Live tracking updated',
-                        ),
+              : (isDelivered || isCancelled)
+                  ? ResponsiveContainer(
+                      maxWidth: Responsive.defaultMaxContentWidth,
+                      fillHeight: true,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context).clamp(12.0, 20.0), 10, Responsive.horizontalPadding(context).clamp(12.0, 20.0), 36),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Offline Network Recovery Banner
+                            OfflineBanner(
+                              onRetry: () {
+                                _fetchLiveOrder();
+                              },
+                              offlineText: 'Offline • Live tracking paused',
+                              onlineText: 'Back Online • Live tracking updated',
+                            ),
 
-                        // 0. Cancelled Order Alert Card
-                        if (isCancelled) ...[
-                          const TrackingCancelCard(),
-                          const SizedBox(height: 14),
-                        ] else ...[
-                          // Pay Online Banner (if unpaid COD)
-                          if (!isPaid && !isDelivered && _order?.deliveryMethod != 'PICKUP') ...[
-                            TrackingPaymentCard(
+                            // Cancelled Order Alert Card
+                            if (isCancelled) ...[
+                              const TrackingCancelCard(),
+                              const SizedBox(height: 14),
+                            ],
+
+                            // Refund Notice Card (If applicable)
+                            if ((_order?.refundAmount ?? 0) > 0 || ((_order?.notes ?? '').toLowerCase().contains('refund'))) ...[
+                              TrackingRefundNoticeCard(order: _order),
+                              const SizedBox(height: 11),
+                            ],
+
+                            // Gift Card Share & Live Tracking Card (When order is a gift or has gift card)
+                            if (_isGiftOrder(_order)) ...[
+                              _buildTrackingGiftShareCard(_order!),
+                              const SizedBox(height: 11),
+                            ],
+
+                            // Multi-Stage Order Stepper (Live status, ETA & milestones)
+                            TrackingStatusStepper(
                               order: _order,
-                              isProcessingPayment: _isProcessingPayment,
                               statusStep: statusStep,
-                              onPayOnline: _payOrderOnline,
-                              onSwitchToCOD: _confirmAndSwitchToCOD,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-
-                          // 🌟 Hero Live Status & Accurate ETA Card (Blinkit/Zepto Ultra-Clean White Style)
-                          if (!isDelivered && !isCancelled) ...[
-                            Builder(
-                              builder: (context) {
-                                String heroTitle;
-                                String heroSubtitle;
-                                IconData heroIcon;
-                                Color heroAccent;
-                                String statusBadgeText;
-
-                                final riderName = _order?.deliveryBoyName?.trim().isNotEmpty == true
-                                    ? _order!.deliveryBoyName!.trim()
-                                    : (_order?.deliveryUser?.name?.trim().isNotEmpty == true
-                                        ? _order!.deliveryUser!.name!.trim()
-                                        : '');
-
-                                if (statusStep >= 3) {
-                                  // Out for Delivery (SHIPPED)
-                                  heroAccent = const Color(0xFF16A34A);
-                                  heroIcon = Icons.two_wheeler_rounded;
-                                  statusBadgeText = 'ON THE WAY';
-
-                                  if (_etaText.isNotEmpty && _etaText != 'Delivered 🎉') {
-                                    heroTitle = _etaText == 'Arriving now' ? 'Arriving Now!' : 'Arriving in $_etaText';
-                                    final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
-                                    heroSubtitle = riderName.isNotEmpty
-                                        ? (isAtDoorstep
-                                            ? '$riderName has arrived at your doorstep • Live GPS'
-                                            : '$riderName is on the way • ${_distanceText.isNotEmpty ? '$_distanceText • ' : ''}Live GPS')
-                                        : (_distanceText.isNotEmpty
-                                            ? (isAtDoorstep
-                                                ? 'Rider has arrived at your doorstep • Live GPS'
-                                                : (_distanceText.toLowerCase().contains('away')
-                                                    ? '$_distanceText • Live GPS Tracking'
-                                                    : '$_distanceText away • Live GPS Tracking'))
-                                            : 'Rider is on the way to your doorstep');
-                                  } else if (_order?.estimatedDelivery != null && _order!.estimatedDelivery!.isAfter(DateTime.now())) {
-                                    final est = _order!.estimatedDelivery!;
-                                    final hourMin = "${est.hour > 12 ? est.hour - 12 : (est.hour == 0 ? 12 : est.hour)}:${est.minute.toString().padLeft(2, '0')} ${est.hour >= 12 ? 'PM' : 'AM'}";
-                                    heroTitle = 'Expected by $hourMin';
-                                    heroSubtitle = riderName.isNotEmpty
-                                        ? '$riderName is delivering your order'
-                                        : 'Rider is heading to your doorstep';
-                                  } else {
-                                    heroTitle = 'Out for Delivery';
-                                    final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
-                                    heroSubtitle = riderName.isNotEmpty
-                                        ? (isAtDoorstep
-                                            ? '$riderName has arrived at your doorstep • Live GPS'
-                                            : '$riderName is on the way • ${_distanceText.isNotEmpty ? _distanceText : 'Live GPS'}')
-                                        : (_distanceText.isNotEmpty
-                                            ? (isAtDoorstep
-                                                ? 'Rider has arrived at your doorstep • Live GPS'
-                                                : (_distanceText.toLowerCase().contains('away')
-                                                    ? '$_distanceText • On the way'
-                                                    : '$_distanceText away • On the way'))
-                                            : 'Rider is heading to your doorstep');
-                                  }
-                                } else if (statusStep == 2) {
-                                  // Packed / Rider Assigned
-                                  heroAccent = const Color(0xFF0284C7);
-                                  heroIcon = Icons.inventory_2_rounded;
-                                  statusBadgeText = 'PACKED';
-                                  heroTitle = 'Order Packed';
-                                  heroSubtitle = riderName.isNotEmpty
-                                      ? '$riderName is assigned & picking up package'
-                                      : 'Delivery partner is picking up your package';
-                                } else if (statusStep == 1) {
-                                  // Confirmed & Preparing
-                                  heroAccent = const Color(0xFF059669);
-                                  heroIcon = Icons.check_circle_outline_rounded;
-                                  statusBadgeText = 'CONFIRMED';
-                                  heroTitle = 'Order Confirmed';
-                                  heroSubtitle = 'Store accepted your order & preparing dispatch';
-                                } else {
-                                  // Admin & Store Verification (statusStep == 0)
-                                  heroAccent = const Color(0xFFD97706);
-                                  heroIcon = Icons.fact_check_outlined;
-                                  statusBadgeText = 'VERIFYING';
-                                  heroTitle = 'Store Verification';
-                                  final rawShop = _order?.shopName?.trim();
-                                  final storeName = (rawShop != null && rawShop.isNotEmpty)
-                                      ? rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute')
-                                      : 'Ghatampur Hub';
-                                  heroSubtitle = '$storeName is verifying stock & freshness';
-                                }
-
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: heroAccent.withValues(alpha: 0.28),
-                                      width: 1.2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: heroAccent.withValues(alpha: 0.08),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                      BoxShadow(
-                                        color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 38,
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          color: heroAccent.withValues(alpha: 0.10),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: heroAccent.withValues(alpha: 0.22),
-                                            width: 1.2,
-                                          ),
-                                        ),
-                                        child: Center(
-                                          child: Icon(heroIcon, color: heroAccent, size: 20),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Wrap(
-                                              crossAxisAlignment: WrapCrossAlignment.center,
-                                              spacing: 6,
-                                              runSpacing: 3,
-                                              children: [
-                                                Text(
-                                                  heroTitle,
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: Responsive.scaledFontSize(context, 14.5),
-                                                    fontWeight: FontWeight.w900,
-                                                    color: const Color(0xFF0F172A),
-                                                    letterSpacing: -0.3,
-                                                  ),
-                                                ),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: heroAccent.withValues(alpha: 0.12),
-                                                    borderRadius: BorderRadius.circular(6),
-                                                  ),
-                                                  child: Text(
-                                                    statusBadgeText,
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: Responsive.scaledFontSize(context, 9.0),
-                                                      fontWeight: FontWeight.w800,
-                                                      color: heroAccent,
-                                                      letterSpacing: 0.4,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Container(
-                                                  margin: const EdgeInsets.only(top: 4),
-                                                  width: 5,
-                                                  height: 5,
-                                                  decoration: BoxDecoration(
-                                                    color: heroAccent,
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: heroAccent.withValues(alpha: 0.5),
-                                                        blurRadius: 3,
-                                                        spreadRadius: 1,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 5),
-                                                Expanded(
-                                                  child: Text(
-                                                    heroSubtitle,
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: Responsive.scaledFontSize(context, 11.0),
-                                                      fontWeight: FontWeight.w600,
-                                                      color: const Color(0xFF475569),
-                                                      letterSpacing: -0.1,
-                                                      height: 1.25,
-                                                    ),
-                                                    maxLines: 2,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-
-                          // 1. Google Maps Viewport (ONLY WHEN DISPATCHED / OUT FOR DELIVERY)
-                          if (statusStep >= 3 && !isDelivered) ...[
-                            TrackingMapView(
-                              initialTarget: initialTarget,
                               isDelivered: isDelivered,
-                              order: _order,
-                              markers: _markers,
-                              polylines: _polylines,
-                              circles: _circles,
-                              primaryOutlet: _primaryOutlet,
-                              restaurantOutlet: _restaurantOutlet,
-                              onMapCreated: (controller) {
-                                _mapController = controller;
-                                Future.delayed(const Duration(milliseconds: 400), () {
-                                  if (mounted) _fitMapBounds();
-                                });
-                              },
-                              onZoomIn: () {
-                                HapticFeedback.lightImpact();
-                                _mapController?.animateCamera(CameraUpdate.zoomIn());
-                              },
-                              onZoomOut: () {
-                                HapticFeedback.lightImpact();
-                                _mapController?.animateCamera(CameraUpdate.zoomOut());
-                              },
-                              onFitBounds: () {
-                                HapticFeedback.lightImpact();
-                                _fitMapBounds();
-                              },
+                              isCancelled: isCancelled,
+                              cleanDisplayId: cleanDisplayId,
+                              etaText: _etaText,
+                              distanceText: _distanceText,
                             ),
                             const SizedBox(height: 11),
-                          ] else if (!isDelivered && statusStep > 0) ...[
-                            TrackingPreparingCard(order: _order),
-                            const SizedBox(height: 11),
+
+                            // Delivery Address Card
+                            if (_order?.deliveryMethod != 'PICKUP') ...[
+                              TrackingDestinationCard(order: _order),
+                              const SizedBox(height: 12),
+                            ],
+
+                            // Order Items & Receipt Card (Bill Details)
+                            TrackingReceiptCard(order: _order),
+                            const SizedBox(height: 14),
+
+                            // Review Card (If delivered)
+                            if (isDelivered) ...[
+                              TrackingReviewCard(order: _order),
+                              const SizedBox(height: 12),
+                            ],
                           ],
-                        ],
-
-                        // Refund Notice Card (If applicable)
-                        if ((_order?.refundAmount ?? 0) > 0 || ((_order?.notes ?? '').toLowerCase().contains('refund'))) ...[
-                          TrackingRefundNoticeCard(order: _order),
-                          const SizedBox(height: 11),
-                        ],
-
-                        // Gift Card Share & Live Tracking Card (When order is a gift or has gift card)
-                        if (_isGiftOrder(_order)) ...[
-                          _buildTrackingGiftShareCard(_order!),
-                          const SizedBox(height: 11),
-                        ],
-
-                        // 2. Rider Profile & Contact Card (When Assigned/Out for Delivery)
-                        if (statusStep >= 2 && !isDelivered && !isCancelled) ...[
-                          TrackingRiderCard(order: _order),
-                          const SizedBox(height: 11),
-                        ],
-
-                        // 3. Multi-Stage Order Stepper (Live status, ETA & milestones)
-                        TrackingStatusStepper(
-                          order: _order,
-                          statusStep: statusStep,
-                          isDelivered: isDelivered,
-                          isCancelled: isCancelled,
-                          cleanDisplayId: cleanDisplayId,
-                          etaText: _etaText,
-                          distanceText: _distanceText,
                         ),
-                        const SizedBox(height: 11),
-
-                        // Pre-Confirmation Cancel Option Banner (5-min window)
-                        if (canCancel) ...[
-                          TrackingCancelBanner(
-                            isCancelling: _isCancelling,
-                            onCancel: _confirmAndCancelOrder,
-                            createdAt: _order?.createdAt,
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        // ── 1. HERO MAP VIEWPORT (Blinkit / Zepto Style, Top 44% or Fullscreen) ──
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOutCubic,
+                          height: _isMapExpanded
+                              ? (MediaQuery.sizeOf(context).height - MediaQuery.paddingOf(context).top - kToolbarHeight)
+                              : (MediaQuery.sizeOf(context).height * 0.44).clamp(280.0, 420.0),
+                          child: TrackingMapView(
+                            initialTarget: initialTarget,
+                            isDelivered: isDelivered,
+                            order: _order,
+                            markers: _markers,
+                            polylines: _polylines,
+                            circles: _circles,
+                            primaryOutlet: _primaryOutlet,
+                            restaurantOutlet: _restaurantOutlet,
+                            etaText: _etaText,
+                            distanceText: _distanceText,
+                            statusStep: statusStep,
+                            isMapExpanded: _isMapExpanded,
+                            onToggleExpand: () {
+                              HapticFeedback.mediumImpact();
+                              setState(() => _isMapExpanded = !_isMapExpanded);
+                              Future.delayed(const Duration(milliseconds: 350), () {
+                                if (mounted) _fitMapBounds();
+                              });
+                            },
+                            onMapCreated: (controller) {
+                              _mapController = controller;
+                              Future.delayed(const Duration(milliseconds: 350), () {
+                                if (mounted) _fitMapBounds();
+                              });
+                            },
+                            onZoomIn: () {
+                              HapticFeedback.lightImpact();
+                              _mapController?.animateCamera(CameraUpdate.zoomIn());
+                            },
+                            onZoomOut: () {
+                              HapticFeedback.lightImpact();
+                              _mapController?.animateCamera(CameraUpdate.zoomOut());
+                            },
+                            onFitBounds: () {
+                              HapticFeedback.lightImpact();
+                              _fitMapBounds();
+                            },
                           ),
-                          const SizedBox(height: 11),
-                        ],
+                        ),
 
-                        // 4. Delivery Address Card
-                        if (_order?.deliveryMethod != 'PICKUP') ...[
-                          TrackingDestinationCard(order: _order),
-                          const SizedBox(height: 12),
-                        ],
+                        // ── 2. BOTTOM SLIDING CONTENT SHEET (56% height when collapsed) ──
+                        if (!_isMapExpanded)
+                          Expanded(
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0x140F172A),
+                                    blurRadius: 18,
+                                    offset: Offset(0, -4),
+                                  ),
+                                ],
+                              ),
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(
+                                  Responsive.horizontalPadding(context).clamp(12.0, 20.0),
+                                  6,
+                                  Responsive.horizontalPadding(context).clamp(12.0, 20.0),
+                                  36,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    // Subtle Drag Handle Pill
+                                    Center(
+                                      child: Container(
+                                        width: 38,
+                                        height: 4.5,
+                                        margin: const EdgeInsets.only(top: 4, bottom: 10),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFCBD5E1),
+                                          borderRadius: BorderRadius.circular(3),
+                                        ),
+                                      ),
+                                    ),
 
-                        // 5. Sponsored Partner Ad Banner (Placed between Address and Bill Details)
-                        Consumer(
-                          builder: (context, ref, _) {
-                            final bannersAsync = ref.watch(bannersProvider('sponsored_ad'));
-                            return bannersAsync.when(
-                              data: (banners) {
-                                final activeBanner = banners.where((b) => b.isActive).firstOrNull;
-                                if (activeBanner != null) {
-                                  final extra = activeBanner.extraData;
-                                  final discountTag = extra?['discountText']?.toString() ??
-                                      extra?['eyebrowTag']?.toString() ??
-                                      'EXCLUSIVE PROMO';
-                                  final btnText = extra?['actionText']?.toString() ??
-                                      extra?['ctaText']?.toString() ??
-                                      'View Details';
+                                    // Offline Network Recovery Banner
+                                    OfflineBanner(
+                                      onRetry: () {
+                                        _fetchLiveOrder();
+                                      },
+                                      offlineText: 'Offline • Live tracking paused',
+                                      onlineText: 'Back Online • Live tracking updated',
+                                    ),
 
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 14),
-                                    child: SponsoredAdCard(
-                                      title: activeBanner.title,
-                                      subtitle: activeBanner.subtitle ?? 'Special Partner Offer on FastMinute',
-                                      imageUrl: activeBanner.imageUrl,
-                                      discountText: discountTag,
-                                      actionText: btnText,
-                                      onTap: () {
-                                        if (activeBanner.link != null && activeBanner.link!.isNotEmpty) {
-                                          AppUrlLauncher.launchString(
-                                            activeBanner.link!,
-                                            context: context,
-                                            mode: LaunchMode.externalApplication,
-                                          );
+                                    // Pay Online Banner (if unpaid COD)
+                                    if (!isPaid && !isDelivered && _order?.deliveryMethod != 'PICKUP') ...[
+                                      TrackingPaymentCard(
+                                        order: _order,
+                                        isProcessingPayment: _isProcessingPayment,
+                                        statusStep: statusStep,
+                                        onPayOnline: _payOrderOnline,
+                                        onSwitchToCOD: _confirmAndSwitchToCOD,
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+
+                                    // 🌟 Hero Live Status & Accurate ETA Card (Blinkit/Zepto Ultra-Clean White Style)
+                                    Builder(
+                                      builder: (context) {
+                                        String heroTitle;
+                                        String heroSubtitle;
+                                        IconData heroIcon;
+                                        Color heroAccent;
+                                        String statusBadgeText;
+
+                                        final riderName = _order?.deliveryBoyName?.trim().isNotEmpty == true
+                                            ? _order!.deliveryBoyName!.trim()
+                                            : (_order?.deliveryUser?.name?.trim().isNotEmpty == true
+                                                ? _order!.deliveryUser!.name!.trim()
+                                                : '');
+
+                                        if (statusStep >= 3) {
+                                          // Out for Delivery (SHIPPED)
+                                          heroAccent = const Color(0xFF16A34A);
+                                          heroIcon = Icons.two_wheeler_rounded;
+                                          statusBadgeText = 'ON THE WAY';
+
+                                          if (_etaText.isNotEmpty && _etaText != 'Delivered 🎉') {
+                                            heroTitle = _etaText == 'Arriving now' ? 'Arriving Now!' : 'Arriving in $_etaText';
+                                            final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
+                                            heroSubtitle = riderName.isNotEmpty
+                                                ? (isAtDoorstep
+                                                    ? '$riderName has arrived at your doorstep • Live GPS'
+                                                    : '$riderName is on the way • ${_distanceText.isNotEmpty ? '$_distanceText • ' : ''}Live GPS')
+                                                : (_distanceText.isNotEmpty
+                                                    ? (isAtDoorstep
+                                                        ? 'Rider has arrived at your doorstep • Live GPS'
+                                                        : (_distanceText.toLowerCase().contains('away')
+                                                            ? '$_distanceText • Live GPS Tracking'
+                                                            : '$_distanceText away • Live GPS Tracking'))
+                                                    : 'Rider is on the way to your doorstep');
+                                          } else if (_order?.estimatedDelivery != null && _order!.estimatedDelivery!.isAfter(DateTime.now())) {
+                                            final est = _order!.estimatedDelivery!;
+                                            final hourMin = "${est.hour > 12 ? est.hour - 12 : (est.hour == 0 ? 12 : est.hour)}:${est.minute.toString().padLeft(2, '0')} ${est.hour >= 12 ? 'PM' : 'AM'}";
+                                            heroTitle = 'Expected by $hourMin';
+                                            heroSubtitle = riderName.isNotEmpty
+                                                ? '$riderName is delivering your order'
+                                                : 'Rider is heading to your doorstep';
+                                          } else {
+                                            heroTitle = 'Out for Delivery';
+                                            final isAtDoorstep = _distanceText.toLowerCase().contains('doorstep');
+                                            heroSubtitle = riderName.isNotEmpty
+                                                ? (isAtDoorstep
+                                                    ? '$riderName has arrived at your doorstep • Live GPS'
+                                                    : '$riderName is on the way • ${_distanceText.isNotEmpty ? _distanceText : 'Live GPS'}')
+                                                : (_distanceText.isNotEmpty
+                                                    ? (isAtDoorstep
+                                                        ? 'Rider has arrived at your doorstep • Live GPS'
+                                                        : (_distanceText.toLowerCase().contains('away')
+                                                            ? '$_distanceText • On the way'
+                                                            : '$_distanceText away • On the way'))
+                                                    : 'Rider is heading to your doorstep');
+                                          }
+                                        } else if (statusStep == 2) {
+                                          // Packed / Rider Assigned
+                                          heroAccent = const Color(0xFF0284C7);
+                                          heroIcon = Icons.inventory_2_rounded;
+                                          statusBadgeText = 'PACKED';
+                                          heroTitle = 'Order Packed';
+                                          heroSubtitle = riderName.isNotEmpty
+                                              ? '$riderName is assigned & picking up package'
+                                              : 'Delivery partner is picking up your package';
+                                        } else if (statusStep == 1) {
+                                          // Confirmed & Preparing
+                                          heroAccent = const Color(0xFF059669);
+                                          heroIcon = Icons.check_circle_outline_rounded;
+                                          statusBadgeText = 'CONFIRMED';
+                                          heroTitle = 'Order Confirmed';
+                                          heroSubtitle = 'Store accepted your order & preparing dispatch';
+                                        } else {
+                                          // Admin & Store Verification (statusStep == 0)
+                                          heroAccent = const Color(0xFFD97706);
+                                          heroIcon = Icons.fact_check_outlined;
+                                          statusBadgeText = 'VERIFYING';
+                                          heroTitle = 'Store Verification';
+                                          final rawShop = _order?.shopName?.trim();
+                                          final storeName = (rawShop != null && rawShop.isNotEmpty)
+                                              ? rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute')
+                                              : 'Ghatampur Hub';
+                                          heroSubtitle = '$storeName is verifying stock & freshness';
                                         }
+
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: heroAccent.withValues(alpha: 0.28),
+                                              width: 1.2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: heroAccent.withValues(alpha: 0.08),
+                                                blurRadius: 16,
+                                                offset: const Offset(0, 3),
+                                              ),
+                                              BoxShadow(
+                                                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 1),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 38,
+                                                height: 38,
+                                                decoration: BoxDecoration(
+                                                  color: heroAccent.withValues(alpha: 0.10),
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: heroAccent.withValues(alpha: 0.22),
+                                                    width: 1.2,
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Icon(heroIcon, color: heroAccent, size: 20),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Wrap(
+                                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                                      spacing: 6,
+                                                      runSpacing: 3,
+                                                      children: [
+                                                        Text(
+                                                          heroTitle,
+                                                          style: GoogleFonts.inter(
+                                                            fontSize: Responsive.scaledFontSize(context, 14.5),
+                                                            fontWeight: FontWeight.w900,
+                                                            color: const Color(0xFF0F172A),
+                                                            letterSpacing: -0.3,
+                                                          ),
+                                                        ),
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                          decoration: BoxDecoration(
+                                                            color: heroAccent.withValues(alpha: 0.12),
+                                                            borderRadius: BorderRadius.circular(6),
+                                                          ),
+                                                          child: Text(
+                                                            statusBadgeText,
+                                                            style: GoogleFonts.inter(
+                                                              fontSize: Responsive.scaledFontSize(context, 9.0),
+                                                              fontWeight: FontWeight.w800,
+                                                              color: heroAccent,
+                                                              letterSpacing: 0.4,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Row(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Container(
+                                                          margin: const EdgeInsets.only(top: 4),
+                                                          width: 5,
+                                                          height: 5,
+                                                          decoration: BoxDecoration(
+                                                            color: heroAccent,
+                                                            shape: BoxShape.circle,
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: heroAccent.withValues(alpha: 0.5),
+                                                                blurRadius: 3,
+                                                                spreadRadius: 1,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 5),
+                                                        Expanded(
+                                                          child: Text(
+                                                            heroSubtitle,
+                                                            style: GoogleFonts.inter(
+                                                              fontSize: Responsive.scaledFontSize(context, 11.0),
+                                                              fontWeight: FontWeight.w600,
+                                                              color: const Color(0xFF475569),
+                                                              letterSpacing: -0.1,
+                                                              height: 1.25,
+                                                            ),
+                                                            maxLines: 2,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
                                       },
                                     ),
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                              loading: () => const SizedBox.shrink(),
-                              error: (_, __) => const SizedBox.shrink(),
-                            );
-                          },
-                        ),
+                                    const SizedBox(height: 12),
 
-                        // 6. Order Items & Receipt Card (Bill Details)
-                        TrackingReceiptCard(order: _order),
-                        const SizedBox(height: 14),
+                                    // Store Preparing Card (displayed during preparing / confirmed stages)
+                                    if (statusStep < 3) ...[
+                                      TrackingPreparingCard(order: _order),
+                                      const SizedBox(height: 11),
+                                    ],
 
-                        // 7. Review Card (If delivered)
-                        if (isDelivered) ...[
-                          TrackingReviewCard(order: _order),
-                          const SizedBox(height: 12),
-                        ],
+                                    // Refund Notice Card (If applicable)
+                                    if ((_order?.refundAmount ?? 0) > 0 || ((_order?.notes ?? '').toLowerCase().contains('refund'))) ...[
+                                      TrackingRefundNoticeCard(order: _order),
+                                      const SizedBox(height: 11),
+                                    ],
+
+                                    // Gift Card Share & Live Tracking Card (When order is a gift or has gift card)
+                                    if (_isGiftOrder(_order)) ...[
+                                      _buildTrackingGiftShareCard(_order!),
+                                      const SizedBox(height: 11),
+                                    ],
+
+                                    // 2. Rider Profile & Contact Card (When Assigned/Out for Delivery)
+                                    if (statusStep >= 2 && !isDelivered && !isCancelled) ...[
+                                      TrackingRiderCard(order: _order),
+                                      const SizedBox(height: 11),
+                                    ],
+
+                                    // 3. Multi-Stage Order Stepper (Live status, ETA & milestones)
+                                    TrackingStatusStepper(
+                                      order: _order,
+                                      statusStep: statusStep,
+                                      isDelivered: isDelivered,
+                                      isCancelled: isCancelled,
+                                      cleanDisplayId: cleanDisplayId,
+                                      etaText: _etaText,
+                                      distanceText: _distanceText,
+                                    ),
+                                    const SizedBox(height: 11),
+
+                                    // Pre-Confirmation Cancel Option Banner (5-min window)
+                                    if (canCancel) ...[
+                                      TrackingCancelBanner(
+                                        isCancelling: _isCancelling,
+                                        onCancel: _confirmAndCancelOrder,
+                                        createdAt: _order?.createdAt,
+                                      ),
+                                      const SizedBox(height: 11),
+                                    ],
+
+                                    // 4. Delivery Address Card
+                                    if (_order?.deliveryMethod != 'PICKUP') ...[
+                                      TrackingDestinationCard(order: _order),
+                                      const SizedBox(height: 12),
+                                    ],
+
+                                    // 5. Sponsored Partner Ad Banner (Placed between Address and Bill Details)
+                                    Consumer(
+                                      builder: (context, ref, _) {
+                                        final bannersAsync = ref.watch(bannersProvider('sponsored_ad'));
+                                        return bannersAsync.when(
+                                          data: (banners) {
+                                            final activeBanner = banners.where((b) => b.isActive).firstOrNull;
+                                            if (activeBanner != null) {
+                                              final extra = activeBanner.extraData;
+                                              final discountTag = extra?['discountText']?.toString() ??
+                                                  extra?['eyebrowTag']?.toString() ??
+                                                  'EXCLUSIVE PROMO';
+                                              final btnText = extra?['actionText']?.toString() ??
+                                                  extra?['ctaText']?.toString() ??
+                                                  'View Details';
+
+                                              return Padding(
+                                                padding: const EdgeInsets.only(bottom: 14),
+                                                child: SponsoredAdCard(
+                                                  title: activeBanner.title,
+                                                  subtitle: activeBanner.subtitle ?? 'Special Partner Offer on FastMinute',
+                                                  imageUrl: activeBanner.imageUrl,
+                                                  discountText: discountTag,
+                                                  actionText: btnText,
+                                                  onTap: () {
+                                                    if (activeBanner.link != null && activeBanner.link!.isNotEmpty) {
+                                                      AppUrlLauncher.launchString(
+                                                        activeBanner.link!,
+                                                        context: context,
+                                                        mode: LaunchMode.externalApplication,
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                              );
+                                            }
+                                            return const SizedBox.shrink();
+                                          },
+                                          loading: () => const SizedBox.shrink(),
+                                          error: (_, __) => const SizedBox.shrink(),
+                                        );
+                                      },
+                                    ),
+
+                                    // 6. Order Items & Receipt Card (Bill Details)
+                                    TrackingReceiptCard(order: _order),
+                                    const SizedBox(height: 14),
+
+                                    // 7. Review Card (If delivered)
+                                    if (isDelivered) ...[
+                                      TrackingReviewCard(order: _order),
+                                      const SizedBox(height: 12),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                ),
 
           // Minimalist Luxury CRED-Style Celebration Confetti
           Align(

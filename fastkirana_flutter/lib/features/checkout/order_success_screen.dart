@@ -369,15 +369,18 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
     String resolveCleanOrderId() {
       // 1. Highest priority: readableId from live/fetched Order object (e.g. '4095' or '#4095')
       final readable = effectiveOrder?.readableId?.trim();
-      if (readable != null && readable.isNotEmpty) {
+      if (readable != null &&
+          readable.isNotEmpty &&
+          !readable.toLowerCase().contains('ord') &&
+          readable.length <= 10) {
         final clean = readable.replaceAll('#', '').replaceAll('FK-', '').trim();
         if (clean.isNotEmpty) return '#$clean';
       }
 
-      // 2. If widget.orderId is already a short clean readable ID (not an internal Cashfree/UUID string)
+      // 2. If widget.orderId is already a short clean readable ID (not an internal Cashfree/Razorpay string)
       if (widget.orderId != null && widget.orderId!.trim().isNotEmpty) {
         final wId = widget.orderId!.trim();
-        if (!wId.toLowerCase().contains('ord_') && wId.length <= 10) {
+        if (!wId.toLowerCase().contains('ord') && wId.length <= 10) {
           final clean = wId.replaceAll('#', '').replaceAll('FK-', '').trim();
           if (clean.isNotEmpty) return '#$clean';
         }
@@ -386,21 +389,27 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
       // 3. If effectiveOrder.displayId is available and clean
       if (effectiveOrder != null) {
         final disp = effectiveOrder.displayId;
-        if (!disp.toLowerCase().contains('ord_') && disp.length <= 10) {
+        if (!disp.toLowerCase().contains('ord') && disp.length <= 10) {
           return '#$disp';
         }
       }
 
-      // 4. Fallback for internal gateway/cashfree order strings (e.g. 'ord_478fcfeaa5bf42e1a56d' or 'FK-ord_...')
+      // 4. Fallback for internal gateway/cashfree order strings (e.g. 'order_U2wpJDbkW0MCqt' or 'ord_478fcfeaa5bf42e1a56d')
       final raw = widget.orderId ?? effectiveOrder?.id ?? '';
       if (raw.isNotEmpty) {
-        final clean = raw.replaceAll('#', '').replaceAll('FK-', '').replaceAll('ord_', '').replaceAll('_', '').trim();
+        final clean = raw
+            .replaceAll('#', '')
+            .replaceAll('FK-', '')
+            .replaceAll('order_', '')
+            .replaceAll('ord_', '')
+            .replaceAll('_', '')
+            .trim();
         final digits = clean.replaceAll(RegExp(r'[^0-9]'), '');
         if (digits.length >= 4) {
           return '#${digits.substring(digits.length - 4)}';
         }
-        if (clean.length > 6) {
-          return '#${clean.substring(clean.length - 6).toUpperCase()}';
+        if (clean.length >= 4) {
+          return '#${clean.substring(clean.length - 4).toUpperCase()}';
         }
         return '#$clean';
       }

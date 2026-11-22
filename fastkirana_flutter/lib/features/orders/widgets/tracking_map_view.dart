@@ -40,6 +40,11 @@ class TrackingMapView extends StatelessWidget {
   final VoidCallback? onZoomIn;
   final VoidCallback? onZoomOut;
   final VoidCallback onFitBounds;
+  final String etaText;
+  final String distanceText;
+  final int statusStep;
+  final bool isMapExpanded;
+  final VoidCallback? onToggleExpand;
 
   const TrackingMapView({
     super.key,
@@ -55,6 +60,11 @@ class TrackingMapView extends StatelessWidget {
     this.onZoomIn,
     this.onZoomOut,
     required this.onFitBounds,
+    this.etaText = '',
+    this.distanceText = '',
+    this.statusStep = 3,
+    this.isMapExpanded = false,
+    this.onToggleExpand,
   });
 
   Widget _buildRouteStep({
@@ -64,25 +74,23 @@ class TrackingMapView extends StatelessWidget {
     required BuildContext context,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.20), width: 0.9),
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.9),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 12)),
-          const SizedBox(width: 5),
+          Text(emoji, style: const TextStyle(fontSize: 11)),
+          const SizedBox(width: 4),
           ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: Responsive.isTablet(context) ? 140 : 85,
-            ),
+            constraints: const BoxConstraints(maxWidth: 85),
             child: Text(
               label,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: Responsive.scaledFontSize(context, 10.5),
+                fontSize: Responsive.scaledFontSize(context, 10.0),
                 fontWeight: FontWeight.w800,
                 color: color,
                 letterSpacing: -0.1,
@@ -98,8 +106,8 @@ class TrackingMapView extends StatelessWidget {
 
   Widget _buildArrow() {
     return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4),
-      child: Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFF94A3B8)),
+      padding: EdgeInsets.symmetric(horizontal: 3),
+      child: Icon(Icons.chevron_right_rounded, size: 13, color: Color(0xFF64748B)),
     );
   }
 
@@ -108,141 +116,149 @@ class TrackingMapView extends StatelessWidget {
     final rawShop = order?.shopName ?? 'FastMinute Store';
     final shopName = rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
 
+    final bool isOutForDelivery = statusStep >= 3;
+    final String badgeTitle = isOutForDelivery
+        ? (etaText.isNotEmpty ? 'Arriving in $etaText' : 'Out for Delivery')
+        : (statusStep >= 2 ? 'Packed & Assigning' : 'Store Preparing');
+
+    final String badgeSubtitle = isOutForDelivery
+        ? (distanceText.isNotEmpty ? '$distanceText • Live GPS' : 'FastMinute Express')
+        : 'Direct Store to Home Route';
+
     return RepaintBoundary(
-      child: Column(
+      child: Stack(
         children: [
-          // ── Map Container with Clean Modern Card Border & Adaptive Height ──
-          Container(
-            height: Responsive.isTablet(context)
-                ? 360.0
-                : (MediaQuery.sizeOf(context).height * 0.30).clamp(210.0, 280.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: const Color(0xFFE2E8F0),
-                width: 1.2,
+          // ── 1. Google Map Viewport with Zero Gesture Conflict ──
+          Positioned.fill(
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: initialTarget,
+                zoom: 14.2,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              markers: markers,
+              polylines: polylines,
+              circles: circles,
+              myLocationEnabled: false,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              compassEnabled: false,
+              mapToolbarEnabled: false,
+              scrollGesturesEnabled: true,
+              zoomGesturesEnabled: true,
+              tiltGesturesEnabled: false,
+              rotateGesturesEnabled: false,
+              gestureRecognizers: {
+                Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+              },
+              style: _premiumMapStyle,
+              onMapCreated: onMapCreated,
             ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              children: [
-                // Google Map with premium style
-                GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: initialTarget,
-                    zoom: 13.8,
-                  ),
-                  markers: markers,
-                  polylines: polylines,
-                  circles: circles,
-                  myLocationEnabled: false,
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                  compassEnabled: false,
-                  mapToolbarEnabled: false,
-                  scrollGesturesEnabled: true,
-                  zoomGesturesEnabled: true,
-                  tiltGesturesEnabled: false,
-                  rotateGesturesEnabled: false,
-                  gestureRecognizers: {
-                    Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
-                  },
-                  style: _premiumMapStyle,
-                  onMapCreated: onMapCreated,
-                ),
+          ),
 
-                // Top fade gradient for clean aesthetic depth
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 40,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.5),
-                            Colors.white.withValues(alpha: 0.0),
-                          ],
-                        ),
-                      ),
-                    ),
+          // ── 2. Top Fade Gradient for Visual Clarity ──
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 50,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.18),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
+              ),
+            ),
+          ),
 
-                // Live GPS Badge — top left (Blinkit / Zepto style pill)
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          // ── 3. Floating Live ETA Pill (Top-Left of Hero Map) ──
+          Positioned(
+            top: 14,
+            left: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Pulsing Live Green Dot
+                  Container(
+                    width: 7,
+                    height: 7,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
+                      shape: BoxShape.circle,
+                      color: isOutForDelivery ? const Color(0xFF16A34A) : const Color(0xFF0284C7),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF16A34A),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF16A34A).withValues(alpha: 0.5),
-                                blurRadius: 4,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Live GPS',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 10.5),
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0F172A),
-                            letterSpacing: 0.2,
-                          ),
+                          color: (isOutForDelivery ? const Color(0xFF16A34A) : const Color(0xFF0284C7)).withValues(alpha: 0.5),
+                          blurRadius: 5,
+                          spreadRadius: 1.5,
                         ),
                       ],
                     ),
                   ),
-                ),
+                  const SizedBox(width: 7),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        badgeTitle,
+                        style: GoogleFonts.outfit(
+                          fontSize: Responsive.scaledFontSize(context, 12),
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF0F172A),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      Text(
+                        badgeSubtitle,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
 
-                // Sleek Floating Re-center FAB — bottom right (replaces bulky desktop zoom buttons)
-                Positioned(
-                  bottom: 12,
-                  right: 12,
-                  child: GestureDetector(
-                    onTap: onFitBounds,
+          // ── 4. Floating Action Controls (Bottom-Right of Map) ──
+          Positioned(
+            bottom: 14,
+            right: 14,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Fullscreen / Shrink Toggle Button
+                if (onToggleExpand != null) ...[
+                  GestureDetector(
+                    onTap: onToggleExpand,
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: 42,
+                      height: 42,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white.withValues(alpha: 0.95),
                         shape: BoxShape.circle,
                         border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
                         boxShadow: [
@@ -253,9 +269,38 @@ class TrackingMapView extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(Icons.my_location_rounded, size: 20, color: Color(0xFF0F172A)),
+                      child: Center(
+                        child: Icon(
+                          isMapExpanded ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
+                          size: 22,
+                          color: const Color(0xFF0F172A),
+                        ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                // Sleek Re-center FAB
+                GestureDetector(
+                  onTap: onFitBounds,
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 12,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.my_location_rounded, size: 21, color: Color(0xFF00A344)),
                     ),
                   ),
                 ),
@@ -263,26 +308,24 @@ class TrackingMapView extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 8),
-
-          // ── Route Trail Bar (Fully Responsive, Zero Overflow) ──
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
+          // ── 5. Compact Floating Route Trail Pill (Bottom-Left of Map) ──
+          Positioned(
+            bottom: 14,
+            left: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: order?.isCombined == true
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
@@ -302,8 +345,8 @@ class TrackingMapView extends StatelessWidget {
                         ),
                         _buildArrow(),
                         _buildRouteStep(
-                          emoji: '🛵',
-                          label: '1 Rider',
+                          emoji: isOutForDelivery ? '🛵' : '📦',
+                          label: isOutForDelivery ? 'Rider' : 'Packed',
                           color: const Color(0xFFEA580C),
                           context: context,
                         ),
@@ -344,15 +387,15 @@ class TrackingMapView extends StatelessWidget {
                             ),
                             _buildArrow(),
                             _buildRouteStep(
-                              emoji: '🛵',
-                              label: 'On the Way',
-                              color: const Color(0xFFEA580C),
+                              emoji: isOutForDelivery ? '🛵' : '📦',
+                              label: isOutForDelivery ? 'On the Way' : 'Preparing',
+                              color: isOutForDelivery ? const Color(0xFFEA580C) : const Color(0xFF0284C7),
                               context: context,
                             ),
                             _buildArrow(),
                             _buildRouteStep(
                               emoji: '🏠',
-                              label: 'Your Home',
+                              label: 'Home',
                               color: const Color(0xFFDC2626),
                               context: context,
                             ),
