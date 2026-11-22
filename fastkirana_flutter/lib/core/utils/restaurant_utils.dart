@@ -714,7 +714,7 @@ OutletLocation getOutletLocation({
 
   if (isFoodOrder || isCustomShop) {
     final matchedRest = RestaurantRegistry.find(restaurantId) ?? RestaurantRegistry.find(shopName);
-    final resolvedName = matchedRest?.name ?? (isCustomShop ? shopName!.trim() : null) ??
+    final resolvedName = matchedRest?.name ?? (isCustomShop ? shopName.trim() : null) ??
         (restaurantId != null ? 'Restaurant ($restaurantId)' : 'Food Kitchen');
 
     final resolvedPhone = matchedRest?.phone ?? matchedRest?.ownerPhone ?? rawOrderMap?['shopPhone']?.toString().trim();

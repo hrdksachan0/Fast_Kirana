@@ -72,14 +72,19 @@ class TrackingMapView extends StatelessWidget {
     final rawShop = order?.shopName ?? 'FastMinute Store';
     final shopName = rawShop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
 
+    final bool isRest = primaryOutlet?.isRestaurant == true;
     final bool isOutForDelivery = statusStep >= 3;
     final String badgeTitle = isOutForDelivery
         ? (etaText.isNotEmpty ? 'Arriving in $etaText' : 'Out for Delivery')
-        : (statusStep >= 2 ? 'Packed & Assigning' : 'Store Preparing');
+        : (statusStep >= 2
+            ? (isRest ? 'Order Ready & Assigning' : 'Packed & Assigning')
+            : (isRest ? 'Kitchen Preparing' : 'Store Preparing'));
 
     final String badgeSubtitle = isOutForDelivery
         ? (distanceText.isNotEmpty ? '$distanceText • Live GPS' : 'FastMinute Express')
-        : 'Direct Store to Home Route';
+        : (isRest
+            ? 'Direct ${primaryOutlet?.name ?? "Restaurant"} to Home Route'
+            : 'Direct Store to Home Route');
 
     // Outlet display name
     final rawName = primaryOutlet?.name ?? shopName;
@@ -94,7 +99,7 @@ class TrackingMapView extends StatelessWidget {
     } else if (lower.contains('bal udyan') || lower.contains('baludyan')) {
       displayStoreName = 'Bal Udyan';
     }
-    final isRest = primaryOutlet?.isRestaurant == true;
+
 
     return RepaintBoundary(
       child: Stack(
