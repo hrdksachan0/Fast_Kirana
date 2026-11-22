@@ -221,27 +221,29 @@ class _CartUpsellCarouselState extends ConsumerState<CartUpsellCarousel> {
         const SizedBox(height: 10),
         Builder(builder: (context) {
           final hasUpsellFood = products.any((p) => isRestaurantProduct(p));
+          final shelfH = hasUpsellFood ? 210.0 : 194.0;
           return SizedBox(
-            height: Responsive.productShelfHeight(context, isFood: hasUpsellFood),
+            height: shelfH,
             child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, idx) {
-              final cardWidth = Responsive.productCardShelfWidth(context);
-              return SizedBox(
-                width: cardWidth,
-                child: ProductCard(
-                  product: products[idx],
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: products.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, idx) {
+                final cardWidth = Responsive.productCardShelfWidth(context).clamp(104.0, 118.0);
+                return SizedBox(
                   width: cardWidth,
-                ),
-              );
-            },
-          ),
-        );
-      }),
-      const SizedBox(height: 16),
+                  child: ProductCard(
+                    product: products[idx],
+                    width: cardWidth,
+                    isCompact: true,
+                  ),
+                );
+              },
+            ),
+          );
+        }),
+        const SizedBox(height: 12),
       ],
     );
   }

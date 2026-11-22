@@ -216,7 +216,7 @@ class _MainShellState extends ConsumerState<MainShell>
           fillHeight: true,
           child: Stack(
               children: [
-                IndexedStack(
+                SmoothIndexedStack(
                   index: selectedIndex,
                   children: [
                     for (var index = 0; index < screens.length; index++)
@@ -377,6 +377,84 @@ class _MainShellState extends ConsumerState<MainShell>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Ultra-smooth 180ms cross-fade indexed stack for bottom navigation
+/// Preserves 100% of widget state & scroll offsets without re-fetching
+class SmoothIndexedStack extends StatefulWidget {
+  final int index;
+  final List<Widget> children;
+  final Duration duration;
+
+  const SmoothIndexedStack({
+    super.key,
+    required this.index,
+    required this.children,
+    this.duration = const Duration(milliseconds: 180),
+  });
+
+  @override
+  State<SmoothIndexedStack> createState() => _SmoothIndexedStackState();
+}
+
+class _SmoothIndexedStackState extends State<SmoothIndexedStack>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late int _displayIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayIndex = widget.index;
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+      value: 1.0,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.985, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void didUpdateWidget(SmoothIndexedStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.index != _displayIndex) {
+      _controller.reverse(from: 0.75).then((_) {
+        if (!mounted) return;
+        setState(() {
+          _displayIndex = widget.index;
+        });
+        _controller.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: IndexedStack(
+          index: _displayIndex,
+          children: widget.children,
         ),
       ),
     );

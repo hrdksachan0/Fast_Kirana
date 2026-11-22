@@ -148,7 +148,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
     final closedStoreName = closedRestItem?.product.restaurant?.name ?? 'Restaurant';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
@@ -159,8 +159,8 @@ class CartBottomCheckoutBar extends ConsumerWidget {
           // ─── Swiggy Style Seamless Integrated Store Closed Strip ───
           if (isStoreClosed) ...[
             Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF1F2), // Soft Rose 50
                 borderRadius: BorderRadius.circular(10),
@@ -176,7 +176,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                           ? 'Darkstore is resting · Orders open at $groceryOpenTime'
                           : '$closedStoreName is closed for new orders',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontSize: Responsive.scaledFontSize(context, 10.0),
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFFBE123C),
                       ),
@@ -207,21 +207,21 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                         Text(
                           '₹${grandTotal.toInt()}',
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 19),
+                            fontSize: Responsive.scaledFontSize(context, 17.5),
                             fontWeight: FontWeight.w900,
                             color: AppDesignSystem.slate900,
                             letterSpacing: -0.4,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF16A34A)),
+                        const Icon(Icons.info_outline_rounded, size: 13, color: Color(0xFF16A34A)),
                       ],
                     ),
                     const SizedBox(height: 1),
                     Text(
                       'TOTAL BILL • VIEW BREAKDOWN',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 8.5),
+                        fontSize: Responsive.scaledFontSize(context, 8.0),
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF15803D),
                         letterSpacing: 0.1,
@@ -296,7 +296,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                     decoration: BoxDecoration(
                       gradient: !tier.isServiceable
                           ? const LinearGradient(colors: [AppDesignSystem.slate400, AppDesignSystem.slate500])
@@ -311,7 +311,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
                           color: (!tier.isServiceable
@@ -319,9 +319,9 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                                   : isStoreClosed
                                       ? const Color(0xFF475569)
                                       : const Color(0xFF16A34A))
-                              .withValues(alpha: 0.32),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                              .withValues(alpha: 0.28),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
@@ -337,13 +337,13 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                                     ? (isGroceryClosed ? 'Store Closed' : 'Restaurant Closed')
                                     : 'Proceed to Checkout',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 13.5),
+                              fontSize: Responsive.scaledFontSize(context, 12.5),
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                               letterSpacing: -0.1,
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 5),
                           Icon(
                             !tier.isServiceable
                                 ? Icons.block_rounded
@@ -351,7 +351,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                                     ? Icons.access_time_rounded
                                     : Icons.arrow_forward_rounded,
                             color: Colors.white,
-                            size: 17,
+                            size: 15,
                           ),
                         ],
                       ),

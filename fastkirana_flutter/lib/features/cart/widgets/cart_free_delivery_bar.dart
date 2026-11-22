@@ -64,24 +64,24 @@ class CartFreeDeliveryBar extends StatelessWidget {
     final isUnlocked = remaining <= 0;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUnlocked ? const Color(0xFFBBF7D0) : const Color(0xFFFED7AA),
-          width: 1.2,
+          width: 1.1,
         ),
         boxShadow: [
           BoxShadow(
-            color: (isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C)).withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: (isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C)).withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
           const BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 4,
+            color: Color(0x04000000),
+            blurRadius: 3,
             offset: Offset(0, 1),
           ),
         ],
@@ -95,8 +95,8 @@ class CartFreeDeliveryBar extends StatelessWidget {
             children: [
               // Icon Badge with subtle gradient & glow
               Container(
-                width: 42,
-                height: 42,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isUnlocked
@@ -105,23 +105,23 @@ class CartFreeDeliveryBar extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: (isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C)).withValues(alpha: 0.28),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      color: (isUnlocked ? const Color(0xFF16A34A) : const Color(0xFFEA580C)).withValues(alpha: 0.24),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Center(
                   child: Text(
                     isUnlocked ? '🎉' : '🛵',
-                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 20)),
+                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 17)),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
 
               // Title Headline
               Expanded(
@@ -133,7 +133,7 @@ class CartFreeDeliveryBar extends StatelessWidget {
                           ? 'FREE Delivery Unlocked!'
                           : 'Add ₹${remaining.toInt()} for FREE Delivery',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 13.5),
+                        fontSize: Responsive.scaledFontSize(context, 12.5),
                         fontWeight: FontWeight.w800,
                         color: AppDesignSystem.slate900,
                         letterSpacing: -0.2,
@@ -146,11 +146,11 @@ class CartFreeDeliveryBar extends StatelessWidget {
                           ? 'You saved ₹${tier.baseFee.toInt()} on delivery (${tier.tierName})'
                           : 'Shop for ₹${freeDeliveryThreshold.toInt()} or more to get free delivery',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontSize: Responsive.scaledFontSize(context, 10.0),
                         fontWeight: FontWeight.w500,
                         color: isUnlocked ? const Color(0xFF15803D) : AppDesignSystem.slate500,
                         letterSpacing: -0.1,
-                        height: 1.25,
+                        height: 1.2,
                       ),
                     ),
                   ],
@@ -199,7 +199,7 @@ class CartFreeDeliveryBar extends StatelessWidget {
             builder: (context, constraints) {
               final barWidth = constraints.maxWidth;
               return Container(
-                height: 6,
+                height: 4.5,
                 width: barWidth,
                 decoration: BoxDecoration(
                   color: isUnlocked ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
@@ -211,7 +211,7 @@ class CartFreeDeliveryBar extends StatelessWidget {
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.easeOutCubic,
                     width: (barWidth * progress).clamp(0.0, barWidth),
-                    height: 6,
+                    height: 4.5,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: isUnlocked

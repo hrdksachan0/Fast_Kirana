@@ -33,15 +33,15 @@ class CartItemRow extends ConsumerWidget {
         children: [
           // Product Image Container
           Container(
-            width: 52,
-            height: 52,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: AppDesignSystem.slate50,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               child: AppCachedImage(
                 imageUrl: prod.imageUrl,
                 fit: BoxFit.cover,
@@ -61,7 +61,7 @@ class CartItemRow extends ConsumerWidget {
                 Text(
                   prod.name,
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                    fontSize: Responsive.scaledFontSize(context, 12.5),
                     fontWeight: FontWeight.w800,
                     color: AppDesignSystem.slate900,
                     letterSpacing: -0.2,
@@ -82,7 +82,7 @@ class CartItemRow extends ConsumerWidget {
                     child: Text(
                       prod.unit.trim(),
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontSize: Responsive.scaledFontSize(context, 9.5),
                         fontWeight: FontWeight.w600,
                         color: AppDesignSystem.slate600,
                         letterSpacing: -0.1,
@@ -141,11 +141,11 @@ class CartItemRow extends ConsumerWidget {
 
           // High-End Modern Stepper Button (- 1 +)
           Container(
-            height: 34,
+            height: 28,
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -153,30 +153,30 @@ class CartItemRow extends ConsumerWidget {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
                     onTap: () {
                       HapticFeedback.lightImpact();
                       ref.read(cartProvider.notifier).decrement(prod.id);
                     },
                     child: Container(
-                      width: 32,
-                      height: 34,
+                      width: 28,
+                      height: 28,
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.remove_rounded,
-                        size: 16,
+                        size: 14,
                         color: AppDesignSystem.primary,
                       ),
                     ),
                   ),
                 ),
                 Container(
-                  constraints: const BoxConstraints(minWidth: 26),
+                  constraints: const BoxConstraints(minWidth: 22),
                   alignment: Alignment.center,
                   child: Text(
                     '$qty',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 13.5),
+                      fontSize: Responsive.scaledFontSize(context, 12.0),
                       fontWeight: FontWeight.w900,
                       color: AppDesignSystem.slate900,
                     ),
@@ -185,11 +185,11 @@ class CartItemRow extends ConsumerWidget {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
+                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
                     onTap: () {
                       if (prod.stock > 0 && qty >= prod.stock) {
                         StockNoticeHelper.showStockLimit(
-                          context: context,
+                           context: context,
                           stock: prod.stock,
                           hasFloatingCart: true,
                         );
@@ -199,12 +199,12 @@ class CartItemRow extends ConsumerWidget {
                       ref.read(cartProvider.notifier).increment(prod);
                     },
                     child: Container(
-                      width: 32,
-                      height: 34,
+                      width: 28,
+                      height: 28,
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.add_rounded,
-                        size: 16,
+                        size: 14,
                         color: AppDesignSystem.primary,
                       ),
                     ),
@@ -249,16 +249,16 @@ class CartItemsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppDesignSystem.slate200, width: 1.1),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -267,20 +267,20 @@ class CartItemsSection extends StatelessWidget {
         children: [
           // Section Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: isGrocery ? const Color(0xFFFBFDFA) : const Color(0xFFFCFBFB),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
               border: const Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
                     color: isGrocery ? const Color(0xFFF0FDF4) : const Color(0xFFFFF1F2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isGrocery ? const Color(0xFFDCFCE7) : const Color(0xFFFFE4E6),
                       width: 1,
@@ -289,10 +289,10 @@ class CartItemsSection extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     isGrocery ? '📦' : '🍕',
-                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 15)),
+                    style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13)),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,7 +300,7 @@ class CartItemsSection extends StatelessWidget {
                       Text(
                         title,
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13.5),
+                          fontSize: Responsive.scaledFontSize(context, 12.5),
                           fontWeight: FontWeight.w800,
                           color: AppDesignSystem.slate900,
                           letterSpacing: -0.2,
@@ -311,7 +311,7 @@ class CartItemsSection extends StatelessWidget {
                       Text(
                         subtitle,
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontSize: Responsive.scaledFontSize(context, 9.5),
                           fontWeight: FontWeight.w500,
                           color: AppDesignSystem.slate500,
                         ),
@@ -322,15 +322,15 @@ class CartItemsSection extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     '${items.length} ${items.length == 1 ? 'item' : 'items'}',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontSize: Responsive.scaledFontSize(context, 9.5),
                       fontWeight: FontWeight.w700,
                       color: AppDesignSystem.slate600,
                     ),
@@ -342,7 +342,7 @@ class CartItemsSection extends StatelessWidget {
 
           // Items inside the section
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             child: Column(
               children: [
                 for (int i = 0; i < items.length; i++) ...[

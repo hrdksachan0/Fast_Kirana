@@ -297,10 +297,10 @@ class FastKiranaApp extends ConsumerWidget {
       initialRoute: '/splash',
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
-        // Accessible mobile text scaling (supports up to 1.5x scaling without catastrophic overflow)
+        // Calibrated mobile text scaling (prevents catastrophic system font blowup / zoom-in)
         final clampedTextScaler = mediaQuery.textScaler.clamp(
           minScaleFactor: 0.85,
-          maxScaleFactor: 1.5,
+          maxScaleFactor: 1.05,
         );
         return MediaQuery(
           data: mediaQuery.copyWith(textScaler: clampedTextScaler),
