@@ -144,23 +144,7 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
 
         } else {
 
-          ScaffoldMessenger.of(context).showSnackBar(
-
-            SnackBar(
-
-              backgroundColor: const Color(0xFF16A34A),
-
-              content: Text('📍 Location set to ${details.area} (${details.distanceKm.toStringAsFixed(1)} km)'),
-
-              behavior: SnackBarBehavior.floating,
-
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-
-              duration: const Duration(seconds: 2),
-
-            ),
-
-          );
+          showLocationFeedback(ref, ' km');
 
         }
 

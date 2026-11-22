@@ -163,3 +163,18 @@ class SelectedAddressNotifier extends StateNotifier<Address?> {
 final selectedAddressProvider = StateNotifierProvider<SelectedAddressNotifier, Address?>((ref) {
   return SelectedAddressNotifier(ref);
 });
+
+/// Ephemeral feedback provider to show transient confirmation in Header (DoorDash/Instacart style)
+final recentLocationFeedbackProvider = StateProvider<String?>((ref) => null);
+
+Timer? _locationFeedbackTimer;
+
+/// Triggers a brief, non-obtrusive confirmation badge in the header that automatically dissolves.
+void showLocationFeedback(WidgetRef ref, String feedbackText) {
+  _locationFeedbackTimer?.cancel();
+  ref.read(recentLocationFeedbackProvider.notifier).state = feedbackText;
+  _locationFeedbackTimer = Timer(const Duration(milliseconds: 2500), () {
+    ref.read(recentLocationFeedbackProvider.notifier).state = null;
+  });
+}
+

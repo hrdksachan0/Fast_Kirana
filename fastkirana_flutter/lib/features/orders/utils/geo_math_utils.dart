@@ -28,6 +28,145 @@ class GeoMathUtils {
     return (startHeading + deltaHeading * progress) % 360;
   }
 
+  /// Mathematical orthogonal projection of a GPS coordinate onto a road segment [segStart -> segEnd].
+  /// Uses spherical longitudinal cosine projection for millimeter precision on road surfaces.
+  static ({LatLng point, double distanceMeters, double bearing}) projectOnSegment({
+    required LatLng point,
+    required LatLng segStart,
+    required LatLng segEnd,
+  }) {
+    final x0 = point.longitude;
+    final y0 = point.latitude;
+    final x1 = segStart.longitude;
+    final y1 = segStart.latitude;
+    final x2 = segEnd.longitude;
+    final y2 = segEnd.latitude;
+
+    final dx = x2 - x1;
+    final dy = y2 - y1;
+
+    if (dx == 0 && dy == 0) {
+      final d = getHaversineDistance(point, segStart) * 1000.0;
+      return (point: segStart, distanceMeters: d, bearing: 0.0);
+    }
+
+    final latRad = (y1 + y2) * math.pi / 360.0;
+    final cosLat = math.cos(latRad);
+
+    final scaledDx = dx * cosLat;
+    final scaledDy = dy;
+    final scaledPx = (x0 - x1) * cosLat;
+    final scaledPy = y0 - y1;
+
+    final scaledLenSq = scaledDx * scaledDx + scaledDy * scaledDy;
+    double t = 0.0;
+    if (scaledLenSq > 0) {
+      t = (scaledPx * scaledDx + scaledPy * scaledDy) / scaledLenSq;
+      t = t.clamp(0.0, 1.0);
+    }
+
+    final projLat = y1 + t * dy;
+    final projLng = x1 + t * dx;
+    final projPoint = LatLng(projLat, projLng);
+
+    final distanceMeters = getHaversineDistance(point, projPoint) * 1000.0;
+    final bearing = calculateBearing(y1, x1, y2, x2);
+
+    return (
+      point: projPoint,
+      distanceMeters: distanceMeters,
+      bearing: bearing,
+    );
+  }
+
+  /// Snaps a raw GPS point to the nearest road polyline segment (Blinkit/Uber zero-cost road snapping).
+  /// If rider is within [snapThresholdMeters] (default 38m), snaps directly onto the road geometry.
+  /// If rider deviates beyond 38m (turns into an unmapped alley/shortcut), preserves raw point.
+  static ({LatLng snappedPoint, double bearing, bool wasSnapped, double distanceMeters, int segmentIndex}) snapToRoadPolyline({
+    required LatLng rawPoint,
+    required List<LatLng> polyline,
+    double snapThresholdMeters = 38.0,
+  }) {
+    if (polyline.length < 2) {
+      return (
+        snappedPoint: rawPoint,
+        bearing: 0.0,
+        wasSnapped: false,
+        distanceMeters: 0.0,
+        segmentIndex: -1,
+      );
+    }
+
+    double minDistance = double.infinity;
+    LatLng bestPoint = rawPoint;
+    double bestBearing = 0.0;
+    int bestSegmentIndex = -1;
+
+    // Step 1: Fast bounding box scan to evaluate only relevant segments
+    for (int i = 0; i < polyline.length - 1; i++) {
+      final p1 = polyline[i];
+      final p2 = polyline[i + 1];
+
+      final latMin = math.min(p1.latitude, p2.latitude) - 0.0006;
+      final latMax = math.max(p1.latitude, p2.latitude) + 0.0006;
+      final lngMin = math.min(p1.longitude, p2.longitude) - 0.0006;
+      final lngMax = math.max(p1.longitude, p2.longitude) + 0.0006;
+
+      if (rawPoint.latitude < latMin || rawPoint.latitude > latMax ||
+          rawPoint.longitude < lngMin || rawPoint.longitude > lngMax) {
+        continue;
+      }
+
+      final proj = projectOnSegment(
+        point: rawPoint,
+        segStart: p1,
+        segEnd: p2,
+      );
+
+      if (proj.distanceMeters < minDistance) {
+        minDistance = proj.distanceMeters;
+        bestPoint = proj.point;
+        bestBearing = proj.bearing;
+        bestSegmentIndex = i;
+      }
+    }
+
+    // Step 2: Fallback scan across all segments if bounding box pruned all
+    if (minDistance == double.infinity) {
+      for (int i = 0; i < polyline.length - 1; i++) {
+        final proj = projectOnSegment(
+          point: rawPoint,
+          segStart: polyline[i],
+          segEnd: polyline[i + 1],
+        );
+        if (proj.distanceMeters < minDistance) {
+          minDistance = proj.distanceMeters;
+          bestPoint = proj.point;
+          bestBearing = proj.bearing;
+          bestSegmentIndex = i;
+        }
+      }
+    }
+
+    if (minDistance <= snapThresholdMeters) {
+      return (
+        snappedPoint: bestPoint,
+        bearing: bestBearing,
+        wasSnapped: true,
+        distanceMeters: minDistance,
+        segmentIndex: bestSegmentIndex,
+      );
+    }
+
+    return (
+      snappedPoint: rawPoint,
+      bearing: bestBearing,
+      wasSnapped: false,
+      distanceMeters: minDistance,
+      segmentIndex: bestSegmentIndex,
+    );
+  }
+
   static final List<Map<String, dynamic>> _gpsHistory = [];
 
   static int estimateEtaWeightedAverage(LatLng currentPosition, LatLng destination, double currentDistanceKm) {

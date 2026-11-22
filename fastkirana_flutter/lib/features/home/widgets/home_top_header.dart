@@ -20,8 +20,6 @@ import '../../navratri/navratri_data.dart';
 import '../../../widgets/festive_fairy_lights.dart';
 import '../../../providers/store_settings_provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:geolocator/geolocator.dart';
-import '../../../widgets/swiggy_location_permission_sheet.dart';
 
 class HomeTopHeader extends ConsumerStatefulWidget {
   final bool showSearch;
@@ -119,14 +117,12 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                 child: Consumer(
                   builder: (context, ref, _) {
                     final selectedAddress = ref.watch(selectedAddressProvider);
+                    final recentFeedback = ref.watch(recentLocationFeedbackProvider);
                     final currentHub = ref.watch(currentStoreHubProvider);
                     final hasLocation = selectedAddress != null &&
                         selectedAddress.latitude != null &&
                         selectedAddress.latitude != 0.0;
 
-                    final selectedArea = hasLocation
-                        ? selectedAddress.displayArea
-                        : '';
                     final shortLocation = hasLocation
                         ? selectedAddress.shortAddress
                         : 'Select Location';
@@ -167,6 +163,8 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                             if (distKm > currentHub.deliveryRadiusKm) {
                               UnserviceableLocationBanner
                                   .showUnserviceableModal(context, ref, distKm);
+                            } else {
+                              showLocationFeedback(ref, '${distKm.toStringAsFixed(1)} km');
                             }
                           },
                         );
@@ -188,17 +186,72 @@ class _HomeTopHeaderState extends ConsumerState<HomeTopHeader> {
                                 ),
                               ),
                               const SizedBox(width: 5),
-                              Flexible(
-                                child: Text(
-                                  line1Text,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize:
-                                        Responsive.scaledFontSize(context, 10.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFFE11D48),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                line1Text,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize:
+                                      Responsive.scaledFontSize(context, 10.5),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFE11D48),
+                                ),
+                              ),
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOutCubic,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  reverseDuration: const Duration(milliseconds: 400),
+                                  transitionBuilder: (child, animation) {
+                                    return FadeTransition(
+                                      opacity: CurvedAnimation(
+                                        parent: animation,
+                                        curve: Curves.easeInOut,
+                                      ),
+                                      child: ScaleTransition(
+                                        scale: Tween<double>(begin: 0.82, end: 1.0).animate(
+                                          CurvedAnimation(
+                                            parent: animation,
+                                            curve: Curves.easeOutBack,
+                                          ),
+                                        ),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: recentFeedback != null
+                                      ? Container(
+                                          key: const ValueKey('header_feedback_active'),
+                                          margin: const EdgeInsets.only(left: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFECFDF5),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: const Color(0xFFA7F3D0),
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.check_rounded,
+                                                size: 11,
+                                                color: Color(0xFF059669),
+                                              ),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                recentFeedback,
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: const Color(0xFF065F46),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(key: ValueKey('header_feedback_empty')),
                                 ),
                               ),
                             ],

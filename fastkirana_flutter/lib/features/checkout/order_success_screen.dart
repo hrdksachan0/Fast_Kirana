@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:confetti/confetti.dart';
 
 import '../../core/theme/design_system.dart';
-import '../../core/routes/page_transitions.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/network/api_client.dart';
 import '../../data/models/order.dart';
@@ -69,7 +68,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
   Timer? _syncTimer;
   Timer? _autoRedirectTimer;
   Timer? _countdownTimer;
-  int _secondsRemaining = 5;
+  int _secondsRemaining = 2;
   bool _hasNavigated = false;
 
   @override
@@ -219,24 +218,27 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
     final effectiveOrder = _liveOrder ?? widget.order;
     final trackingId = effectiveOrder?.id ?? effectiveOrder?.readableId ?? widget.orderId ?? '';
 
+    final trackingRoute = PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => OrderTrackingScreen(
+        orderId: trackingId,
+        initialOrder: effectiveOrder,
+      ),
+      transitionDuration: const Duration(milliseconds: 220),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeIn,
+          ),
+          child: child,
+        );
+      },
+    );
+
     try {
-      Navigator.of(context).pushReplacement(
-        FadeSlideRoute(
-          page: OrderTrackingScreen(
-            orderId: trackingId,
-            initialOrder: effectiveOrder,
-          ),
-        ),
-      );
+      Navigator.of(context).pushReplacement(trackingRoute);
     } catch (_) {
-      AppRouter.navigatorKey.currentState?.pushReplacement(
-        FadeSlideRoute(
-          page: OrderTrackingScreen(
-            orderId: trackingId,
-            initialOrder: effectiveOrder,
-          ),
-        ),
-      );
+      AppRouter.navigatorKey.currentState?.pushReplacement(trackingRoute);
     }
   }
 
