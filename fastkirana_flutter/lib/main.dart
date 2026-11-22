@@ -288,6 +288,7 @@ class FastKiranaApp extends ConsumerWidget {
     return MaterialApp(
       title: 'FastMinute',
       navigatorKey: AppRouter.navigatorKey,
+      navigatorObservers: [AppRouter.routeObserver],
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

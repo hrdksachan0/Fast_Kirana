@@ -445,46 +445,38 @@ async def dispatch_admin_order_buzzer(
             "sound": "order_chime",
         }
 
-        # 1. Topic Broadcast - STRICTLY HUB-ISOLATED
-        # We NEVER broadcast to global 'admin_orders' or 'admin_orders_all' to protect managers of other hubs!
-        admin_topics = set()
+        # 1. Topic Broadcast - STRICTLY HUB-ISOLATED (EXACTLY 1 CANONICAL TOPIC PER HUB)
+        # We NEVER broadcast to multiple duplicate topics or global 'admin_orders' to prevent double notifications.
+        canonical_admin_topic = None
         if "209206" in str(target_store_id):
-            admin_topics.add("admin_orders_ghatampur")
-            admin_topics.add("admin_orders_hub-209206")
+            canonical_admin_topic = "admin_orders_ghatampur"
         elif "816101" in str(target_store_id):
-            admin_topics.add("admin_orders_barharwa")
-            admin_topics.add("admin_orders_hub-816101")
+            canonical_admin_topic = "admin_orders_barharwa"
         elif "224122" in str(target_store_id):
-            admin_topics.add("admin_orders_akbarpur")
-            admin_topics.add("admin_orders_hub-224122")
+            canonical_admin_topic = "admin_orders_akbarpur"
         elif target_store_id:
-            admin_topics.add(f"admin_orders_{target_store_id}")
+            canonical_admin_topic = f"admin_orders_{target_store_id}"
 
-        for t in admin_topics:
-            await send_fcm_topic_notification(t, admin_title, admin_body, admin_data)
+        if canonical_admin_topic:
+            await send_fcm_topic_notification(canonical_admin_topic, admin_title, admin_body, admin_data)
 
-        # 2. Direct FCM Push to registered Admin device tokens (Hub-Scoped + Super Admin HQ)
+        # 2. Super Admin HQ (9170942500) Direct Alert ONLY (if not on local hub topic)
         try:
             from database import AsyncSessionLocal
             async with AsyncSessionLocal() as s:
-                adm_conditions = [
-                    User.role == Role.ADMIN,
-                    or_(
-                        User.assignedStoreId == target_store_id,
-                        User.phone.like("%9170942500%"),  # Super Admin HQ
-                        User.phone.like("%7054470303%") if "209206" in str(target_store_id) else False,
-                        User.phone.like("%7633898577%") if "816101" in str(target_store_id) else False,
-                        User.phone.like("%9696678006%") if "224122" in str(target_store_id) else False,
-                    )
-                ]
                 adm_res = await s.execute(
-                    select(FcmToken.token).join(User, FcmToken.userId == User.id).where(and_(*adm_conditions))
+                    select(FcmToken.token).join(User, FcmToken.userId == User.id).where(
+                        and_(
+                            User.role == Role.ADMIN,
+                            User.phone.like("%9170942500%"),  # Super Admin HQ only
+                        )
+                    )
                 )
-                adm_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
-                if adm_toks:
-                    await send_fcm_notification(tokens=adm_toks, title=admin_title, body=admin_body, data=admin_data)
+                hq_toks = list(set(t for t in adm_res.scalars().all() if t and len(t) > 10))
+                if hq_toks:
+                    await send_fcm_notification(tokens=hq_toks, title=admin_title, body=admin_body, data=admin_data)
         except Exception as direct_err:
-            logger.error(f"Failed direct FCM push in dispatch_admin_order_buzzer: {direct_err}")
+            logger.error(f"Failed Super Admin HQ direct FCM push: {direct_err}")
     except Exception as e:
         logger.error(f"Failed dispatch_admin_order_buzzer: {e}")
 

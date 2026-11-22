@@ -33,8 +33,37 @@ import '../../features/referral/referral_screen.dart';
 import '../../data/models/category.dart';
 import '../../features/categories/category_products_screen.dart';
 
+class AppRouteObserver extends NavigatorObserver {
+  static String? currentRoute;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (route.settings.name != null && route.settings.name!.isNotEmpty) {
+      currentRoute = route.settings.name;
+    }
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (newRoute?.settings.name != null && newRoute!.settings.name!.isNotEmpty) {
+      currentRoute = newRoute.settings.name;
+    }
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    if (previousRoute?.settings.name != null && previousRoute!.settings.name!.isNotEmpty) {
+      currentRoute = previousRoute.settings.name;
+    }
+  }
+}
+
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final AppRouteObserver routeObserver = AppRouteObserver();
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final rawRoute = settings.name ?? '';

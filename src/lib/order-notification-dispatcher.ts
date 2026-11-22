@@ -109,52 +109,41 @@ export async function dispatchOrderNotifications(ctx: OrderNotificationContext):
         }
       }
 
-      // Hub-scoped admin topic (strictly hub-isolated)
+      // Hub-scoped admin topic (strictly hub-isolated, exactly 1 canonical topic per hub)
       const targetStoreId = storeId || 'hub-209206'
       const fcmDispatchPromises: Promise<any>[] = []
 
-      fcmDispatchPromises.push(
-        sendTopicWithRetry(fcmMessaging, { topic: `admin_orders_${targetStoreId}`, ...staffPayload }).catch(() => {})
-      )
-
+      let canonicalAdminTopic = `admin_orders_${targetStoreId}`
       if (targetStoreId.includes('209206')) {
-        fcmDispatchPromises.push(
-          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_ghatampur', ...staffPayload }).catch(() => {})
-        )
+        canonicalAdminTopic = 'admin_orders_ghatampur'
       } else if (targetStoreId.includes('816101')) {
-        fcmDispatchPromises.push(
-          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_barharwa', ...staffPayload }).catch(() => {})
-        )
+        canonicalAdminTopic = 'admin_orders_barharwa'
       } else if (targetStoreId.includes('224122')) {
-        fcmDispatchPromises.push(
-          sendTopicWithRetry(fcmMessaging, { topic: 'admin_orders_akbarpur', ...staffPayload }).catch(() => {})
-        )
+        canonicalAdminTopic = 'admin_orders_akbarpur'
       }
 
-      // DIRECT FCM PUSH to registered Admin device token (Hub-Scoped + Super Admin HQ)
+      fcmDispatchPromises.push(
+        sendTopicWithRetry(fcmMessaging, { topic: canonicalAdminTopic, ...staffPayload }).catch(() => {})
+      )
+
+      // Super Admin HQ (9170942500) Direct Alert ONLY (if not on local hub topic)
       try {
-        const adminTokens = await prisma.fcmToken.findMany({
+        const hqTokens = await prisma.fcmToken.findMany({
           where: {
             user: {
               role: Role.ADMIN,
-              OR: [
-                { assignedStoreId: targetStoreId },
-                { phone: { contains: '9170942500' } },
-                ...(targetStoreId.includes('209206') ? [{ phone: { contains: '7054470303' } }] : []),
-                ...(targetStoreId.includes('816101') ? [{ phone: { contains: '7633898577' } }] : []),
-                ...(targetStoreId.includes('224122') ? [{ phone: { contains: '9696678006' } }] : []),
-              ],
+              phone: { contains: '9170942500' },
             },
           },
           select: { token: true },
         })
 
-        for (const t of adminTokens) {
+        for (const t of hqTokens) {
           if (!sentFcmTokensThisCheckout.has(t.token)) {
             sentFcmTokensThisCheckout.add(t.token)
             fcmDispatchPromises.push(
               fcmMessaging.send({ token: t.token, ...staffPayload }).catch((err: any) =>
-                console.error('Direct admin FCM send failed:', err)
+                console.error('Direct Super Admin HQ FCM send failed:', err)
               )
             )
           }

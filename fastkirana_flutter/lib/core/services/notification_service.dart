@@ -348,12 +348,19 @@ title.toString().contains('🛵') ||
     }
   }
 
-  if (notification != null && !isOrderAlert) {
-    // Android OS FCM client displays notification directly in system tray for routine customer notifications.
-    // Suppress localNotifications.show here to avoid showing 2 duplicate notifications for customer.
-    // BUT for isOrderAlert (Admin buzzers, Kitchen buzzers, Rider alarms), NEVER return early!
-    // We MUST execute localNotifications.show with fastminute_order_alarm_v3, fullScreenIntent, and alarm chime!
-    debugPrint('NotificationService: Suppressing duplicate routine FCM notification in background.');
+  if (notification != null) {
+    // Android OS FCM client ALREADY displays notification directly in system tray!
+    // Calling localNotifications.show here creates an exact duplicate notification in the tray.
+    // Trigger the buzzer audio chime directly, and return to guarantee strictly 1 notification in tray!
+    if (isOrderAlert) {
+      final rawOrderId = data['readableId'] ?? data['orderId'] ?? data['id'];
+      final baseOrderNum = NotificationService.getBaseOrderNumber(rawOrderId);
+      final cleanOrderId = baseOrderNum.isNotEmpty
+          ? baseOrderNum
+          : rawOrderId?.toString().trim().replaceAll('#', '');
+      OrderAlarmService.instance.startOrderBuzzer(orderId: cleanOrderId);
+    }
+    debugPrint('NotificationService: Suppressing duplicate FCM notification in background (Android OS handles display).');
     return;
   }
 

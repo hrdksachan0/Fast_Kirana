@@ -27,7 +27,8 @@ async def test_admin_pending_notifies_admin_only():
             payment_status="PENDING",
         )
         sent_topics = [call.args[0] for call in mock_topic.call_args_list]
-        assert "admin_orders_hub-209206" in sent_topics
+        assert "admin_orders_ghatampur" in sent_topics
+        assert len(sent_topics) == 1
         assert "admin_orders_ghatampur" in sent_topics
         assert "admin_orders_barharwa" not in sent_topics
         assert "admin_orders" not in sent_topics
