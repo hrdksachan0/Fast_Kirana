@@ -159,6 +159,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     // Active order polling: 3s fallback so customer screen syncs within 3 seconds whenever admin changes status
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
       final st = _order?.status;
       if (st != OrderStatus.delivered && st != OrderStatus.cancelled) {
         _silentPollOrder();
@@ -175,8 +176,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     } catch (e) { LoggerService.error("Bare catch", e); }
   }
 
+  bool _isDisposed = false;
+
   @override
   void dispose() {
+    _isDisposed = true;
     _eventBusSub?.cancel();
     _pollTimer?.cancel();
     _etaUpdateTimer?.cancel();
@@ -521,14 +525,23 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   void _playStatusChime([String soundAsset = 'sounds/status_step_tick.wav']) {
     try {
-      _audioPlayer.stop();
-      _audioPlayer.play(
-        AssetSource(soundAsset),
-        volume: 0.85,
-        mode: PlayerMode.lowLatency,
-      );
+      _audioPlayer.stop().then((_) {
+        try {
+          _audioPlayer.play(
+            AssetSource(soundAsset),
+            volume: 0.85,
+            mode: PlayerMode.lowLatency,
+          ).catchError((_) {
+            SystemSound.play(SystemSoundType.alert);
+          });
+        } catch (_) {
+          SystemSound.play(SystemSoundType.alert);
+        }
+      }).catchError((_) {
+        SystemSound.play(SystemSoundType.alert);
+      });
     } catch (_) {
-      SystemSound.play(SystemSoundType.alert);
+      try { SystemSound.play(SystemSoundType.alert); } catch (_) {}
     }
   }
 
@@ -724,6 +737,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   Future<void> _silentPollOrder() async {
+    if (!mounted || _isDisposed) return;
     try {
       final repo = OrderRepository(ref.read(dioProvider));
       var cleanId = widget.orderId.trim();

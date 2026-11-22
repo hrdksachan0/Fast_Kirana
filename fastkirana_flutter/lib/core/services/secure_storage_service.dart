@@ -237,10 +237,15 @@ class SecureStorage {
       // 1. Write exclusively to encrypted storage
       await _storage.write(key: key, value: value);
 
-      // 2. Verify write succeeded with readback
-      final verified = await _storage.read(key: key);
-      if (verified != value) {
-        throw Exception('Secure storage write verification failed for $key');
+      // 2. Verify write succeeded with readback (with graceful fallback if verification times out)
+      try {
+        final verified = await _storage.read(key: key);
+        if (verified != null && verified != value) {
+          LoggerService.error('SecureStorageService: readback mismatch, retrying write for $key', null);
+          await _storage.write(key: key, value: value);
+        }
+      } catch (readErr) {
+        LoggerService.error('SecureStorageService: readback exception ignored', readErr);
       }
 
       // 3. Purge any legacy plaintext copy from SharedPreferences

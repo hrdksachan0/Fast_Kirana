@@ -288,13 +288,17 @@ class DeliveryRoutes {
       try {
         final a = (order as dynamic).address;
         if (a != null) {
-          if (a.formattedAddress != null) addressTokens.add(a.formattedAddress.toString());
-          if (a.area != null) addressTokens.add(a.area.toString());
-          if (a.street != null) addressTokens.add(a.street.toString());
-          if (a.label != null) addressTokens.add(a.label.toString());
-          if (a.landmark != null) addressTokens.add(a.landmark.toString());
-          if (a.lat != null) lat = (a.lat as num).toDouble();
-          if (a.lng != null) lng = (a.lng as num).toDouble();
+          if (a is Map) {
+            extractFromMap(a);
+          } else {
+            try { if (a.formattedAddress != null) addressTokens.add(a.formattedAddress.toString()); } catch (_) {}
+            try { if (a.area != null) addressTokens.add(a.area.toString()); } catch (_) {}
+            try { if (a.street != null) addressTokens.add(a.street.toString()); } catch (_) {}
+            try { if (a.label != null) addressTokens.add(a.label.toString()); } catch (_) {}
+            try { if (a.landmark != null) addressTokens.add(a.landmark.toString()); } catch (_) {}
+            try { if (a.lat != null) lat = (a.lat as num).toDouble(); } catch (_) {}
+            try { if (a.lng != null) lng = (a.lng as num).toDouble(); } catch (_) {}
+          }
         }
       } catch (_) {}
 
