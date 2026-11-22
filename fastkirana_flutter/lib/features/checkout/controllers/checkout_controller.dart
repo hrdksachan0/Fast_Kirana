@@ -452,12 +452,17 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     );
   }
 
-  Future<void> _onCashfreeError(CFErrorResponse errorResponse, String cfOrderId) async {
+    Future<void> _onCashfreeError(CFErrorResponse errorResponse, String cfOrderId) async {
     HapticFeedback.lightImpact();
+
+    // If customer is already placing or switched to COD, ignore any delayed online payment errors
+    if (state.selectedPayment == 'cod') {
+      debugPrint('[Checkout] Suppressing online payment notice because selected payment is COD.');
+      return;
+    }
 
     PaymentVerificationResult? fastVerify;
     try {
-      // Quick verification: check if server already marked order PAID (e.g., slow SDK callback)
       fastVerify = await _paymentHandler.verifyPayment(cfOrderId, maxAttempts: 6);
       if (fastVerify.isPaid) {
         debugPrint('✅ Payment verified as PAID on server despite error callback! Routing to success...');
@@ -465,7 +470,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         return;
       }
     } catch (vErr) {
-      debugPrint('Cashfree error verify check note: $vErr');
+      debugPrint('Cashfree error verify check note: ');
     }
 
     final rawMsg = errorResponse.getMessage() ?? '';
@@ -478,6 +483,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final isUserBackout = msg.contains('USER_DROPPED') ||
         msg.contains('CANCEL') ||
         msg.contains('BACK') ||
+        msg.contains('UNDEFINED') ||
+        rawMsg.trim().isEmpty ||
         code.contains('USER_DROPPED') ||
         code.contains('CANCEL') ||
         code.contains('BACK') ||
@@ -488,7 +495,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final cart = state.pendingCart ?? ref.read(cartProvider).value;
     final context = _currentContext;
 
-    // Swiggy/Blinkit rule: Always cleanly reset in-flight state and clear pending payment session
+    // Cleanly reset in-flight state and clear pending payment recovery
     await PaymentGatewayHandler.clearPendingPaymentRecovery();
     await CheckoutDraft.clearAcceptedDraft();
     state = state.copyWith(
@@ -498,10 +505,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       pendingCart: null,
     );
 
-    // If user deliberately pressed back or dropped out, return gracefully without scary modals
+    // If user cancelled, pressed back, or closed the sheet, return cleanly without scary modals
     if (isUserBackout) {
-      debugPrint('ℹ️ User dropped or cancelled Cashfree payment ($cfOrderId). Returning cleanly to checkout.');
-      if (context != null && context.mounted) {
+      debugPrint('ℹ️ User dropped or cancelled payment (). Returning cleanly to checkout.');
+      if (context != null && context.mounted && state.selectedPayment != 'cod') {
         AppToast.showInfo(
           context,
           'Payment Cancelled',
@@ -511,8 +518,8 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
-    // Prompt customer immediately with options: Retry Payment, Convert to COD, or Cancel Order
-    if (context != null && context.mounted && total > 0 && cart != null) {
+    // Prompt customer with options: Retry Payment, Convert to COD, or Cancel Order
+    if (context != null && context.mounted && total > 0 && cart != null && state.selectedPayment != 'cod') {
       await PaymentFailedCodSheet.show(
         context: context,
         grandTotal: total,
@@ -559,10 +566,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return;
     }
 
-    if (context != null && context.mounted) {
-      final errorMsg = (errorResponse.getMessage() ?? '').toLowerCase();
-      final displayMsg = errorMsg.isNotEmpty
-          ? errorMsg
+    if (context != null && context.mounted && state.selectedPayment != 'cod') {
+      final cleanMsg = (errorResponse.getMessage() ?? '').trim();
+      final displayMsg = (cleanMsg.isNotEmpty && cleanMsg.toLowerCase() != 'undefined' && cleanMsg.toLowerCase() != 'null')
+          ? cleanMsg
           : 'Payment cancelled or could not be completed. Please retry or choose Cash on Delivery (COD).';
 
       AppToast.showWarning(
@@ -1003,7 +1010,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         if (cfOrderId != null) {
           state = state.copyWith(
             pendingCashfreeOrderId: cfOrderId,
-            isPlacingOrder: false,
+            isPlacingOrder: true,
           );
           return;
         }
@@ -1919,6 +1926,16 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         );
       }
     }
+  }
+
+  void dismissRecoveryBanner() {
+    PaymentGatewayHandler.clearPendingPaymentRecovery();
+    CheckoutDraft.clearAcceptedDraft();
+    state = state.copyWith(
+      pendingCashfreeOrderId: null,
+      pendingGrandTotal: null,
+      pendingCart: null,
+    );
   }
 
   Future<void> cancelPendingPaymentSession(BuildContext context) async {

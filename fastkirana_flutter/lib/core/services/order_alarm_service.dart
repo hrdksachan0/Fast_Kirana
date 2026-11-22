@@ -77,9 +77,11 @@ class OrderAlarmService {
     await _playChime();
 
     _alarmLoopTimer?.cancel();
-    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3200), (_) async {
-      if (!_isPlaying || _isMuted) {
-        _alarmLoopTimer?.cancel();
+    int iteration = 0;
+    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3200), (timer) async {
+      iteration++;
+      if (!_isPlaying || _isMuted || iteration > 12) {
+        stopAlarm();
         return;
       }
       await _playChime();
@@ -101,11 +103,13 @@ class OrderAlarmService {
     // Play initial sound & vibration
     await _playChime();
 
-    // Loop alarm every 3.5 seconds until accepted or dismissed
+    // Loop alarm every 3.5 seconds until accepted or dismissed (max 12 iterations ~42s auto-stop)
     _alarmLoopTimer?.cancel();
-    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3500), (_) async {
-      if (!_isPlaying || _isMuted) {
-        _alarmLoopTimer?.cancel();
+    int iteration = 0;
+    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3500), (timer) async {
+      iteration++;
+      if (!_isPlaying || _isMuted || iteration > 12) {
+        stopAlarm();
         return;
       }
       await _playChime();

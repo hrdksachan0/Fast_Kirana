@@ -14,6 +14,7 @@ import '../../../data/models/order.dart';
 import '../../../providers/store_settings_provider.dart';
 import '../../orders/order_detail_screen.dart';
 import '../../delivery/widgets/rider_cart_modal.dart';
+import '../../../core/services/order_alarm_service.dart';
 
 /// Reusable Admin Order Card extracted from admin_orders_list.dart
 /// Handles status badges, KOT dispatch, rider assignments, super-edit, and items preview.
@@ -1630,6 +1631,7 @@ class AdminOrderCard extends ConsumerWidget {
                               onPressed: (onUpdateStatus != null && !isProcessing)
                                   ? () {
                                       HapticFeedback.heavyImpact();
+                                      OrderAlarmService.instance.stopAlarm();
                                       onUpdateStatus!(order, OrderStatus.confirmed);
                                     }
                                   : null,
@@ -1665,6 +1667,7 @@ class AdminOrderCard extends ConsumerWidget {
                               onPressed: (onUpdateStatus != null && !isProcessing)
                                   ? () {
                                       HapticFeedback.mediumImpact();
+                                      OrderAlarmService.instance.stopAlarm();
                                       onUpdateStatus!(order, OrderStatus.cancelled);
                                     }
                                   : null,

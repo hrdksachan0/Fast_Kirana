@@ -224,7 +224,7 @@ async def send_fcm_notification(
 
         message = messaging.MulticastMessage(
             tokens=clean_tokens,
-            notification=messaging.Notification(
+            notification=None if is_status else messaging.Notification(
                 title=title,
                 body=body,
             ),
@@ -232,7 +232,7 @@ async def send_fcm_notification(
             android=messaging.AndroidConfig(
                 priority="high",
                 collapse_key=collapse_id,
-                notification=messaging.AndroidNotification(
+                notification=None if is_status else messaging.AndroidNotification(
                     icon="@mipmap/ic_launcher",
                     color="#E20A22",
                     sound=sound,

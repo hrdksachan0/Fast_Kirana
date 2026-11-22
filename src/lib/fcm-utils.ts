@@ -124,22 +124,26 @@ export function buildOrderFcmPayload(
       : 'fastkirana_alerts'
 
   return {
-    notification: { title, body },
+    ...(isCustomerTracking ? {} : { notification: { title, body } }),
     data,
     android: {
       priority: 'high' as const,
       ttl: ttlSeconds,
       ...(collapseId ? { collapseKey: collapseId } : {}),
-      notification: {
-        channelId,
-        sound: isOrderAlert ? 'order_chime' : undefined,
-        defaultSound: !isOrderAlert && !isCustomerTracking,
-        defaultVibrateTimings: !isOrderAlert && !isCustomerTracking,
-        ...(isOrderAlert ? { vibrateTimingsMillis: [0, 1000, 500, 1000, 500, 1000, 500, 1000] } : {}),
-        visibility: 'PUBLIC' as const,
-        priority: isOrderAlert ? ('MAX' as const) : ('HIGH' as const),
-        ...(collapseId ? { tag: collapseId } : {}),
-      },
+      ...(isCustomerTracking
+        ? {}
+        : {
+            notification: {
+              channelId,
+              sound: isOrderAlert ? 'order_chime' : undefined,
+              defaultSound: !isOrderAlert && !isCustomerTracking,
+              defaultVibrateTimings: !isOrderAlert && !isCustomerTracking,
+              ...(isOrderAlert ? { vibrateTimingsMillis: [0, 1000, 500, 1000, 500, 1000, 500, 1000] } : {}),
+              visibility: 'PUBLIC' as const,
+              priority: isOrderAlert ? ('MAX' as const) : ('HIGH' as const),
+              ...(collapseId ? { tag: collapseId } : {}),
+            },
+          }),
     },
     apns: {
       headers: {

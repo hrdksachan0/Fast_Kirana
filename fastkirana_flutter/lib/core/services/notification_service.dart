@@ -289,7 +289,16 @@ title.toString().contains('🛵') ||
       ((data['screen'] == 'delivery' || data['screen'] == 'delivery-dashboard' || data['role'] == 'DELIVERY') &&
           (orderStatus == 'CONFIRMED' || orderStatus == 'PACKED' || data['type'] == 'NEW_ORDER' || data['type'] == 'ORDER_PACKED' || data['type'] == 'DELIVERY_ASSIGNED')));
 
-  final isOrderAlert = !isCustomerNotification && isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
+  final isConfirmedOrProgressing = orderStatus == 'CONFIRMED' ||
+      orderStatus == 'COOKING' ||
+      orderStatus == 'PREPARING' ||
+      orderStatus == 'PACKED' ||
+      orderStatus == 'SHIPPED' ||
+      orderStatus == 'OUT_FOR_DELIVERY' ||
+      orderStatus == 'DELIVERED' ||
+      orderStatus == 'CANCELLED';
+
+  final isOrderAlert = !isCustomerNotification && !isConfirmedOrProgressing && isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
       data['type'] == 'NEW_ORDER' ||
       data['type'] == 'VENDOR_NEW_ORDER' ||
       orderStatus == 'PENDING' ||
@@ -299,18 +308,20 @@ title.toString().contains('🛵') ||
       data['screen'] == 'admin-orders' ||
       data['role'] == 'ADMIN' ||
       data['screen'] == 'restaurant-console' ||
-      (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'CONFIRMED' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
-      title.toString().contains('👨‍🍳') ||
+      (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
       title.toString().contains('🛎️') ||
-      title.toString().contains('💳') ||
       title.toString().contains('🚨') ||
       title.toString().contains('🔔') ||
-      title.toString().toLowerCase().contains('kitchen') ||
       title.toString().toLowerCase().contains('new order') ||
       title.toString().toLowerCase().contains('new combined order') ||
       title.toString().toLowerCase().contains('combined order') ||
       title.toString().toLowerCase().contains('new approved order') ||
       title.toString().toLowerCase().contains('awaiting approval'))));
+
+  // If status is confirmed or beyond, silence any active order buzzer immediately!
+  if (isConfirmedOrProgressing) {
+    OrderAlarmService.instance.stopAlarm(closeModal: false);
+  }
 
   final isOrderStatusUpdate = !isCancelledOrTerminal && !isOrderAlert && (
       isCustomerNotification ||
@@ -436,25 +447,25 @@ title.toString().contains('🛵') ||
       String cleanBodyText = body.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
       if (isOrderStatusUpdate && cleanOrderId != null && cleanOrderId.isNotEmpty) {
         if (rawStatus == 'PENDING' || rawStatus == 'ADMIN_PENDING' || rawStatus == 'PLACED') {
-          cleanTitle = 'Store Verifying ⏳ • #$cleanOrderId';
+          cleanTitle = '#$cleanOrderId • Verifying ⏳';
           cleanBodyText = 'Ghatampur Central Hub is checking freshness & stock';
         } else if (rawStatus == 'CONFIRMED') {
-          cleanTitle = 'Order Confirmed 👨‍🍳 • #$cleanOrderId';
+          cleanTitle = '#$cleanOrderId • Confirmed 👨‍🍳';
           cleanBodyText = 'Store accepted your order & preparing fresh items';
         } else if (rawStatus == 'PREPARING' || rawStatus == 'COOKING') {
-          cleanTitle = 'Preparing Fresh 🍲 • #$cleanOrderId';
+          cleanTitle = '#$cleanOrderId • Cooking 🍲';
           cleanBodyText = 'Store is preparing your fresh order items';
         } else if (rawStatus == 'PACKED') {
-          cleanTitle = 'Order Packed 🛍️ • #$cleanOrderId';
+          cleanTitle = '#$cleanOrderId • Packed 🛍️';
           cleanBodyText = 'Store packed your fresh items • Awaiting rider pickup';
         } else if (rawStatus == 'SHIPPED' || rawStatus == 'OUT_FOR_DELIVERY') {
-          cleanTitle = 'Out for Delivery 🛵 • #$cleanOrderId';
+          cleanTitle = '#$cleanOrderId • On the Way 🛵';
           cleanBodyText = 'Rider is on the way to your doorstep • Live GPS tracking';
         } else if (rawStatus == 'ARRIVING_SOON') {
-          cleanTitle = 'Arriving Soon! 🛵 • #$cleanOrderId';
+          cleanTitle = '#$cleanOrderId • Arriving Soon ⚡';
           cleanBodyText = 'Rider has reached your area and is arriving at your doorstep!';
         } else if (rawStatus == 'DELIVERED') {
-          cleanTitle = '🎉 Order Delivered! • #$cleanOrderId';
+          cleanTitle = '#$cleanOrderId • Delivered! 🎉';
           cleanBodyText = 'Your FastMinute order was delivered fresh. Enjoy!';
         } else {
           cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute').trim();
@@ -1274,30 +1285,33 @@ title.toString().contains('🛵') ||
           }
         }
 
-        // Suppress ONLY routine customer delivery status updates (e.g. out for delivery, delivered, cooking)
-        // DO NOT suppress new incoming orders (PENDING, ADMIN_PENDING, or CONFIRMED live orders)!
-        final isNewOrderAlert = msgType == 'NEW_ORDER' ||
+        // Suppress routine updates and confirmed orders for Admin in foreground
+        final isConfirmedOrProgressing = orderStatus == 'CONFIRMED' ||
+            orderStatus == 'COOKING' ||
+            orderStatus == 'PREPARING' ||
+            orderStatus == 'PACKED' ||
+            orderStatus == 'SHIPPED' ||
+            orderStatus == 'OUT_FOR_DELIVERY' ||
+            orderStatus == 'DELIVERED';
+
+        final isNewOrderAlert = !isConfirmedOrProgressing && (
+            msgType == 'NEW_ORDER' ||
             msgType == 'STAFF_ALERT' ||
             data['screen'] == 'admin-orders' ||
             orderStatus == 'PENDING' ||
             orderStatus == 'ADMIN_PENDING' ||
             title.toString().contains('New Order') ||
             title.toString().contains('New Food') ||
-            title.toString().contains('👨‍🍳') ||
             title.toString().contains('🛎️') ||
             title.toString().contains('🚨') ||
-            title.toString().contains('🔔');
+            title.toString().contains('🔔'));
 
         if (!isNewOrderAlert && (
             msgType == 'ORDER_STATUS_UPDATE' ||
             msgType == 'STATUS_UPDATE' ||
             msgType == 'ORDER_STATUS' ||
-            orderStatus == 'PREPARING' ||
-            orderStatus == 'COOKING' ||
-            orderStatus == 'PACKED' ||
-            orderStatus == 'SHIPPED' ||
-            orderStatus == 'OUT_FOR_DELIVERY' ||
-            orderStatus == 'DELIVERED')) {
+            isConfirmedOrProgressing)) {
+          OrderAlarmService.instance.stopAlarm(closeModal: false);
           debugPrint('NotificationService: Suppressed routine status update ($orderStatus) for Admin in foreground.');
           return;
         }
@@ -1393,7 +1407,20 @@ title.toString().contains('🛵') ||
         title.toString().toLowerCase().contains('out for delivery') ||
         title.toString().toLowerCase().contains('on the way');
 
-    final isOrderAlert = !isCustomerNotification && !isOnTheWayOrDelivering && isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
+    final isConfirmedOrProgressing = orderStatus == 'CONFIRMED' ||
+        orderStatus == 'COOKING' ||
+        orderStatus == 'PREPARING' ||
+        orderStatus == 'PACKED' ||
+        orderStatus == 'SHIPPED' ||
+        orderStatus == 'OUT_FOR_DELIVERY' ||
+        orderStatus == 'DELIVERED' ||
+        orderStatus == 'CANCELLED';
+
+    if (isConfirmedOrProgressing) {
+      OrderAlarmService.instance.stopAlarm(closeModal: false);
+    }
+
+    final isOrderAlert = !isCustomerNotification && !isOnTheWayOrDelivering && !isConfirmedOrProgressing && isStaff && (isDeliveryRiderAlert || (!isCancelledOrTerminal && (
         data['type'] == 'NEW_ORDER' ||
         data['type'] == 'VENDOR_NEW_ORDER' ||
         orderStatus == 'PENDING' ||
@@ -1403,10 +1430,8 @@ title.toString().contains('🛵') ||
         data['screen'] == 'admin-orders' ||
         data['role'] == 'ADMIN' ||
         data['screen'] == 'restaurant-console' ||
-        (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'CONFIRMED' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
-        title.toString().contains('👨‍🍳') ||
+        (data['restaurantId'] != null && (orderStatus == 'PENDING' || orderStatus == 'PLACED' || data['type'] == 'NEW_ORDER')) ||
         title.toString().contains('🛎️') ||
-        title.toString().contains('💳') ||
         title.toString().contains('🚨') ||
         title.toString().contains('🔔') ||
         title.toString().toLowerCase().contains('kitchen') ||
@@ -1492,25 +1517,25 @@ title.toString().contains('🛵') ||
     String cleanBodyText = body.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
     if (isOrderStatusUpdate && cleanOrderId != null && cleanOrderId.isNotEmpty) {
       if (orderStatus == 'PENDING' || orderStatus == 'ADMIN_PENDING' || orderStatus == 'PLACED') {
-        cleanTitle = 'Store Verifying ⏳ • #$cleanOrderId';
+        cleanTitle = '#$cleanOrderId • Verifying ⏳';
         cleanBodyText = 'Ghatampur Central Hub is checking freshness & stock';
       } else if (orderStatus == 'CONFIRMED') {
-        cleanTitle = 'Order Confirmed 👨‍🍳 • #$cleanOrderId';
+        cleanTitle = '#$cleanOrderId • Confirmed 👨‍🍳';
         cleanBodyText = 'Store accepted your order & preparing fresh items';
       } else if (orderStatus == 'PREPARING' || orderStatus == 'COOKING') {
-        cleanTitle = 'Preparing Fresh 🍲 • #$cleanOrderId';
+        cleanTitle = '#$cleanOrderId • Cooking 🍲';
         cleanBodyText = 'Store is preparing your fresh order items';
       } else if (orderStatus == 'PACKED') {
-        cleanTitle = 'Order Packed 🛍️ • #$cleanOrderId';
+        cleanTitle = '#$cleanOrderId • Packed 🛍️';
         cleanBodyText = 'Store packed your fresh items • Awaiting rider pickup';
       } else if (orderStatus == 'SHIPPED' || orderStatus == 'OUT_FOR_DELIVERY') {
-        cleanTitle = 'Out for Delivery 🛵 • #$cleanOrderId';
+        cleanTitle = '#$cleanOrderId • On the Way 🛵';
         cleanBodyText = 'Rider is on the way to your doorstep • Live GPS tracking';
       } else if (orderStatus == 'ARRIVING_SOON') {
-        cleanTitle = 'Arriving Soon! 🛵 • #$cleanOrderId';
+        cleanTitle = '#$cleanOrderId • Arriving Soon ⚡';
         cleanBodyText = 'Rider has reached your area and is arriving at your doorstep!';
       } else if (orderStatus == 'DELIVERED') {
-        cleanTitle = '🎉 Order Delivered! • #$cleanOrderId';
+        cleanTitle = '#$cleanOrderId • Delivered! 🎉';
         cleanBodyText = 'Your FastMinute order was delivered fresh. Enjoy!';
       } else {
         cleanTitle = title.toString().replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute').trim();
@@ -1627,6 +1652,14 @@ title.toString().contains('🛵') ||
     final notifTag = NotificationService.LIVE_TRACKING_TAG;
     final int notifId = NotificationService.LIVE_TRACKING_NOTIF_ID;
 
+    // Cancel any duplicate standard/FCM static notification for this order
+    // so ONLY this rich Live Activity notification with progress bar remains in the tray!
+    if (baseNum.isNotEmpty) {
+      final orderNotifId = NotificationService.getOrderNotifId(baseNum);
+      unawaited(_localNotifications?.cancel(orderNotifId, tag: 'order_$baseNum'));
+      unawaited(_localNotifications?.cancel(orderNotifId));
+    }
+
     if (isTerminal) {
       _lastLiveActivityOrderId = null;
       _lastLiveActivityTitle = null;
@@ -1695,16 +1728,16 @@ title.toString().contains('🛵') ||
       case OrderStatus.shipped:
         if (customEtaText != null && customEtaText.isNotEmpty && customEtaText != 'Delivered 🎉') {
           if (customEtaText.toLowerCase().contains('now') || customEtaText.toLowerCase().contains('arriving')) {
-            title = 'Arriving Now! 🛵 • $displayTag';
+            title = '$displayTag • Arriving Now! 🛵';
             body = '$riderName has reached your doorstep!\n📍 FastMinute Live Doorstep Delivery';
             progress = customProgress ?? 95;
           } else {
-            title = 'Arriving in $customEtaText 🛵 • $displayTag';
+            title = '$displayTag • Arriving in $customEtaText 🛵';
             body = '$riderName is on the way to your doorstep\n📍 FastMinute Live GPS Tracking';
             progress = customProgress ?? 80;
           }
         } else {
-          title = 'Out for Delivery 🛵 • $displayTag';
+          title = '$displayTag • On the Way 🛵';
           body = '$riderName is heading to your doorstep\n📍 FastMinute Live GPS Tracking';
           progress = customProgress ?? 75;
         }
@@ -1725,7 +1758,7 @@ title.toString().contains('🛵') ||
         break;
 
       case OrderStatus.packed:
-        title = 'Order Packed 🛍️ • $displayTag';
+        title = '$displayTag • Packed 🛍️';
         body = rawRiderName.isNotEmpty
             ? '$riderName is assigned & picking up package\n🏪 Ghatampur Central Hub'
             : 'Store packed your fresh items • Awaiting rider pickup\n🏪 Ghatampur Central Hub';
@@ -1740,7 +1773,7 @@ title.toString().contains('🛵') ||
         break;
 
       case OrderStatus.confirmed:
-        title = 'Order Confirmed 👨‍🍳 • $displayTag';
+        title = '$displayTag • Confirmed 👨‍🍳';
         body = 'Store accepted your order & preparing fresh items\n🏪 Ghatampur Central Hub';
         progress = customProgress ?? 35;
         actions = [
@@ -1755,7 +1788,7 @@ title.toString().contains('🛵') ||
       case OrderStatus.adminPending:
       case OrderStatus.pending:
       default:
-        title = 'Store Verifying ⏳ • $displayTag';
+        title = '$displayTag • Verifying ⏳';
         body = 'Ghatampur Central Hub is checking freshness & stock\n⏳ FastMinute Express';
         progress = customProgress ?? 15;
         actions = [

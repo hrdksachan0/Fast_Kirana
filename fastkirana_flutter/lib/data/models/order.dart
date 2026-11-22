@@ -208,12 +208,10 @@ class Order {
   ({String label, String formattedAddress, double? lat, double? lng})? get address {
     final rawLat = (addressRaw?['lat'] as num?)?.toDouble() ??
         (addressRaw?['latitude'] as num?)?.toDouble() ??
-        (addressRaw?['custLat'] as num?)?.toDouble() ??
-        deliveryLat;
+        (addressRaw?['custLat'] as num?)?.toDouble();
     final rawLng = (addressRaw?['lng'] as num?)?.toDouble() ??
         (addressRaw?['longitude'] as num?)?.toDouble() ??
-        (addressRaw?['custLng'] as num?)?.toDouble() ??
-        deliveryLng;
+        (addressRaw?['custLng'] as num?)?.toDouble();
     final rawAddr = customerAddress ?? (addressRaw?['formattedAddress'] as String?) ?? (addressRaw?['address'] as String?) ?? 'Ghatampur Zone';
     final rawLabel = (addressRaw?['label'] as String?) ?? 'Delivery Location';
     return (

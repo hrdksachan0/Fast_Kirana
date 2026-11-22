@@ -3795,7 +3795,9 @@ async def get_order_details(
                     "area": order.address.area,
                     "city": order.address.city,
                     "pincode": order.address.pincode,
-                    "phone": order.address.phone
+                    "phone": order.address.phone,
+                    "lat": float(order.address.lat) if getattr(order.address, 'lat', None) is not None else None,
+                    "lng": float(order.address.lng) if getattr(order.address, 'lng', None) is not None else None,
                 } if order.address else None,
                 "deliveryUser": delivery_user,
                 "isCombined": True,
@@ -3882,7 +3884,9 @@ async def get_order_details(
             "area": order.address.area,
             "city": order.address.city,
             "pincode": order.address.pincode,
-            "phone": order.address.phone
+            "phone": order.address.phone,
+            "lat": float(order.address.lat) if getattr(order.address, 'lat', None) is not None else None,
+            "lng": float(order.address.lng) if getattr(order.address, 'lng', None) is not None else None,
         } if order.address else None,
         "deliveryUser": delivery_user
     }

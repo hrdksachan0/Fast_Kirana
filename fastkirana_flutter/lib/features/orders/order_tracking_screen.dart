@@ -807,7 +807,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   void _setupCoordinatesFromOrder(Order order) {
-    // 1. Customer Position (Delivery Address Coordinates)
+    // 1. Customer Position (Delivery Address Coordinates - Locked once resolved)
     final custLat = (order.addressRaw?['lat'] as num?)?.toDouble() ??
         (order.addressRaw?['latitude'] as num?)?.toDouble() ??
         order.address?.lat;
@@ -816,8 +816,22 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         order.address?.lng;
 
     if (custLat != null && custLng != null && custLat != 0.0 && custLng != 0.0) {
-      _customerPosition = LatLng(custLat, custLng);
-    } else {
+      final newCustomerPos = LatLng(custLat, custLng);
+      // Once customer position is set to a valid address, don't let it drift/jump unless difference is substantial
+      if (_customerPosition == null) {
+        _customerPosition = newCustomerPos;
+      } else {
+        final d = Geolocator.distanceBetween(
+          _customerPosition!.latitude,
+          _customerPosition!.longitude,
+          newCustomerPos.latitude,
+          newCustomerPos.longitude,
+        );
+        if (d > 2.0) {
+          _customerPosition = newCustomerPos;
+        }
+      }
+    } else if (_customerPosition == null) {
       _customerPosition = LatLng(AppConfig.darkstoreLat + 0.008, AppConfig.darkstoreLng + 0.006);
     }
 
@@ -944,12 +958,33 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     if (heading != 0.0) {
       _targetRiderHeading = heading;
     } else {
-      _targetRiderHeading = _calculateBearing(
+      double calculatedHeading = _calculateBearing(
         _prevRiderPosition!.latitude,
         _prevRiderPosition!.longitude,
         newPos.latitude,
         newPos.longitude,
       );
+      // Snapping to forward road polyline segment if available
+      if (_roadPolylinePoints.length >= 2) {
+        int bestIdx = 0;
+        double minD = double.infinity;
+        for (int i = 0; i < _roadPolylinePoints.length; i++) {
+          final d = _getHaversineDistance(newPos, _roadPolylinePoints[i]);
+          if (d < minD) {
+            minD = d;
+            bestIdx = i;
+          }
+        }
+        if (minD < 0.06 && bestIdx < _roadPolylinePoints.length - 1) {
+          calculatedHeading = _calculateBearing(
+            _roadPolylinePoints[bestIdx].latitude,
+            _roadPolylinePoints[bestIdx].longitude,
+            _roadPolylinePoints[bestIdx + 1].latitude,
+            _roadPolylinePoints[bestIdx + 1].longitude,
+          );
+        }
+      }
+      _targetRiderHeading = calculatedHeading;
     }
 
     _riderAnimController.reset();
@@ -1401,15 +1436,23 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     if (_mapController == null || !mounted) return;
     try {
       final points = <LatLng>[];
-      if (_storePosition != null) points.add(_storePosition!);
-      if (_restaurantPosition != null) points.add(_restaurantPosition!);
-      if (_customerPosition != null) points.add(_customerPosition!);
-      if (_riderPosition != null) points.add(_riderPosition!);
+      final isOutForDelivery = _order?.status == OrderStatus.shipped;
+
+      if (isOutForDelivery && _riderPosition != null && _customerPosition != null) {
+        // Active delivery leg: tight focus strictly on Rider and Customer
+        points.add(_riderPosition!);
+        points.add(_customerPosition!);
+      } else {
+        if (_storePosition != null) points.add(_storePosition!);
+        if (_restaurantPosition != null) points.add(_restaurantPosition!);
+        if (_customerPosition != null) points.add(_customerPosition!);
+        if (_riderPosition != null) points.add(_riderPosition!);
+      }
 
       if (points.isEmpty) return;
 
       if (points.length == 1) {
-        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(points.first, 13.8));
+        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(points.first, 15.5));
         return;
       }
 
@@ -1427,32 +1470,38 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
       final latSpan = (maxLat - minLat).abs();
       final lngSpan = (maxLng - minLng).abs();
-      final latMargin = math.max(0.008, latSpan * 0.45);
-      final lngMargin = math.max(0.008, lngSpan * 0.45);
+      // Snug, crisp padding tailored for city/neighborhood deliveries
+      final latMargin = math.max(0.0012, latSpan * 0.18);
+      final lngMargin = math.max(0.0012, lngSpan * 0.18);
 
       final bounds = LatLngBounds(
         southwest: LatLng(minLat - latMargin, minLng - lngMargin),
         northeast: LatLng(maxLat + latMargin, maxLng + lngMargin),
       );
 
-      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 45));
+      _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
     } catch (e) {
-      debugPrint('[OrderTracking] _fitMapBounds error: $e');
+      debugPrint('[OrderTracking] _fitMapBounds error: ');
     }
   }
 
   void _followRiderWithCamera() {
     if (_mapController == null || _riderPosition == null || !mounted) return;
-    _mapController!.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: _riderPosition!,
-          zoom: 14.8,
-          bearing: _riderHeading,
-          tilt: 15.0,
+    if (_order?.status == OrderStatus.shipped && _customerPosition != null) {
+      // During active delivery, dynamically frame both the moving rider and customer home snuggly
+      _fitMapBounds();
+    } else {
+      _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: _riderPosition!,
+            zoom: 16.0,
+            bearing: _riderHeading,
+            tilt: 15.0,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   int _getStatusStep(OrderStatus? status) {

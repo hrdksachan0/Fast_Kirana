@@ -30,23 +30,23 @@ class TrackingPaymentCard extends StatelessWidget {
     const alertRose = Color(0xFFE11D48);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8.5),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isOnlinePayment ? const Color(0xFFFDA4AF) : const Color(0xFF86EFAC),
-          width: 1.2,
+          color: isOnlinePayment ? const Color(0xFFFECDD3) : const Color(0xFFA7F3D0),
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: (isOnlinePayment ? alertRose : brandGreen).withValues(alpha: 0.08),
-            blurRadius: 14,
-            offset: const Offset(0, 3),
+            color: (isOnlinePayment ? alertRose : brandGreen).withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
           BoxShadow(
             color: const Color(0xFF0F172A).withValues(alpha: 0.02),
-            blurRadius: 6,
+            blurRadius: 4,
             offset: const Offset(0, 1),
           ),
         ],
@@ -55,23 +55,23 @@ class TrackingPaymentCard extends StatelessWidget {
         children: [
           // Icon badge
           Container(
-            width: 40,
-            height: 40,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               color: isOnlinePayment ? const Color(0xFFFFF1F2) : const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: isOnlinePayment ? const Color(0xFFFECDD3) : const Color(0xFFA7F3D0),
-                width: 1,
+                width: 0.8,
               ),
             ),
             child: Icon(
               isOnlinePayment ? Icons.payment_rounded : Icons.account_balance_wallet_rounded,
               color: isOnlinePayment ? alertRose : brandGreen,
-              size: 20,
+              size: 17,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
 
           // Details
           Expanded(
@@ -84,7 +84,7 @@ class TrackingPaymentCard extends StatelessWidget {
                     Text(
                       isOnlinePayment ? 'Pay Online: ' : 'Cash on Delivery: ',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.scaledFontSize(context, 12),
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF64748B),
                       ),
@@ -92,24 +92,25 @@ class TrackingPaymentCard extends StatelessWidget {
                     Text(
                       '₹${grandTotal.toInt()}',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.scaledFontSize(context, 14),
+                        fontSize: 13.0,
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF0F172A),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   isOnlinePayment
                       ? 'Payment pending • Tap to pay'
                       : 'Pay via Cash or UPI at door',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                    fontWeight: FontWeight.w600,
+                    fontSize: 10.0,
+                    fontWeight: FontWeight.w500,
                     color: isOnlinePayment ? alertRose : const Color(0xFF64748B),
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -120,8 +121,8 @@ class TrackingPaymentCard extends StatelessWidget {
           // Actions
           if (isProcessingPayment)
             const SizedBox(
-              width: 24,
-              height: 24,
+              width: 20,
+              height: 20,
               child: CircularProgressIndicator(color: brandGreen, strokeWidth: 2),
             )
           else ...[
@@ -129,14 +130,14 @@ class TrackingPaymentCard extends StatelessWidget {
               TextButton(
                 onPressed: onSwitchToCOD,
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Text(
                   'Switch to COD',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                    fontSize: 10.0,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF475569),
                   ),
@@ -145,19 +146,19 @@ class TrackingPaymentCard extends StatelessWidget {
             GestureDetector(
               onTap: onPayOnline,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF00A344), Color(0xFF008736)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: brandGreen.withValues(alpha: 0.28),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: brandGreen.withValues(alpha: 0.22),
+                      blurRadius: 6,
+                      offset: const Offset(0, 1.5),
                     ),
                   ],
                 ),
@@ -167,13 +168,13 @@ class TrackingPaymentCard extends StatelessWidget {
                     Text(
                       'Pay Online',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 12),
+                    const SizedBox(width: 3),
+                    const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 11),
                   ],
                 ),
               ),

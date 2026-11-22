@@ -249,84 +249,188 @@ class MapMarkerGenerator {
     return marker;
   }
 
-  /// 🛵 Sleek 3D Delivery Rider Marker (Compact 38x38 Pulsing Emerald Badge)
+  /// 🛵 Uber/Swiggy-Grade Top-Down Vector Delivery Bike (True Directional Heading Marker)
+  /// Features: Headlight projection beam, aerodynamic chassis, rider helmet, delivery box, and dual wheels
   static Future<BitmapDescriptor> createRiderMarkerBitmap([BuildContext? context]) async {
-    const cacheKey = 'vector_rider_marker_v4';
+    const cacheKey = 'vector_rider_bike_topdown_v1';
     if (_cache.containsKey(cacheKey)) return _cache[cacheKey]!;
 
-    const size = Size(38.0, 38.0);
+    const size = Size(46.0, 46.0);
     final marker = await _renderCanvasToBitmap(size, (canvas, sz) {
-      const center = Offset(19.0, 19.0);
+      const center = Offset(23.0, 23.0);
 
-      // 1. Soft Drop Shadow
-      final shadowPaint = Paint()
-        ..color = const Color(0xFF059669).withValues(alpha: 0.30)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
-      canvas.drawCircle(center, 16.5, shadowPaint);
+      // ── 1. Dynamic Headlight Projection Beam (Points forward / UP in 0° heading) ──
+      final lightBeamPath = Path()
+        ..moveTo(center.dx - 4.0, center.dy - 12.0)
+        ..lineTo(center.dx - 11.0, 2.0)
+        ..lineTo(center.dx + 11.0, 2.0)
+        ..lineTo(center.dx + 4.0, center.dy - 12.0)
+        ..close();
 
-      // 2. White Outer Rim
-      canvas.drawCircle(center, 15.5, Paint()..color = Colors.white..style = PaintingStyle.fill);
+      final lightBeamPaint = Paint()
+        ..shader = ui.Gradient.linear(
+          Offset(center.dx, center.dy - 10.0),
+          Offset(center.dx, 1.0),
+          [
+            const Color(0xFF10B981).withValues(alpha: 0.35),
+            const Color(0xFF10B981).withValues(alpha: 0.0),
+          ],
+        )
+        ..style = PaintingStyle.fill;
+      canvas.drawPath(lightBeamPath, lightBeamPaint);
 
-      // 3. Crisp Emerald Accent Border
-      canvas.drawCircle(
-        center,
-        15.5,
+      // ── 2. Soft Realistic Contact Shadow Beneath Bike ──
+      final bikeShadow = Paint()
+        ..color = Colors.black.withValues(alpha: 0.28)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: center.translate(0, 1.5), width: 15.0, height: 32.0),
+          const Radius.circular(7.5),
+        ),
+        bikeShadow,
+      );
+
+      // ── 3. Bike Main Chassis / Body (Top-Down Aerodynamic Contour) ──
+      // Main Body Base (Midnight Slate with fine white accent stroke)
+      final chassisPath = Path()
+        ..moveTo(center.dx, center.dy - 15.5) // Front nose tip
+        ..cubicTo(center.dx + 4.5, center.dy - 13.0, center.dx + 6.0, center.dy - 5.0, center.dx + 6.0, center.dy + 3.0)
+        ..cubicTo(center.dx + 6.0, center.dy + 9.0, center.dx + 5.5, center.dy + 14.5, center.dx, center.dy + 15.0) // Tail
+        ..cubicTo(center.dx - 5.5, center.dy + 14.5, center.dx - 6.0, center.dy + 9.0, center.dx - 6.0, center.dy + 3.0)
+        ..cubicTo(center.dx - 6.0, center.dy - 5.0, center.dx - 4.5, center.dy - 13.0, center.dx, center.dy - 15.5)
+        ..close();
+
+      // Body Outer White Stroke (Ensures perfect contrast on any map background)
+      canvas.drawPath(
+        chassisPath,
         Paint()
-          ..color = const Color(0xFF10B981)
-          ..strokeWidth = 2.0
+          ..color = Colors.white
+          ..strokeWidth = 3.0
           ..style = PaintingStyle.stroke,
       );
 
-      // 4. Emerald Core Circle
-      final corePaint = Paint()
+      // Body Core Fill (Sleek dark gradient)
+      canvas.drawPath(
+        chassisPath,
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(center.dx, center.dy - 15.0),
+            Offset(center.dx, center.dy + 15.0),
+            [const Color(0xFF1E293B), const Color(0xFF0F172A)],
+          )
+          ..style = PaintingStyle.fill,
+      );
+
+      // ── 4. Front & Rear Tires (Visible Top Profile) ──
+      final tirePaint = Paint()..color = const Color(0xFF020617)..style = PaintingStyle.fill;
+      // Front Tire
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(center.dx, center.dy - 13.0), width: 2.8, height: 7.0),
+          const Radius.circular(1.4),
+        ),
+        tirePaint,
+      );
+      // Rear Tire
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(center.dx, center.dy + 13.0), width: 3.2, height: 7.0),
+          const Radius.circular(1.6),
+        ),
+        tirePaint,
+      );
+
+      // ── 5. Front Handlebars & Side Mirrors ──
+      final barPaint = Paint()
+        ..color = const Color(0xFFE2E8F0)
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      // Handlebar cross bar
+      canvas.drawLine(
+        Offset(center.dx - 8.5, center.dy - 9.0),
+        Offset(center.dx + 8.5, center.dy - 9.0),
+        barPaint,
+      );
+      // Dual Handlebar Grips
+      final gripPaint = Paint()..color = const Color(0xFF0F172A)..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(center.dx - 8.5, center.dy - 9.0), 1.8, gripPaint);
+      canvas.drawCircle(Offset(center.dx + 8.5, center.dy - 9.0), 1.8, gripPaint);
+
+      // ── 6. Front Headlight LED Beacon (Bright Emerald Point) ──
+      canvas.drawCircle(
+        Offset(center.dx, center.dy - 14.0),
+        2.2,
+        Paint()..color = const Color(0xFF34D399)..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        Offset(center.dx, center.dy - 14.0),
+        1.1,
+        Paint()..color = Colors.white..style = PaintingStyle.fill,
+      );
+
+      // ── 7. Rider Helmet & Shoulders (Centered Vector Figure) ──
+      // Shoulders / Arms
+      final riderBodyPaint = Paint()
+        ..color = const Color(0xFF334155)
+        ..style = PaintingStyle.fill;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(center.dx, center.dy - 3.5), width: 11.5, height: 5.5),
+          const Radius.circular(2.5),
+        ),
+        riderBodyPaint,
+      );
+
+      // Helmet (Signature FastMinute Emerald with White Racing Stripe)
+      final helmetPaint = Paint()
         ..shader = ui.Gradient.linear(
-          const Offset(8, 8),
-          const Offset(30, 30),
+          Offset(center.dx - 4.5, center.dy - 4.5),
+          Offset(center.dx + 4.5, center.dy + 4.5),
           [const Color(0xFF10B981), const Color(0xFF047857)],
         )
         ..style = PaintingStyle.fill;
-      canvas.drawCircle(center, 13.0, corePaint);
 
-      // 5. Directional Pointer Arrow Beacon (Top)
-      final arrowPaint = Paint()..color = const Color(0xFF10B981)..style = PaintingStyle.fill;
-      final arrowPath = Path()
-        ..moveTo(19.0, 1.0)
-        ..lineTo(22.5, 5.5)
-        ..lineTo(15.5, 5.5)
-        ..close();
-      canvas.drawPath(arrowPath, arrowPaint);
+      canvas.drawCircle(Offset(center.dx, center.dy - 3.5), 4.5, Paint()..color = Colors.white..style = PaintingStyle.fill);
+      canvas.drawCircle(Offset(center.dx, center.dy - 3.5), 3.8, helmetPaint);
 
-      // 6. Vector Motor-Scooter Icon (Crisp White Geometric Shapes)
-      final bikePaint = Paint()..color = Colors.white..style = PaintingStyle.fill;
-
-      // Wheels
-      canvas.drawCircle(const Offset(14.5, 22.5), 2.8, bikePaint);
-      canvas.drawCircle(const Offset(14.5, 22.5), 1.4, Paint()..color = const Color(0xFF047857));
-
-      canvas.drawCircle(const Offset(23.5, 22.5), 2.8, bikePaint);
-      canvas.drawCircle(const Offset(23.5, 22.5), 1.4, Paint()..color = const Color(0xFF047857));
-
-      // Scooter Chassis
-      final bodyPath = Path()
-        ..moveTo(14.5, 21.5)
-        ..lineTo(19.0, 21.5)
-        ..lineTo(22.0, 16.5)
-        ..lineTo(20.0, 16.5)
-        ..lineTo(18.0, 19.0)
-        ..lineTo(14.5, 19.0)
-        ..close();
-      canvas.drawPath(bodyPath, bikePaint);
-
-      // Handlebar
-      canvas.drawRect(const Rect.fromLTWH(20.5, 14.5, 1.5, 3.2), bikePaint);
-      canvas.drawCircle(const Offset(21.2, 14.5), 1.2, bikePaint);
-
-      // Delivery Box on Back
-      final boxRect = RRect.fromRectAndRadius(
-        const Rect.fromLTWH(12.5, 16.0, 4.8, 4.2),
-        const Radius.circular(0.8),
+      // Helmet Visor / Face Direction (Pointing forward / UP)
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(center.dx, center.dy - 5.5), width: 4.8, height: 1.8),
+          const Radius.circular(0.8),
+        ),
+        Paint()..color = const Color(0xFF0F172A)..style = PaintingStyle.fill,
       );
-      canvas.drawRRect(boxRect, bikePaint);
+
+      // ── 8. FastMinute Delivery Bag (Rear Carrier Box) ──
+      // Delivery Box White Border
+      final boxRect = Rect.fromCenter(center: Offset(center.dx, center.dy + 6.0), width: 10.5, height: 8.5);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(boxRect, const Radius.circular(2.4)),
+        Paint()..color = Colors.white..style = PaintingStyle.fill,
+      );
+      // Delivery Box Core (FastMinute Brand Red / Emerald Contrast)
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(center.dx, center.dy + 6.0), width: 9.0, height: 7.0),
+          const Radius.circular(1.8),
+        ),
+        Paint()
+          ..shader = ui.Gradient.linear(
+            Offset(center.dx, center.dy + 3.0),
+            Offset(center.dx, center.dy + 9.0),
+            [const Color(0xFFE20A22), const Color(0xFFB91C1C)], // FastMinute Red
+          )
+          ..style = PaintingStyle.fill,
+      );
+      // Delivery Box Logo Dot
+      canvas.drawCircle(
+        Offset(center.dx, center.dy + 6.0),
+        1.3,
+        Paint()..color = Colors.white..style = PaintingStyle.fill,
+      );
     });
 
     _cache[cacheKey] = marker;

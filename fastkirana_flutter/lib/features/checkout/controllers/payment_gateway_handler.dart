@@ -50,8 +50,24 @@ class PaymentGatewayHandler {
       });
 
       _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (PaymentFailureResponse res) {
-        debugPrint('Razorpay payment error: code=${res.code}, msg=${res.message}');
-        final err = CFErrorResponse('FAILED', res.message ?? 'Payment cancelled or failed', 'PAYMENT_FAILED', 'ERROR');
+        debugPrint('Razorpay payment error: code=, msg=');
+        final isCancel = res.code == Razorpay.PAYMENT_CANCELLED ||
+            (res.message != null && res.message!.toLowerCase().contains('cancel')) ||
+            res.message == 'undefined' ||
+            res.message == null ||
+            res.message!.trim().isEmpty;
+        final cleanMsg = (res.message != null &&
+                res.message != 'undefined' &&
+                res.message!.trim().isNotEmpty &&
+                res.message != 'null')
+            ? res.message!
+            : (isCancel ? 'Payment cancelled' : 'Payment could not be completed');
+        final err = CFErrorResponse(
+          isCancel ? 'CANCELLED' : 'FAILED',
+          cleanMsg,
+          isCancel ? 'USER_DROPPED' : 'PAYMENT_FAILED',
+          'ERROR',
+        );
         onError(err, _activeRazorpayOrderId ?? '');
       });
 
