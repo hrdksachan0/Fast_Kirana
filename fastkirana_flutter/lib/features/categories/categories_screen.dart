@@ -7,6 +7,7 @@ import '../../core/theme/design_system.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/voice_search_sheet.dart';
+import '../../core/widgets/loading_widgets.dart';
 import '../home/utils/category_visual_helper.dart';
 import '../../core/utils/category_transition_helper.dart';
 
@@ -387,11 +388,31 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                   ),
                 );
               },
-              loading: () => const SliverFillRemaining(
-                child: Center(
-                  child: CircularProgressIndicator(color: AppDesignSystem.red600),
-                ),
-              ),
+              loading: () {
+                final loadCols = Responsive.gridColumns(context, smallMobile: 2, mobile: 2, smallTablet: 3, tablet: 4, desktop: 5);
+                final loadAspect = Responsive.categoryCardAspectRatio(context);
+
+                return SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    Responsive.horizontalPadding(context),
+                    0,
+                    Responsive.horizontalPadding(context),
+                    110,
+                  ),
+                  sliver: SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: loadCols,
+                      childAspectRatio: loadAspect,
+                      crossAxisSpacing: context.isCompact ? 10 : 14,
+                      mainAxisSpacing: context.isCompact ? 10 : 14,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => const CategoryCardShimmer(),
+                      childCount: 8,
+                    ),
+                  ),
+                );
+              },
               error: (_, __) => SliverFillRemaining(
                 child: Center(
                   child: Column(

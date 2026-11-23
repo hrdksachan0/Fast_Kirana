@@ -91,7 +91,7 @@ class CategoryTransitionHelper {
 
     Navigator.push(
       context,
-      FadeThroughRoute(
+      ZeptoSlideRoute(
         page: CategoryProductsScreen(
           category: category,
           loadingContext: resolveContext(category),

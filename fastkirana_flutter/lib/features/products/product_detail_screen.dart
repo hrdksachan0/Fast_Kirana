@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/widgets/app_cached_image.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:share_plus/share_plus.dart';
@@ -311,29 +311,36 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       child: Center(
                         child: Hero(
                           tag: 'product_image_${p.id}',
+                          flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                            final target = flightDirection == HeroFlightDirection.push
+                                ? toHeroContext.widget
+                                : fromHeroContext.widget;
+                            return Material(
+                              color: Colors.transparent,
+                              child: target,
+                            );
+                          },
                           child: (p.imageUrl != null && p.imageUrl!.isNotEmpty)
-                              ? CachedNetworkImage(
-                                  imageUrl: p.imageUrl!,
+                              ? AppCachedImage(
+                                  imageUrl: p.imageUrl,
                                   height: 260,
                                   fit: BoxFit.contain,
-                                  memCacheWidth: 800,
-                                  memCacheHeight: 800,
-                                  placeholder: (_, __) => const Center(
-                                    child: CircularProgressIndicator(
-                                        color: primaryRed),
+                                  memCacheWidth: 600,
+                                  memCacheHeight: 600,
+                                  placeholder: const Center(
+                                    child: CircularProgressIndicator(color: primaryRed),
                                   ),
-                                  errorWidget: (_, __, ___) => Center(
-                                      child: Text('🛍️',
-                                          style: TextStyle(
-                                              fontSize:
-                                                  Responsive.scaledFontSize(
-                                                      context, 72)))),
+                                  errorWidget: Center(
+                                    child: Text('🛍️',
+                                        style: TextStyle(
+                                            fontSize: Responsive.scaledFontSize(context, 72))),
+                                  ),
                                 )
                               : Center(
                                   child: Text('🛍️',
                                       style: TextStyle(
-                                          fontSize: Responsive.scaledFontSize(
-                                              context, 72)))),
+                                          fontSize: Responsive.scaledFontSize(context, 72))),
+                                ),
                         ),
                       ),
                     ),

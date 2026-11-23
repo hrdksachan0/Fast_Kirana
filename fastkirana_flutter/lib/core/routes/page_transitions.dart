@@ -19,8 +19,8 @@ class ZeptoSlideRoute<T> extends PageRoute<T> with CupertinoRouteTransitionMixin
   ZeptoSlideRoute({
     required this.page,
     super.settings,
-    this.transitionDurationOverride = const Duration(milliseconds: 250),
-    this.reverseDurationOverride = const Duration(milliseconds: 200),
+    this.transitionDurationOverride = const Duration(milliseconds: 280),
+    this.reverseDurationOverride = const Duration(milliseconds: 240),
     super.fullscreenDialog = false,
   });
 

@@ -356,14 +356,20 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                                   clipBehavior: Clip.antiAlias,
                                   child: Hero(
                                     tag: widget.heroTag ?? 'product_image_${product.id}',
-                                    child: Transform.scale(
-                                      scale: 1.05,
-                                      child: AppCachedImage(
-                                        imageUrl: product.imageUrl ?? '',
-                                        fit: BoxFit.contain,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                      ),
+                                    flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                                      final target = flightDirection == HeroFlightDirection.push
+                                          ? toHeroContext.widget
+                                          : fromHeroContext.widget;
+                                      return Material(
+                                        color: Colors.transparent,
+                                        child: target,
+                                      );
+                                    },
+                                    child: AppCachedImage(
+                                      imageUrl: product.imageUrl ?? '',
+                                      fit: BoxFit.contain,
+                                      width: double.infinity,
+                                      height: double.infinity,
                                     ),
                                   ),
                                 ),

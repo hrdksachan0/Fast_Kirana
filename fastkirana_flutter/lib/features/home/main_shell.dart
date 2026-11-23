@@ -394,7 +394,7 @@ class SmoothIndexedStack extends StatefulWidget {
     super.key,
     required this.index,
     required this.children,
-    this.duration = const Duration(milliseconds: 180),
+    this.duration = const Duration(milliseconds: 220),
   });
 
   @override
@@ -406,6 +406,7 @@ class _SmoothIndexedStackState extends State<SmoothIndexedStack>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
   late int _displayIndex;
 
   @override
@@ -421,8 +422,14 @@ class _SmoothIndexedStackState extends State<SmoothIndexedStack>
       parent: _controller,
       curve: Curves.easeOutCubic,
     );
-    _scaleAnimation = Tween<double>(begin: 0.985, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    _scaleAnimation = Tween<double>(begin: 0.98, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Cubic(0.2, 0.0, 0.0, 1.0)),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 0.015),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: const Cubic(0.2, 0.0, 0.0, 1.0)),
     );
   }
 
@@ -430,7 +437,7 @@ class _SmoothIndexedStackState extends State<SmoothIndexedStack>
   void didUpdateWidget(SmoothIndexedStack oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.index != _displayIndex) {
-      _controller.reverse(from: 0.75).then((_) {
+      _controller.reverse(from: 0.6).then((_) {
         if (!mounted) return;
         setState(() {
           _displayIndex = widget.index;
@@ -450,11 +457,14 @@ class _SmoothIndexedStackState extends State<SmoothIndexedStack>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: IndexedStack(
-          index: _displayIndex,
-          children: widget.children,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: IndexedStack(
+            index: _displayIndex,
+            children: widget.children,
+          ),
         ),
       ),
     );

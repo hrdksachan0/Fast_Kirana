@@ -22,6 +22,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../products/product_detail_screen.dart';
 import '../bakery/bakery_store_screen.dart';
 import '../../core/widgets/loading_widgets.dart';
+import '../../core/widgets/app_cached_image.dart';
 import '../../widgets/offline_banner.dart';
 
 class _SubcatItem {
@@ -71,11 +72,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    if (widget.loadingContext != null &&
-        widget.loadingTimeout > const Duration(milliseconds: 180)) {
-      _loadingDelay = Timer(const Duration(milliseconds: 180), () {
-        if (mounted) setState(() => _showContextualLoader = true);
-      });
+    if (widget.loadingContext != null) {
+      _showContextualLoader = true;
       _loadingLimit = Timer(widget.loadingTimeout, () {
         if (mounted) setState(() => _showContextualLoader = false);
       });
@@ -135,13 +133,18 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
         ? AsyncValue<List<Product>>.data(cachedPreview!)
         : productsAsync;
 
-    if (_showContextualLoader &&
+    final bool showSplash = _showContextualLoader &&
         widget.loadingContext != null &&
         !visibleProductsAsync.hasValue &&
         productsAsync.isLoading &&
         isOnline &&
-        !MediaQuery.disableAnimationsOf(context)) {
-      return ContextualBrandTransitionScreen(contextType: widget.loadingContext!);
+        !MediaQuery.disableAnimationsOf(context);
+
+    if (showSplash) {
+      return ContextualBrandTransitionScreen(
+        contextType: widget.loadingContext!,
+        customTitle: 'Entering ${widget.category.name}...\nCurating best fresh picks!',
+      );
     }
 
     final catalogProducts = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
@@ -615,17 +618,23 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                       child: product.imageUrl != null && product.imageUrl!.isNotEmpty
                           ? Hero(
                               tag: 'product_image_${product.id}',
-                              child: Transform.scale(
-                                scale: 1.05,
-                                child: CachedNetworkImage(
-                                  imageUrl: product.imageUrl!,
-                                  fit: BoxFit.contain,
-                                  memCacheWidth: 350,
-                                  memCacheHeight: 350,
-                                  placeholder: (_, __) => Container(color: const Color(0xFFF8FAFC)),
-                                  errorWidget: (_, __, ___) => const Center(
-                                    child: Icon(Icons.shopping_basket_outlined, color: Color(0xFFCBD5E1), size: 30),
-                                  ),
+                              flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                                final target = flightDirection == HeroFlightDirection.push
+                                    ? toHeroContext.widget
+                                    : fromHeroContext.widget;
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: target,
+                                );
+                              },
+                              child: AppCachedImage(
+                                imageUrl: product.imageUrl,
+                                fit: BoxFit.contain,
+                                memCacheWidth: 400,
+                                memCacheHeight: 400,
+                                placeholder: Container(color: const Color(0xFFF8FAFC)),
+                                errorWidget: const Center(
+                                  child: Icon(Icons.shopping_basket_outlined, color: Color(0xFFCBD5E1), size: 30),
                                 ),
                               ),
                             )
