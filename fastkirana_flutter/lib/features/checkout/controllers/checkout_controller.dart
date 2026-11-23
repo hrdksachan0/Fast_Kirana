@@ -1703,14 +1703,14 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       try {
         Navigator.pushReplacement(
           rootContext,
-          FadeSlideRoute(page: successPage),
+          FadeThroughRoute(page: successPage),
         );
       } catch (_) {
-        nav?.pushReplacement(FadeSlideRoute(page: successPage));
+        nav?.pushReplacement(FadeThroughRoute(page: successPage));
       }
     } else if (nav != null && nav.mounted) {
       nav.pushReplacement(
-        FadeSlideRoute(page: successPage),
+        FadeThroughRoute(page: successPage),
       );
     }
 

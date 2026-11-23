@@ -8,6 +8,7 @@ import '../../../core/routes/page_transitions.dart';
 import '../../../providers/product_provider.dart';
 import '../../../providers/store_settings_provider.dart';
 import '../../categories/category_products_screen.dart';
+import '../../../core/utils/category_transition_helper.dart';
 import '../featured_categories.dart';
 import '../main_shell.dart';
 import '../utils/category_visual_helper.dart';
@@ -125,7 +126,7 @@ class TrendingCategoriesSection extends ConsumerWidget {
   }
 }
 
-class _FeaturedTile extends StatefulWidget {
+class _FeaturedTile extends ConsumerStatefulWidget {
   final FeaturedCategorySelection selection;
   final TextStyle labelStyle;
   final double labelHeight, badgeHeight, width, imageHeight;
@@ -138,20 +139,18 @@ class _FeaturedTile extends StatefulWidget {
       required this.labelHeight,
       required this.badgeHeight});
   @override
-  State<_FeaturedTile> createState() => _FeaturedTileState();
+  ConsumerState<_FeaturedTile> createState() => _FeaturedTileState();
 }
 
-class _FeaturedTileState extends State<_FeaturedTile> {
+class _FeaturedTileState extends ConsumerState<_FeaturedTile> {
   bool pressed = false;
   void openCategory() {
     HapticFeedback.selectionClick();
-    final page = CategoryProductsScreen(category: widget.selection.category);
-    Navigator.of(context).push(MediaQuery.disableAnimationsOf(context)
-        ? PageRouteBuilder<void>(
-            pageBuilder: (_, __, ___) => page,
-            transitionDuration: Duration.zero,
-            reverseTransitionDuration: Duration.zero)
-        : FadeSlideRoute(page: page));
+    CategoryTransitionHelper.pushCategoryWithTransition(
+      context,
+      ref,
+      widget.selection.category,
+    );
   }
 
   @override

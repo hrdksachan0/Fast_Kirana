@@ -17,6 +17,7 @@ import '../features/cafe/cafe_menu_screen.dart';
 import '../features/search/search_screen.dart';
 import 'card_media_widget.dart';
 import '../features/gifting/send_gift_screen.dart';
+import '../core/utils/category_transition_helper.dart';
 
 /// Ultra-Premium Animated Hero Carousel (Amazon Side-Peek + Swiggy Instamart Depth)
 /// Specifications:
@@ -297,9 +298,10 @@ class _DynamicHeroBannerCarouselState extends ConsumerState<DynamicHeroBannerCar
       );
 
       if (cat != null && context.mounted) {
-        Navigator.push(
+        CategoryTransitionHelper.pushCategoryWithTransition(
           context,
-          FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
+          ref,
+          cat,
         );
       }
       return;

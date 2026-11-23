@@ -344,6 +344,7 @@ import '../campaign_bento/campaign_bento_zone.dart';
 import '../../data/models/home_layout_config.dart';
 import '../../providers/home_layout_provider.dart';
 import '../categories/category_products_screen.dart';
+import '../../core/utils/category_transition_helper.dart';
 
 
 
@@ -1528,10 +1529,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             slug: slug),
                       );
                       if (cat != null) {
-                        Navigator.push(
+                        CategoryTransitionHelper.pushCategoryWithTransition(
                           context,
-                          FadeSlideRoute(
-                              page: CategoryProductsScreen(category: cat)),
+                          ref,
+                          cat,
                         );
                         return;
                       }

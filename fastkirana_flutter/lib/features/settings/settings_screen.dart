@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/design_system.dart';
 import '../../widgets/app_confirmation_dialog.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/routes/page_transitions.dart';
 import 'privacy_policy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -110,7 +111,7 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   _navTile(context, Icons.privacy_tip_rounded, 'Privacy Policy', 'How we handle your data', () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()));
+                    Navigator.push(context, ZeptoSlideRoute(page: const PrivacyPolicyScreen()));
                   }),
                   _divider(),
                   _navTile(context, Icons.description_rounded, 'Terms & Conditions', 'Usage terms', () {}),

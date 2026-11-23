@@ -306,7 +306,7 @@ class AppRouter {
         return FadeThroughRoute(
           page: ContextualBrandTransitionScreen(
             contextType: TransitionContextType.cafe,
-            autoDismissDuration: const Duration(milliseconds: 1300),
+            autoDismissDuration: const Duration(milliseconds: 900),
             onFinished: () {
               AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
             },
@@ -317,7 +317,7 @@ class AppRouter {
         return FadeThroughRoute(
           page: ContextualBrandTransitionScreen(
             contextType: TransitionContextType.grocery,
-            autoDismissDuration: const Duration(milliseconds: 1300),
+            autoDismissDuration: const Duration(milliseconds: 900),
             onFinished: () {
               AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
             },
@@ -328,7 +328,7 @@ class AppRouter {
         return FadeThroughRoute(
           page: ContextualBrandTransitionScreen(
             contextType: TransitionContextType.beauty,
-            autoDismissDuration: const Duration(milliseconds: 1300),
+            autoDismissDuration: const Duration(milliseconds: 900),
             onFinished: () {
               AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
             },
@@ -339,7 +339,7 @@ class AppRouter {
         return FadeThroughRoute(
           page: ContextualBrandTransitionScreen(
             contextType: TransitionContextType.pharmacy,
-            autoDismissDuration: const Duration(milliseconds: 1300),
+            autoDismissDuration: const Duration(milliseconds: 900),
             onFinished: () {
               AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
             },
@@ -350,7 +350,7 @@ class AppRouter {
         return FadeThroughRoute(
           page: ContextualBrandTransitionScreen(
             contextType: TransitionContextType.essentials,
-            autoDismissDuration: const Duration(milliseconds: 1300),
+            autoDismissDuration: const Duration(milliseconds: 900),
             onFinished: () {
               AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
             },
@@ -360,7 +360,7 @@ class AppRouter {
         return FadeThroughRoute(
           page: ContextualBrandTransitionScreen(
             contextType: TransitionContextType.checkout,
-            autoDismissDuration: const Duration(milliseconds: 1300),
+            autoDismissDuration: const Duration(milliseconds: 900),
             onFinished: () {
               AppRouter.navigatorKey.currentState?.pushReplacementNamed('/orders');
             },
@@ -370,7 +370,7 @@ class AppRouter {
         return FadeThroughRoute(
           page: ContextualBrandTransitionScreen(
             contextType: TransitionContextType.storeFinder,
-            autoDismissDuration: const Duration(milliseconds: 1300),
+            autoDismissDuration: const Duration(milliseconds: 900),
             onFinished: () {
               AppRouter.navigatorKey.currentState?.pushReplacementNamed('/home');
             },

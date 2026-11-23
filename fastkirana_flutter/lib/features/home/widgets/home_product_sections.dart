@@ -13,6 +13,7 @@ import '../../../data/models/category.dart';
 import '../../../providers/product_provider.dart';
 import '../../../widgets/product_card.dart';
 import '../../categories/category_products_screen.dart';
+import '../../../core/utils/category_transition_helper.dart';
 
 class HomeProductSections extends ConsumerStatefulWidget {
   final int selectedFilterIndex;
@@ -188,11 +189,10 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    Navigator.push(
+                    CategoryTransitionHelper.pushCategoryWithTransition(
                       context,
-                      FadeSlideRoute(
-                        page: CategoryProductsScreen(category: cat),
-                      ),
+                      ref,
+                      cat,
                     );
                   },
                   child: Container(
@@ -418,11 +418,10 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                     return GestureDetector(
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        Navigator.push(
+                        CategoryTransitionHelper.pushCategoryWithTransition(
                           context,
-                          FadeSlideRoute(
-                            page: CategoryProductsScreen(category: cat),
-                          ),
+                          ref,
+                          cat,
                         );
                       },
                       child: Container(

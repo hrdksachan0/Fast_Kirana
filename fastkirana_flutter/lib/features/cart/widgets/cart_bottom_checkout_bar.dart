@@ -285,7 +285,8 @@ class CartBottomCheckoutBar extends ConsumerWidget {
 
                     await Navigator.push(
                       context,
-                      FadeSlideRoute(
+                      SharedAxisRoute(
+                        transitionType: SharedAxisTransitionType.horizontal,
                         page: CheckoutScreen(
                           cookingInstruction: cookingInstruction.isNotEmpty ? cookingInstruction : null,
                           couponCode: appliedCoupon,

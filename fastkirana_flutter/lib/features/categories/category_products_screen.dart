@@ -613,16 +613,19 @@ class _ReferenceExactProductCard extends ConsumerWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(1.5),
                       child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                          ? Transform.scale(
-                              scale: 1.05,
-                              child: CachedNetworkImage(
-                                imageUrl: product.imageUrl!,
-                                fit: BoxFit.contain,
-                                memCacheWidth: 350,
-                                memCacheHeight: 350,
-                                placeholder: (_, __) => Container(color: const Color(0xFFF8FAFC)),
-                                errorWidget: (_, __, ___) => const Center(
-                                  child: Icon(Icons.shopping_basket_outlined, color: Color(0xFFCBD5E1), size: 30),
+                          ? Hero(
+                              tag: 'product_image_${product.id}',
+                              child: Transform.scale(
+                                scale: 1.05,
+                                child: CachedNetworkImage(
+                                  imageUrl: product.imageUrl!,
+                                  fit: BoxFit.contain,
+                                  memCacheWidth: 350,
+                                  memCacheHeight: 350,
+                                  placeholder: (_, __) => Container(color: const Color(0xFFF8FAFC)),
+                                  errorWidget: (_, __, ___) => const Center(
+                                    child: Icon(Icons.shopping_basket_outlined, color: Color(0xFFCBD5E1), size: 30),
+                                  ),
                                 ),
                               ),
                             )

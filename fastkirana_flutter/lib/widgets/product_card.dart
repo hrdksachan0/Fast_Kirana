@@ -354,13 +354,16 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                                     borderRadius: BorderRadius.circular(s(9)),
                                   ),
                                   clipBehavior: Clip.antiAlias,
-                                  child: Transform.scale(
-                                    scale: 1.05,
-                                    child: AppCachedImage(
-                                      imageUrl: product.imageUrl ?? '',
-                                      fit: BoxFit.contain,
-                                      width: double.infinity,
-                                      height: double.infinity,
+                                  child: Hero(
+                                    tag: widget.heroTag ?? 'product_image_${product.id}',
+                                    child: Transform.scale(
+                                      scale: 1.05,
+                                      child: AppCachedImage(
+                                        imageUrl: product.imageUrl ?? '',
+                                        fit: BoxFit.contain,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
                                     ),
                                   ),
                                 ),

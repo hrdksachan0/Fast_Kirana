@@ -9,6 +9,7 @@ import '../../../core/routes/page_transitions.dart';
 import '../../../data/models/category.dart';
 import '../../../providers/product_provider.dart';
 import '../../categories/category_products_screen.dart';
+import '../../../core/utils/category_transition_helper.dart';
 
 class HomeHeroBanner extends ConsumerWidget {
   const HomeHeroBanner({super.key});
@@ -52,9 +53,10 @@ class HomeHeroBanner extends ConsumerWidget {
               orElse: () => Category.fromJson({'id': slug, 'name': 'Vegetables & Fruits', 'slug': slug}),
             );
             if (cat != null) {
-              Navigator.push(
+              CategoryTransitionHelper.pushCategoryWithTransition(
                 context,
-                FadeSlideRoute(page: CategoryProductsScreen(category: cat)),
+                ref,
+                cat,
               );
             }
           },
