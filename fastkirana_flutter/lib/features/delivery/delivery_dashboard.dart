@@ -29,6 +29,7 @@ import 'widgets/connectivity_banner.dart';
 import 'widgets/delivery_header.dart';
 import 'widgets/doorstep_cashfree_qr_sheet.dart';
 import 'widgets/delivery_payment_sheet.dart';
+import 'widgets/delivery_success_celebration_dialog.dart';
 import 'widgets/delivery_wallet_tab.dart';
 import 'widgets/delivery_history_tab.dart';
 import 'widgets/delivery_orders_tab.dart';
@@ -1344,6 +1345,19 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     if (newStatus == 'DELIVERED') {
       _confettiController.play();
       HapticFeedback.heavyImpact();
+
+      // Show 1.5-Second Cheerful Green Tick Celebration Dialog
+      if (mounted) {
+        final totalAmt = (safeOrder['total'] as num?)?.toDouble() ?? 0.0;
+        final payMethod = (extra?['paymentMethod'] ?? safeOrder['paymentMethod'] ?? 'ONLINE').toString().toUpperCase();
+        DeliverySuccessCelebrationDialog.show(
+          context,
+          orderNum: rid ?? orderId.substring(0, math.min(8, orderId.length)),
+          amount: totalAmt,
+          paymentMethod: payMethod,
+        );
+      }
+
       final riderId = _currentUserId ?? 'rider_current';
       if (_isOnline) {
         _locationService.startIdleTracking(

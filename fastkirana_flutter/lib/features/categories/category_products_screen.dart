@@ -1,12 +1,9 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/design_system.dart';
 import '../../core/routes/page_transitions.dart';
-import '../../core/utils/app_connectivity.dart';
-import '../../core/widgets/contextual_brand_transition_screen.dart';
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../providers/product_provider.dart';
@@ -42,13 +39,9 @@ class _SubcatItem {
 
 class CategoryProductsScreen extends ConsumerStatefulWidget {
   final Category category;
-  final TransitionContextType? loadingContext;
-  final Duration loadingTimeout;
   const CategoryProductsScreen({
     super.key,
     required this.category,
-    this.loadingContext,
-    this.loadingTimeout = const Duration(milliseconds: 1200),
   });
 
   @override
@@ -57,9 +50,6 @@ class CategoryProductsScreen extends ConsumerStatefulWidget {
 
 class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen> {
   String _selectedSubcatId = 'all';
-  bool _showContextualLoader = false;
-  Timer? _loadingDelay;
-  Timer? _loadingLimit;
   final ScrollController _scrollController = ScrollController();
   int _visibleCount = 14;
 
@@ -72,12 +62,6 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    if (widget.loadingContext != null) {
-      _showContextualLoader = true;
-      _loadingLimit = Timer(widget.loadingTimeout, () {
-        if (mounted) setState(() => _showContextualLoader = false);
-      });
-    }
   }
 
   void _onScroll() {
@@ -102,8 +86,6 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
   @override
   void dispose() {
-    _loadingDelay?.cancel();
-    _loadingLimit?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _searchController.dispose();
@@ -125,27 +107,12 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
         : (widget.category.slug.isNotEmpty ? widget.category.slug : widget.category.id);
 
     final productsAsync = ref.watch(productsProvider(catKey));
-    final isOnline = ref.watch(connectivityProvider).isOnline;
     final cachedPreview = ref.read(productRepositoryProvider).peekCachedProducts(
         categoryKey: catKey,
         storeId: ref.watch(currentStoreHubProvider).id);
     final visibleProductsAsync = !productsAsync.hasValue && (cachedPreview?.isNotEmpty ?? false)
         ? AsyncValue<List<Product>>.data(cachedPreview!)
         : productsAsync;
-
-    final bool showSplash = _showContextualLoader &&
-        widget.loadingContext != null &&
-        !visibleProductsAsync.hasValue &&
-        productsAsync.isLoading &&
-        isOnline &&
-        !MediaQuery.disableAnimationsOf(context);
-
-    if (showSplash) {
-      return ContextualBrandTransitionScreen(
-        contextType: widget.loadingContext!,
-        customTitle: 'Entering ${widget.category.name}...\nCurating best fresh picks!',
-      );
-    }
 
     final catalogProducts = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
     final categoriesAsync = ref.watch(categoriesProvider);
@@ -379,10 +346,28 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                   ),
                 ),
 
-              // 3. Right Product Feed (2-Column Reference Replica)
+              // 3. Right Product Feed (2-Column Reference Replica with Smooth Fluid Crossfade)
               Expanded(
-                child: visibleProductsAsync.when(
-                  skipLoadingOnRefresh: true,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.03),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey('feed_${_selectedSubcatId}_${_searchQuery}_${visibleProductsAsync.isLoading}'),
+                    child: visibleProductsAsync.when(
+                      skipLoadingOnRefresh: true,
                   data: (products) {
                     var list = List<Product>.from(products);
 
@@ -538,6 +523,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                   ),
                 ),
               ),
+            ),
+          ),
             ],
           ),
         ),

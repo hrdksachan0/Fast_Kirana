@@ -420,7 +420,18 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         onStatusUpdate: (newStatusStr) {
           if (!mounted) return;
           debugPrint('[OrderTracking] Realtime status change via key=$key: $newStatusStr');
-          final parsed = Order.parseStatus(newStatusStr);
+          final cleanStr = newStatusStr.trim();
+          if (cleanStr.isEmpty) return;
+          final parsed = Order.parseStatus(cleanStr);
+
+          // 🛡️ Anti-Phantom Cancel Safeguard:
+          // Never transition to cancelled via passive socket broadcast unless explicitly confirmed
+          // by fetching the verified server order record or if current order is already cancelled.
+          if (parsed == OrderStatus.cancelled && _order != null && _order!.status != OrderStatus.cancelled) {
+            _fetchLiveOrder();
+            return;
+          }
+
           if (_order != null && _order!.status != parsed) {
             final prevStatus = _order!.status;
             setState(() {
@@ -479,7 +490,16 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (!mounted) return;
       debugPrint('[OrderTracking] ⚡ Instant sync from EventBus: tag=${event.tag} status=${event.status}');
 
-      final parsed = Order.parseStatus(event.status);
+      final cleanStatus = event.status.trim();
+      if (cleanStatus.isEmpty) return;
+      final parsed = Order.parseStatus(cleanStatus);
+
+      // 🛡️ Anti-Phantom Cancel Safeguard
+      if (parsed == OrderStatus.cancelled && _order != null && _order!.status != OrderStatus.cancelled) {
+        _fetchLiveOrder();
+        return;
+      }
+
       if (_order != null && _order!.status != parsed) {
         setState(() {
           final updatedSubs = _order!.subOrders?.map((s) => s.copyWith(status: parsed)).toList();

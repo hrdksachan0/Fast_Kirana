@@ -94,8 +94,6 @@ class CategoryTransitionHelper {
       ZeptoSlideRoute(
         page: CategoryProductsScreen(
           category: category,
-          loadingContext: resolveContext(category),
-          loadingTimeout: duration,
         ),
       ),
     );
