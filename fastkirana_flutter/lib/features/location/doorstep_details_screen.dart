@@ -38,6 +38,8 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
   final _receiverNameController = TextEditingController();
   final _receiverPhoneController = TextEditingController();
   final _houseNoFocusNode = FocusNode();
+  final _streetFocusNode = FocusNode();
+  final _customLabelFocusNode = FocusNode();
   bool _hasHouseNoError = false;
 
   bool _useAccountDetails = true;
@@ -60,6 +62,8 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
       }
     });
     _houseNoFocusNode.addListener(() { if (mounted) setState(() {}); });
+    _streetFocusNode.addListener(() { if (mounted) setState(() {}); });
+    _customLabelFocusNode.addListener(() { if (mounted) setState(() {}); });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -94,6 +98,8 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
     _receiverNameController.dispose();
     _receiverPhoneController.dispose();
     _houseNoFocusNode.dispose();
+    _streetFocusNode.dispose();
+    _customLabelFocusNode.dispose();
     super.dispose();
   }
 
@@ -157,7 +163,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Please enter your House or Flat number so our delivery hero reaches your exact doorstep.',
+              'Please enter your address so our delivery hero reaches your exact doorstep.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: Responsive.scaledFontSize(context, 12.5),
@@ -193,7 +199,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                 ),
                 child: Center(
                   child: Text(
-                    'Enter House Number',
+                    'Enter Address',
                     style: GoogleFonts.inter(
                       fontSize: Responsive.scaledFontSize(context, 14.5),
                       fontWeight: FontWeight.w800,
@@ -809,7 +815,7 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                                       ),
                                       const SizedBox(width: 5),
                                       Text(
-                                        'House / Flat / Floor No.',
+                                        'Your Address',
                                         style: GoogleFonts.inter(
                                           fontSize: Responsive.scaledFontSize(context, 10),
                                           fontWeight: FontWeight.w800,
@@ -883,12 +889,16 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                             children: [
                               const Icon(Icons.error_outline_rounded, size: 14, color: Color(0xFFEF4444)),
                               const SizedBox(width: 5),
-                              Text(
-                                'Please enter your Flat / House number or Landmark',
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11.5),
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFFEF4444),
+                              Expanded(
+                                child: Text(
+                                  'Please enter your address',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFEF4444),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -969,42 +979,213 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
 
-                      // 4. Save address as
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-                        child: Row(
-                          children: [
-                            const Text('🔖', style: TextStyle(fontSize: 14)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: _customLabelController,
+                      // 4. Nearby Landmark (Optional)
+                      GestureDetector(
+                        onTap: () => _streetFocusNode.requestFocus(),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _streetFocusNode.hasFocus
+                                  ? const Color(0xFFE20A22)
+                                  : const Color(0xFFCBD5E1),
+                              width: _streetFocusNode.hasFocus ? 1.5 : 1.0,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _streetFocusNode.hasFocus
+                                    ? const Color(0xFFE20A22).withValues(alpha: 0.12)
+                                    : Colors.black.withValues(alpha: 0.02),
+                                blurRadius: _streetFocusNode.hasFocus ? 10 : 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.account_balance_outlined,
+                                        size: 14,
+                                        color: _streetFocusNode.hasFocus
+                                            ? const Color(0xFFE20A22)
+                                            : const Color(0xFF64748B),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Nearby Landmark',
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 10),
+                                          fontWeight: FontWeight.w800,
+                                          color: _streetFocusNode.hasFocus
+                                              ? const Color(0xFFE20A22)
+                                              : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'OPTIONAL',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9),
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF64748B),
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: _streetController,
+                                focusNode: _streetFocusNode,
+                                cursorColor: const Color(0xFFE20A22),
+                                cursorWidth: 2.0,
+                                cursorRadius: const Radius.circular(2),
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 12.5),
+                                  fontSize: Responsive.scaledFontSize(context, 14),
                                   fontWeight: FontWeight.w700,
                                   color: slateDark,
                                 ),
                                 decoration: InputDecoration(
-                                  hintText: 'Save address as (e.g. Home, Work)',
+                                  isDense: true,
+                                  hintText: 'e.g. Near Shiv Mandir, School, Hospital, Shop',
                                   hintStyle: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 12),
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF94A3B8),
                                   ),
                                   border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // 5. Save address as
+                      GestureDetector(
+                        onTap: () => _customLabelFocusNode.requestFocus(),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _customLabelFocusNode.hasFocus
+                                  ? const Color(0xFFE20A22)
+                                  : const Color(0xFFCBD5E1),
+                              width: _customLabelFocusNode.hasFocus ? 1.5 : 1.0,
                             ),
-                          ],
+                            boxShadow: [
+                              BoxShadow(
+                                color: _customLabelFocusNode.hasFocus
+                                    ? const Color(0xFFE20A22).withValues(alpha: 0.12)
+                                    : Colors.black.withValues(alpha: 0.02),
+                                blurRadius: _customLabelFocusNode.hasFocus ? 10 : 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.bookmark_outline_rounded,
+                                        size: 14,
+                                        color: _customLabelFocusNode.hasFocus
+                                            ? const Color(0xFFE20A22)
+                                            : const Color(0xFF64748B),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Save Address As',
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 10),
+                                          fontWeight: FontWeight.w800,
+                                          color: _customLabelFocusNode.hasFocus
+                                              ? const Color(0xFFE20A22)
+                                              : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'LABEL',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9),
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF64748B),
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: _customLabelController,
+                                focusNode: _customLabelFocusNode,
+                                cursorColor: const Color(0xFFE20A22),
+                                cursorWidth: 2.0,
+                                cursorRadius: const Radius.circular(2),
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 14),
+                                  fontWeight: FontWeight.w700,
+                                  color: slateDark,
+                                ),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  hintText: 'e.g. Home, Work, Parents, Shop',
+                                  hintStyle: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -1032,8 +1213,63 @@ class _DoorstepDetailsScreenState extends ConsumerState<DoorstepDetailsScreen> {
                     _buildInstructionChip('🚪 Leave at door'),
                     _buildInstructionChip('🔔 Don\'t ring bell'),
                     _buildInstructionChip('📞 Call before delivery'),
+                    _buildInstructionChip('🐾 Beware of pets'),
+                    _buildInstructionChip('🏢 Leave with guard'),
+                    _buildInstructionChip('🤝 Hand to neighbor'),
                   ],
                 ),
+
+                const SizedBox(height: 16),
+
+                // 4. FastMinute Doorstep Reassurance Card
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.verified_user_rounded, color: Color(0xFF16A34A), size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'FastMinute Doorstep Guarantee',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 12),
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '100% contactless & hygienic delivery directly to your verified doorstep pin.',
+                              style: GoogleFonts.inter(
+                                fontSize: Responsive.scaledFontSize(context, 10.5),
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),

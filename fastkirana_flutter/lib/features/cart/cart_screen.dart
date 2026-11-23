@@ -229,8 +229,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               Navigator.pop(context);
             },
             child: Container(
-              width: 38,
-              height: 38,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 shape: BoxShape.circle,
@@ -246,39 +246,39 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               child: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: Color(0xFF0F172A),
-                size: 15,
+                size: 13,
               ),
             ),
           ),
         ),
       ),
       title: Padding(
-        padding: const EdgeInsets.only(left: 10),
+        padding: const EdgeInsets.only(left: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Your Cart',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: Responsive.scaledFontSize(context, 18),
+                fontSize: Responsive.scaledFontSize(context, 16.5),
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF0F172A),
-                letterSpacing: -0.4,
+                letterSpacing: -0.3,
               ),
             ),
             if (itemCount != null && itemCount > 0) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
                 ),
                 child: Text(
                   '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontSize: Responsive.scaledFontSize(context, 10.5),
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF475569),
                     letterSpacing: 0.1,
@@ -297,8 +297,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   child: Bounceable(
                     onTap: onClear,
                     child: Container(
-                      width: 38,
-                      height: 38,
+                      width: 34,
+                      height: 34,
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8FAFC),
                         shape: BoxShape.circle,
@@ -307,7 +307,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       child: const Icon(
                         Icons.delete_outline_rounded,
                         color: Color(0xFF64748B),
-                        size: 18,
+                        size: 16,
                       ),
                     ),
                   ),
@@ -556,7 +556,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           children: [
             SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 32 + MediaQuery.of(context).padding.bottom),
+              padding: EdgeInsets.fromLTRB(14, 8, 14, 28 + MediaQuery.of(context).padding.bottom),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -570,7 +570,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ),
 
                   // 0. Dynamic Distance-Tiered Delivery Progress Bar
-                                    CartFreeDeliveryBar(subtotal: subtotal, tier: tier),
+                  CartFreeDeliveryBar(subtotal: subtotal, tier: tier),
 
                   // 1. Grocery Items Section (if present)
                   if (groceryItems.isNotEmpty)
@@ -602,7 +602,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   if (_freeGiftDetails != null)
                     CartBogoFreeGiftCard(gift: _freeGiftDetails!),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
 
                   // 3. Frequently Bought Together Carousel
                   CartUpsellCarousel(
@@ -622,7 +622,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       });
                     },
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
 
                   // 5. Delivery Partner Tip Card
                   CartTipSelector(
@@ -631,7 +631,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       setState(() => _selectedTip = tip);
                     },
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
 
                   // 6. Apply Promo / Coupon Code Card
                   CartCouponCard(
@@ -648,7 +648,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     onApplyCoupon: (code) => _applyCoupon(code, subtotal),
                     onRemoveCoupon: _removeCoupon,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
 
                   // 7. Bill Details Card
                   CartBillDetailsCard(
@@ -663,11 +663,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     selectedTip: _selectedTip,
                     freeGiftDetails: _freeGiftDetails,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
 
                   // 8. Cancellation Policy Info
                   const CartCancellationPolicy(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
                 ],
               ),
             ),

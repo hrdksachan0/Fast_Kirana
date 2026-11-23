@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:collection/collection.dart';
+import 'package:animations/animations.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/routes/page_transitions.dart';
 import '../../../core/utils/restaurant_utils.dart';
