@@ -19,8 +19,8 @@ class ZeptoSlideRoute<T> extends PageRoute<T> with CupertinoRouteTransitionMixin
   ZeptoSlideRoute({
     required this.page,
     super.settings,
-    this.transitionDurationOverride = const Duration(milliseconds: 280),
-    this.reverseDurationOverride = const Duration(milliseconds: 240),
+    this.transitionDurationOverride = const Duration(milliseconds: 380),
+    this.reverseDurationOverride = const Duration(milliseconds: 320),
     super.fullscreenDialog = false,
   });
 
@@ -50,13 +50,13 @@ class SwiggyModalRoute<T> extends PageRouteBuilder<T> {
   SwiggyModalRoute({
     required this.page,
     super.settings,
-    this.transitionDurationOverride = const Duration(milliseconds: 280),
+    this.transitionDurationOverride = const Duration(milliseconds: 360),
     super.maintainState = true,
     super.fullscreenDialog = true,
   }) : super(
           pageBuilder: (context, animation, secondaryAnimation) => page,
           transitionDuration: transitionDurationOverride,
-          reverseTransitionDuration: const Duration(milliseconds: 220),
+          reverseTransitionDuration: const Duration(milliseconds: 280),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const curve = Cubic(0.18, 0.9, 0.22, 1.0);
             final curvedAnimation = CurvedAnimation(
@@ -88,13 +88,13 @@ class FadeThroughRoute<T> extends PageRouteBuilder<T> {
   FadeThroughRoute({
     required this.page,
     super.settings,
-    this.transitionDurationOverride = const Duration(milliseconds: 240),
+    this.transitionDurationOverride = const Duration(milliseconds: 320),
     super.maintainState = true,
     super.fullscreenDialog = false,
   }) : super(
           pageBuilder: (context, animation, secondaryAnimation) => page,
           transitionDuration: transitionDurationOverride,
-          reverseTransitionDuration: const Duration(milliseconds: 200),
+          reverseTransitionDuration: const Duration(milliseconds: 260),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeThroughTransition(
               animation: animation,
@@ -116,14 +116,14 @@ class SharedAxisRoute<T> extends PageRouteBuilder<T> {
   SharedAxisRoute({
     required this.page,
     this.transitionType = SharedAxisTransitionType.horizontal,
-    this.transitionDurationOverride = const Duration(milliseconds: 240),
+    this.transitionDurationOverride = const Duration(milliseconds: 320),
     super.settings,
     super.maintainState = true,
     super.fullscreenDialog = false,
   }) : super(
           pageBuilder: (context, animation, secondaryAnimation) => page,
           transitionDuration: transitionDurationOverride,
-          reverseTransitionDuration: const Duration(milliseconds: 200),
+          reverseTransitionDuration: const Duration(milliseconds: 260),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return SharedAxisTransition(
               animation: animation,

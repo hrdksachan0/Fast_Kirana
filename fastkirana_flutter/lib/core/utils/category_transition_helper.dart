@@ -78,7 +78,7 @@ class CategoryTransitionHelper {
     BuildContext context,
     WidgetRef ref,
     Category category, {
-    Duration duration = const Duration(milliseconds: 800),
+    Duration duration = const Duration(milliseconds: 1000),
   }) {
     final catKey = (category.id.isNotEmpty &&
             (category.id.toUpperCase().startsWith('CAT-') ||

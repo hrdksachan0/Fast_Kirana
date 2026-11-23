@@ -653,43 +653,75 @@ async def get_doorstep_qr(
         rider_phone=rider_phone
     )
 
-    # 3. Active In-Flight Verification: If order is still UNPAID, check if Razorpay QR was paid!
-    if order.paymentStatus != PaymentStatus.PAID and rzp_qr_info.get("id"):
-        qr_id = rzp_qr_info.get("id")
+    # 3. Active In-Flight Verification: Check if order or any associated Razorpay QR was paid!
+    if order.paymentStatus != PaymentStatus.PAID:
         try:
             import os
             import httpx
             from config import settings
             rzp_key = (os.getenv("RAZORPAY_KEY_ID") or db_rzp_key or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
             rzp_sec = (os.getenv("RAZORPAY_KEY_SECRET") or db_rzp_sec or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
-            if not rzp_key or not rzp_sec:
-                return rzp_qr_info
-            auth = (rzp_key, rzp_sec)
-            async with httpx.AsyncClient(timeout=4.0) as client:
-                chk_resp = await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}", auth=auth)
-                if chk_resp.status_code == 200:
-                    qr_state = chk_resp.json()
-                    is_paid = (
-                        (qr_state.get("status") == "closed" and qr_state.get("close_reason") == "paid") or
-                        ((qr_state.get("payments_count_received") or 0) > 0) or
-                        ((qr_state.get("payments_amount_received") or 0) > 0)
-                    )
-                    # Fallback payment check if count/status not yet updated on QR entity
+            if rzp_key and rzp_sec:
+                auth = (rzp_key, rzp_sec)
+                is_paid = False
+                matched_payment_id = None
+                qr_id = rzp_qr_info.get("id")
+
+                async with httpx.AsyncClient(timeout=4.0) as client:
+                    # Layer 3A: Direct check on active QR code entity
+                    if qr_id:
+                        try:
+                            chk_resp = await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}", auth=auth)
+                            if chk_resp.status_code == 200:
+                                qr_state = chk_resp.json()
+                                if (
+                                    (qr_state.get("status") == "closed" and qr_state.get("close_reason") == "paid") or
+                                    ((qr_state.get("payments_count_received") or 0) > 0) or
+                                    ((qr_state.get("payments_amount_received") or 0) > 0)
+                                ):
+                                    is_paid = True
+                        except Exception:
+                            pass
+
+                        # Layer 3B: Payments list attached to active QR code
+                        if not is_paid:
+                            try:
+                                pay_resp = await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}/payments", auth=auth)
+                                if pay_resp.status_code == 200:
+                                    p_data = pay_resp.json()
+                                    for p_item in (p_data.get("items") or []):
+                                        if p_item.get("status") in ["captured", "authorized"]:
+                                            is_paid = True
+                                            matched_payment_id = p_item.get("id")
+                                            break
+                            except Exception:
+                                pass
+
+                    # Layer 3C: Bulletproof search in recent merchant payments by order_id or readable_id in notes
                     if not is_paid:
                         try:
-                            pay_resp = await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}/payments", auth=auth)
-                            if pay_resp.status_code == 200:
-                                p_data = pay_resp.json()
-                                items = p_data.get("items") or []
-                                for p_item in items:
-                                    if p_item.get("status") in ["captured", "authorized"]:
-                                        is_paid = True
-                                        break
+                            recent_resp = await client.get("https://api.razorpay.com/v1/payments?count=15", auth=auth)
+                            if recent_resp.status_code == 200:
+                                recent_items = recent_resp.json().get("items") or []
+                                target_order_id_clean = str(order.id).strip()
+                                target_readable_clean = str(base_display).strip()
+                                for p in recent_items:
+                                    if p.get("status") in ["captured", "authorized"]:
+                                        p_notes = p.get("notes") or {}
+                                        n_oid = str(p_notes.get("order_id") or "").strip()
+                                        n_rid = str(p_notes.get("readable_id") or "").strip()
+                                        if (
+                                            (n_oid and n_oid == target_order_id_clean) or
+                                            (n_rid and (n_rid == target_readable_clean or target_readable_clean.startswith(n_rid)))
+                                        ):
+                                            is_paid = True
+                                            matched_payment_id = p.get("id")
+                                            break
                         except Exception:
                             pass
 
                     if is_paid:
-                        ref_text = f"Doorstep Razorpay QR Paid ({qr_id})"
+                        ref_text = f"Doorstep Razorpay QR Paid ({matched_payment_id or qr_id or 'verified'})"
                         for o in all_orders:
                             o.paymentMethod = PaymentMethod.ONLINE
                             o.paymentStatus = PaymentStatus.PAID

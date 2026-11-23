@@ -394,7 +394,7 @@ class SmoothIndexedStack extends StatefulWidget {
     super.key,
     required this.index,
     required this.children,
-    this.duration = const Duration(milliseconds: 220),
+    this.duration = const Duration(milliseconds: 320),
   });
 
   @override
