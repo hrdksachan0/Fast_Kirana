@@ -629,13 +629,51 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
     if (cancelReason == null) return;
 
-    HapticFeedback.mediumImpact();
-    setState(() => _isCancelling = true);
+    HapticFeedback.heavyImpact();
+
+    // 1. Instant 0ms Optimistic Local State Update (Swiggy / Blinkit style)
+    // Eliminates any screen freeze / await delay for customer
+    final oldOrder = _order;
+    var cleanId = widget.orderId.trim();
+    if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
+    final previousNotes = _order?.notes ?? '';
+    final cancelNote = 'Self Cancelled by Customer: $cancelReason';
+    final updatedNotes = previousNotes.isNotEmpty ? '$previousNotes | $cancelNote' : cancelNote;
+
+    if (_order != null) {
+      final updatedSubs = _order!.subOrders?.map((s) => s.copyWith(status: OrderStatus.cancelled)).toList();
+      setState(() {
+        _order = _order!.copyWith(
+          status: OrderStatus.cancelled,
+          notes: updatedNotes,
+          subOrders: updatedSubs,
+        );
+        _isCancelling = true;
+      });
+      _triggerStatusHaptic(OrderStatus.cancelled, oldOrder?.status);
+    }
+
+    // 2. Direct Sub-30ms Realtime Broadcast to Fellow Admin Consoles
+    try {
+      final sb = SupabaseService.client;
+      if (sb != null) {
+        final adminChan = sb.channel('admin-global-orders-websocket');
+        adminChan.sendBroadcastMessage(
+          event: 'status_update',
+          payload: {
+            'id': _order?.id ?? cleanId,
+            'orderId': _order?.id ?? cleanId,
+            'readableId': _order?.readableId ?? cleanId,
+            'status': 'CANCELLED',
+            'notes': updatedNotes,
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
+      }
+    } catch (_) {}
 
     try {
       final dio = ref.read(dioProvider);
-      var cleanId = widget.orderId.trim();
-      if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
 
       await dio.patch('/api/orders/$cleanId', data: {
         'status': 'CANCELLED',
@@ -660,6 +698,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       await _fetchLiveOrder();
     } catch (e) {
       LoggerService.error("Cancel order error", e);
+      // Revert optimistic state on network failure
+      if (mounted && oldOrder != null) {
+        setState(() => _order = oldOrder);
+      }
       String errorMsg = 'Failed to cancel order. Please try again.';
       if (e is DioException && e.response?.data != null) {
         final data = e.response?.data;

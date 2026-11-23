@@ -34,7 +34,7 @@ class DoorstepCashfreeQrSheet extends ConsumerStatefulWidget {
 }
 
 class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrSheet> {
-  int _selectedTab = 0; // 0: ⚡ Auto-Verify (Razorpay QR), 1: 🏦 Normal UPI (Fallback)
+  int _selectedTab = 0; // 0: ⚡ Auto-Verify (Razorpay QR), 1: 🏦 Normal UPI (Fallback / Split Pay)
   bool _isLoading = true;
   bool _isPaid = false;
   String _razorpayQrUrl = '';
@@ -50,12 +50,53 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
   RealtimeChannel? _realtimeChannel;
   bool _isCompleting = false;
 
+  // Split Pay / Custom Amount State for Tab 1
+  late TextEditingController _cashInputController;
+  double _customOnlineAmount = 0.0;
+  double _cashGivenAmount = 0.0;
+  String _splitPayQrUrl = '';
+
   @override
   void initState() {
     super.initState();
+    _cashInputController = TextEditingController(text: '0');
+    _customOnlineAmount = widget.total;
     _fetchQrData();
     _startPolling();
     _subscribeRealtime();
+  }
+
+  void _onCashAmountChanged(String val) {
+    final cleaned = val.trim();
+    final cash = double.tryParse(cleaned) ?? 0.0;
+    final total = _effectiveTotal;
+    final remaining = (total - cash).clamp(0.0, total).toDouble();
+    setState(() {
+      _cashGivenAmount = cash;
+      _customOnlineAmount = remaining;
+      _splitPayQrUrl = _generateCustomUpiQr(remaining);
+    });
+  }
+
+  void _setCashPreset(double cash) {
+    final total = _effectiveTotal;
+    final validCash = cash.clamp(0.0, total).toDouble();
+    _cashInputController.text = validCash.toStringAsFixed(0);
+    final remaining = (total - validCash).clamp(0.0, total).toDouble();
+    setState(() {
+      _cashGivenAmount = validCash;
+      _customOnlineAmount = remaining;
+      _splitPayQrUrl = _generateCustomUpiQr(remaining);
+    });
+  }
+
+  String _generateCustomUpiQr(double amount) {
+    final vpa = _upiVpa.isNotEmpty ? _upiVpa : '7054470303-2@ibl';
+    final payee = Uri.encodeComponent('FastMinute Store');
+    final note = Uri.encodeComponent('Order #$_effectiveDisplayId Split Pay');
+    final amtStr = amount.toStringAsFixed(2);
+    final upiUri = 'upi://pay?pa=$vpa&pn=$payee&am=$amtStr&cu=INR&tn=$note';
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(upiUri)}';
   }
 
   void _subscribeRealtime() {
@@ -80,6 +121,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
 
   @override
   void dispose() {
+    _cashInputController.dispose();
     _pollTimer?.cancel();
     _autoCompleteTimer?.cancel();
     if (_realtimeChannel != null) {
@@ -109,6 +151,8 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
               widget.total;
           _displayId = data['readableId']?.toString() ?? widget.orderNum;
           _riderName = data['riderName']?.toString() ?? '';
+          _customOnlineAmount = _combinedTotal > 0 ? _combinedTotal : widget.total;
+          _splitPayQrUrl = _generateCustomUpiQr(_customOnlineAmount);
           _isLoading = false;
         });
 
@@ -210,7 +254,9 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
     final hasRzpQr = _razorpayQrUrl.isNotEmpty && _razorpayQrUrl.startsWith('http');
     final activeQr = _selectedTab == 0
         ? (hasRzpQr ? _razorpayQrUrl : (_directUpiQrUrl.isNotEmpty ? _directUpiQrUrl : _qrImageUrl))
-        : (_directUpiQrUrl.isNotEmpty ? _directUpiQrUrl : _qrImageUrl);
+        : (_splitPayQrUrl.isNotEmpty
+            ? _splitPayQrUrl
+            : (_directUpiQrUrl.isNotEmpty ? _directUpiQrUrl : _qrImageUrl));
 
     return Container(
       decoration: const BoxDecoration(
@@ -399,7 +445,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                     ),
             ),
           ] else ...[
-            // Tab Selector: ⚡ Auto-Verify vs 🏦 Normal UPI
+            // Tab Selector: ⚡ Auto-Verify vs 🏦 Normal / Split Pay
             Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(3),
@@ -445,7 +491,14 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                   ),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _selectedTab = 1),
+                      onTap: () {
+                        setState(() {
+                          _selectedTab = 1;
+                          if (_splitPayQrUrl.isEmpty) {
+                            _splitPayQrUrl = _generateCustomUpiQr(_customOnlineAmount);
+                          }
+                        });
+                      },
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
@@ -458,11 +511,11 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.account_balance_rounded, size: 13, color: AppDesignSystem.slate600),
+                            const Icon(Icons.call_split_rounded, size: 13, color: AppDesignSystem.slate700),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
-                                'Normal UPI 🏦',
+                                'Split / Custom Pay ✂️',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.inter(
@@ -480,6 +533,159 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                 ],
               ),
             ),
+
+            // Tab 1 (Split Pay Calculator Card)
+            if (_selectedTab == 1) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppDesignSystem.slate50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppDesignSystem.slate200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Cash Received by Rider',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w700,
+                            color: AppDesignSystem.slate600,
+                          ),
+                        ),
+                        Text(
+                          'Total: ₹${_effectiveTotal.toStringAsFixed(0)}',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11),
+                            fontWeight: FontWeight.w800,
+                            color: AppDesignSystem.slate900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 44,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppDesignSystem.slate300),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  '₹',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.slate700,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _cashInputController,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                    onChanged: _onCashAmountChanged,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppDesignSystem.slate900,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      hintText: '0',
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Quick Presets
+                        Wrap(
+                          spacing: 4,
+                          children: [
+                            _buildPresetChip('₹0', 0),
+                            if (_effectiveTotal >= 20) _buildPresetChip('₹10', 10),
+                            if (_effectiveTotal >= 40) _buildPresetChip('₹20', 20),
+                            if (_effectiveTotal >= 60) _buildPresetChip('₹50', 50),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Summary pills: Cash + Online = Total
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: AppDesignSystem.amber50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppDesignSystem.amber200),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.payments_outlined, size: 13, color: AppDesignSystem.amber700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Cash: ₹${_cashGivenAmount.toStringAsFixed(0)}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.amber800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: AppDesignSystem.emerald50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppDesignSystem.emerald200),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.qr_code_rounded, size: 13, color: AppDesignSystem.emerald700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'QR: ₹${_customOnlineAmount.toStringAsFixed(0)}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppDesignSystem.emerald800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             // QR Card
             Container(
@@ -532,7 +738,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Please use Normal UPI tab to accept payment',
+                              'Please use Split / Custom Pay tab to accept payment',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 fontSize: 10.5,
@@ -543,8 +749,8 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                             const SizedBox(height: 12),
                             ElevatedButton.icon(
                               onPressed: () => setState(() => _selectedTab = 1),
-                              icon: const Icon(Icons.account_balance_rounded, size: 14),
-                              label: const Text('Switch to Normal UPI 🏦'),
+                              icon: const Icon(Icons.call_split_rounded, size: 14),
+                              label: const Text('Switch to Split / Custom Pay ✂️'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppDesignSystem.slate900,
                                 foregroundColor: Colors.white,
@@ -582,11 +788,11 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                     Text(
                       _selectedTab == 0
                           ? 'Amount ₹${_effectiveTotal.toStringAsFixed(0)} is pre-locked. Scan with GPay, PhonePe, Paytm or Cred'
-                          : 'Normal Store UPI: Customer manually enters ₹${_effectiveTotal.toStringAsFixed(0)}',
+                          : 'Dynamic QR generated for remaining ₹${_customOnlineAmount.toStringAsFixed(0)}',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 11),
                         fontWeight: FontWeight.w600,
-                        color: _selectedTab == 0 ? AppDesignSystem.emerald800 : AppDesignSystem.slate600,
+                        color: _selectedTab == 0 ? AppDesignSystem.emerald800 : AppDesignSystem.slate700,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -643,16 +849,21 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
               ),
             ],
 
-            // Manual Confirm Button (Only shown on Tab 1: Normal Store UPI)
+            // Manual Confirm Button (Only shown on Tab 1: Normal Store UPI / Split Pay)
             if (_selectedTab == 1) ...[
               ElevatedButton(
                 onPressed: () async {
+                  final notes = _cashGivenAmount > 0
+                      ? 'Split Pay: Cash ₹${_cashGivenAmount.toStringAsFixed(0)} + Online ₹${_customOnlineAmount.toStringAsFixed(0)} (Verified)'
+                      : 'Paid via Doorstep Fallback Store UPI scan (₹${_customOnlineAmount.toStringAsFixed(0)} Manual Verified)';
                   await widget.onConfirmPaid({
-                    'paymentMethod': 'UPI',
+                    'paymentMethod': _cashGivenAmount > 0 ? 'SPLIT' : 'UPI',
                     'paymentStatus': 'PAID',
-                    'paymentCollectedBy': 'ONLINE',
-                    'isRiderCash': false,
-                    'notes': 'Paid via Doorstep Fallback Store UPI scan (Manual Verified)',
+                    'paymentCollectedBy': _cashGivenAmount > 0 ? 'SPLIT' : 'ONLINE',
+                    'isRiderCash': _cashGivenAmount > 0,
+                    'cashAmount': _cashGivenAmount,
+                    'onlineAmount': _customOnlineAmount,
+                    'notes': notes,
                   });
                 },
                 style: ElevatedButton.styleFrom(
@@ -661,7 +872,9 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(
-                  'Confirm Customer Paid ₹${_effectiveTotal.toStringAsFixed(0)}',
+                  _cashGivenAmount > 0
+                      ? 'Confirm Split Pay (₹${_cashGivenAmount.toStringAsFixed(0)} Cash + ₹${_customOnlineAmount.toStringAsFixed(0)} QR)'
+                      : 'Confirm Customer Paid ₹${_customOnlineAmount.toStringAsFixed(0)}',
                   style: GoogleFonts.inter(
                     fontSize: Responsive.scaledFontSize(context, 13.5),
                     fontWeight: FontWeight.w800,
@@ -672,6 +885,31 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
             ],
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildPresetChip(String label, double amount) {
+    final isSelected = (_cashGivenAmount - amount).abs() < 0.01;
+    return GestureDetector(
+      onTap: () => _setCashPreset(amount),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppDesignSystem.slate900 : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppDesignSystem.slate900 : AppDesignSystem.slate300,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: isSelected ? Colors.white : AppDesignSystem.slate700,
+          ),
+        ),
       ),
     );
   }

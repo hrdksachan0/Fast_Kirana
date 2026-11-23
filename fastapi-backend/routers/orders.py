@@ -4279,18 +4279,21 @@ async def update_order(
             payment_collected_by == "ONLINE"
         )
 
-        if is_explicit_online:
+        if cash_amount_custom is not None:
+            try:
+                order_cash_collected = max(0.0, float(cash_amount_custom))
+            except (ValueError, TypeError):
+                order_cash_collected = float(order.total)
+            if order_cash_collected > 0:
+                new_payment_method = PaymentMethod.COD
+            else:
+                new_payment_method = PaymentMethod.UPI
+        elif is_explicit_online:
             new_payment_method = PaymentMethod.UPI
             order_cash_collected = 0.0
         else:
             new_payment_method = PaymentMethod.COD
-            if cash_amount_custom is not None:
-                try:
-                    order_cash_collected = max(0.0, float(cash_amount_custom))
-                except (ValueError, TypeError):
-                    order_cash_collected = float(order.total)
-            else:
-                order_cash_collected = float(order.total)
+            order_cash_collected = float(order.total)
 
         order.paymentStatus = PaymentStatus.PAID
         order.paymentMethod = new_payment_method

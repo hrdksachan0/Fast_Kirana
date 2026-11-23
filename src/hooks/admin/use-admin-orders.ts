@@ -1,5 +1,6 @@
 'use client';
 import { apiUrl } from '@/lib/api-url';
+import { supabase } from '@/lib/supabase-client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
@@ -123,6 +124,64 @@ export function useAdminOrders({
       setIsLoadingOrders(false)
     }
   }, [orderPage, orderStatusFilter, orderSearchQuery, selectedHubId, authHeaders, onNewOrderDetected])
+
+  
+  // Sub-30ms Realtime WebSocket Sync with peer Admins, Staff & Customer status changes
+  useEffect(() => {
+    if (!supabase) return
+
+    const channel = supabase.channel('admin-global-orders-websocket')
+
+    channel
+      .on('broadcast', { event: 'status_update' }, ({ payload }) => {
+        if (!payload) return
+        const orderId = payload.orderId || payload.id
+        const readableId = payload.readableId
+        const newStatus = payload.status
+        if (!orderId && !readableId) return
+
+        setOrders((prev) =>
+          prev.map((o) => {
+            const matches = o.id === orderId || (readableId && o.readableId === readableId)
+            if (matches) {
+              return {
+                ...o,
+                status: newStatus || o.status,
+                notes: payload.notes !== undefined ? payload.notes : o.notes,
+                deliveryUserId: payload.deliveryUserId !== undefined ? payload.deliveryUserId : o.deliveryUserId,
+              }
+            }
+            return o
+          })
+        )
+        fetchOrders()
+      })
+      .on('broadcast', { event: 'kot_printed' }, ({ payload }) => {
+        if (!payload) return
+        const orderId = payload.orderId || payload.id
+        const readableId = payload.readableId
+        setOrders((prev) =>
+          prev.map((o) => {
+            if (o.id === orderId || (readableId && o.readableId === readableId)) {
+              return { ...o, kotPrinted: true, kot_printed: true }
+            }
+            return o
+          })
+        )
+      })
+      .on('broadcast', { event: 'new_order' }, ({ payload }) => {
+        if (payload) {
+          fetchOrders()
+        }
+      })
+      .subscribe()
+
+    return () => {
+      try {
+        supabase.removeChannel(channel)
+      } catch (_) {}
+    }
+  }, [fetchOrders])
 
   const isFirstMountRef = useRef(true)
 
