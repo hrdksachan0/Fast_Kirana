@@ -70,16 +70,24 @@ class _HomeStickySearchBarState extends State<HomeStickySearchBar> {
           border: Border.all(
             color: widget.isFestiveActive
                 ? const Color(0xFFFFD54F)
-                : const Color(0xFFE2E8F0),
-            width: widget.isFestiveActive ? 1.3 : 1.1,
+                : const Color(0xFFE2E8F0).withValues(alpha: 0.85),
+            width: widget.isFestiveActive ? 1.2 : 1.0,
           ),
           boxShadow: [
+            // Micro contact shadow for crisp grounding
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+            // Soft atmospheric drop shadow for floating elevation
             BoxShadow(
               color: widget.isFestiveActive
                   ? const Color(0xFFD97706).withValues(alpha: 0.08)
-                  : const Color(0xFF0F172A).withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+                  : const Color(0xFF0F172A).withValues(alpha: 0.07),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+              spreadRadius: -4,
             ),
           ],
         ),
