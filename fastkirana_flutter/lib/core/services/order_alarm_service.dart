@@ -16,6 +16,7 @@ class OrderAlarmService {
 
   final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _alarmLoopTimer;
+  Timer? _autoSilenceTimer;
   bool _isPlaying = false;
   bool _isMuted = false;
   String? _activeOrderId;
@@ -84,6 +85,14 @@ class OrderAlarmService {
       }
       await _playChime();
     });
+
+    // Auto-silence buzzer after 25 seconds if not explicitly acknowledged
+    _autoSilenceTimer?.cancel();
+    _autoSilenceTimer = Timer(const Duration(seconds: 25), () {
+      if (_isPlaying) {
+        stopAlarm(closeModal: false);
+      }
+    });
   }
 
   /// Start the continuous loud alarm loop for a new order
@@ -111,6 +120,14 @@ class OrderAlarmService {
       await _playChime();
     });
 
+    // Auto-silence buzzer after 25 seconds if not explicitly acknowledged
+    _autoSilenceTimer?.cancel();
+    _autoSilenceTimer = Timer(const Duration(seconds: 25), () {
+      if (_isPlaying) {
+        stopAlarm(closeModal: false);
+      }
+    });
+
     // If context is available, show high-priority interactive popup dialog
     if (context != null && context.mounted) {
       _showNewOrderDispatchModal(
@@ -128,6 +145,8 @@ class OrderAlarmService {
     _activeOrderId = null;
     _alarmLoopTimer?.cancel();
     _alarmLoopTimer = null;
+    _autoSilenceTimer?.cancel();
+    _autoSilenceTimer = null;
     try {
       await _audioPlayer.stop();
     } catch (e, _) {
