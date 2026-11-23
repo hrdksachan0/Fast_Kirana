@@ -223,13 +223,17 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen>
         orderId: trackingId,
         initialOrder: effectiveOrder,
       ),
-      transitionDuration: const Duration(milliseconds: 220),
+      transitionDuration: const Duration(milliseconds: 320),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeIn,
-          ),
+        final curve = CurvedAnimation(
+          parent: animation,
+          curve: const Cubic(0.2, 0.8, 0.2, 1.0),
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(curve),
           child: child,
         );
       },
