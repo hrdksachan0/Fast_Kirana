@@ -549,7 +549,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
           _silentFetchAdminOrders();
           final status = (record['status'] ?? '').toString().toUpperCase();
-          if (status == 'CANCELLED' || status == 'CONFIRMED' || status == 'DELIVERED') {
+          if (status == 'CANCELLED' || status == 'CONFIRMED' || status == 'DELIVERED' || status == 'PACKED' || status == 'PREPARING' || status == 'SHIPPED') {
             final recordId = record['id']?.toString();
             final readableId = record['readableId']?.toString();
             if (recordId != null) _dismissedOrAcknowledgedAlarmOrders.add(recordId);
@@ -558,11 +558,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
               final base = readableId.replaceAll(RegExp(r'-[GR\d]+$', caseSensitive: false), '').trim();
               if (base.isNotEmpty) _dismissedOrAcknowledgedAlarmOrders.add(base);
             }
-            if (OrderAlarmService.instance.isPlaying &&
-                (OrderAlarmService.instance.activeOrderId == recordId ||
-                 OrderAlarmService.instance.activeOrderId == readableId)) {
-              _stopPendingAlarm();
-            }
+            // Stop active order alarm immediately across all admin devices
+            _stopPendingAlarm();
           } else if (status == 'PENDING' || status == 'ADMIN_PENDING' || status == 'PLACED') {
             final recId = record['id']?.toString();
             final recRid = record['readableId']?.toString();

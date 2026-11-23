@@ -68,31 +68,24 @@ class OrderAlarmService {
     }
   }
 
-  /// Start continuous buzzer for order alert by ID/readableId (from FCM push or background)
+  /// Play single loud order alert chime once (Notification Buzzer on Order Alert: 1 Time)
+  /// Stops immediately after playing without looping so it doesn't ring endlessly.
   Future<void> startOrderBuzzer({
     String? orderId,
   }) async {
     if (_isMuted) return;
     _activeOrderId = orderId;
     _isPlaying = true;
+    _alarmLoopTimer?.cancel();
+    _alarmLoopTimer = null;
+    _autoSilenceTimer?.cancel();
+    _autoSilenceTimer = null;
+
+    // Play 1 time loud chime & vibration
     await _playChime();
 
-    _alarmLoopTimer?.cancel();
-    _alarmLoopTimer = Timer.periodic(const Duration(milliseconds: 3200), (_) async {
-      if (!_isPlaying || _isMuted) {
-        _alarmLoopTimer?.cancel();
-        return;
-      }
-      await _playChime();
-    });
-
-    // Auto-silence buzzer after 25 seconds if not explicitly acknowledged
-    _autoSilenceTimer?.cancel();
-    _autoSilenceTimer = Timer(const Duration(seconds: 25), () {
-      if (_isPlaying) {
-        stopAlarm(closeModal: false);
-      }
-    });
+    // Mark done after chime finishes so it doesn't loop
+    _isPlaying = false;
   }
 
   /// Start the continuous loud alarm loop for a new order
