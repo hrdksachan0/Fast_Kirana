@@ -607,65 +607,69 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
             ),
             const SizedBox(height: 12),
 
-            // Live Auto-Checking Indicator (Only when dynamic QR is active)
-            if (_selectedTab == 0 && hasRzpQr) ...[
+            // Live Auto-Checking Indicator (When on Auto-Verify tab)
+            if (_selectedTab == 0) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppDesignSystem.green50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppDesignSystem.green100),
+                  color: AppDesignSystem.emerald50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppDesignSystem.emerald200),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppDesignSystem.emerald600),
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2.2, color: AppDesignSystem.emerald600),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Auto-checking Razorpay payment every 2s...',
-                      style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
-                        fontWeight: FontWeight.w700,
-                        color: AppDesignSystem.emerald700,
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        'Awaiting payment • Auto-detecting in real-time...',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontWeight: FontWeight.w700,
+                          color: AppDesignSystem.emerald800,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
             ],
 
-            // Emergency Manual Confirm Button (Active on Normal Fallback or if required)
-            ElevatedButton(
-              onPressed: () async {
-                await widget.onConfirmPaid({
-                  'paymentMethod': _selectedTab == 0 ? 'ONLINE' : 'UPI',
-                  'paymentStatus': 'PAID',
-                  'paymentCollectedBy': 'ONLINE',
-                  'isRiderCash': false,
-                  'notes': _selectedTab == 0
-                      ? 'Paid via Doorstep Razorpay QR scan'
-                      : 'Paid via Doorstep Fallback Store UPI scan',
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _selectedTab == 0 ? AppDesignSystem.emerald600 : AppDesignSystem.slate800,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Text(
-                'Confirm Customer Paid ₹${_effectiveTotal.toStringAsFixed(0)}',
-                style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 13.5),
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+            // Manual Confirm Button (Only shown on Tab 1: Normal Store UPI)
+            if (_selectedTab == 1) ...[
+              ElevatedButton(
+                onPressed: () async {
+                  await widget.onConfirmPaid({
+                    'paymentMethod': 'UPI',
+                    'paymentStatus': 'PAID',
+                    'paymentCollectedBy': 'ONLINE',
+                    'isRiderCash': false,
+                    'notes': 'Paid via Doorstep Fallback Store UPI scan (Manual Verified)',
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppDesignSystem.slate900,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Text(
+                  'Confirm Customer Paid ₹${_effectiveTotal.toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(
+                    fontSize: Responsive.scaledFontSize(context, 13.5),
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ],
       ),

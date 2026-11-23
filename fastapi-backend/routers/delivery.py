@@ -463,10 +463,10 @@ async def _get_or_create_razorpay_doorstep_qr(
         return {}
 
     clean_rider_tag = (rider_name or "norider").replace(" ", "_")[:20]
-    cache_key = f"rzp_doorstep_qr_v4:{order_id}:{amount_paise}:{clean_rider_tag}"
+    cache_key = f"rzp_doorstep_qr_sq_v5:{order_id}:{amount_paise}:{clean_rider_tag}"
     try:
         cached = await get_cache(cache_key)
-        if cached and isinstance(cached, dict) and cached.get("image_url"):
+        if cached and isinstance(cached, dict) and cached.get("image_url") and "rzp.io" not in cached.get("image_url", ""):
             return cached
     except Exception:
         pass
@@ -504,15 +504,22 @@ async def _get_or_create_razorpay_doorstep_qr(
             if resp.status_code in (200, 201):
                 data = resp.json()
                 qr_id = str(data.get("id") or "")
-                official_qr_url = data.get("image_url") or ""
+                standee_url = data.get("image_url") or ""
+
+                # Extract the clean upi_uri directly from Razorpay qr_id
+                # Razorpay encodes tr=<short_id>qrv2 on their VPA fastkirana781706.rzp@rxairtel
+                short_id = qr_id.replace("qr_", "")
+                clean_upi_uri = f"upi://pay?am={total_amount:.2f}&cu=INR&mc=5811&mode=22&pa=fastkirana781706.rzp@rxairtel&pn=Fastkirana&tn=Payment%20To%20Fastkirana&tr={short_id}qrv2"
+                clean_square_qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=320x320&data={urllib.parse.quote(clean_upi_uri)}"
 
                 qr_info = {
                     "id": qr_id,
-                    "image_url": official_qr_url,
-                    "standee_url": official_qr_url,
+                    "image_url": clean_square_qr_url,
+                    "standee_url": standee_url,
+                    "upi_uri": clean_upi_uri,
                     "status": data.get("status")
                 }
-                log.info(f"✅ Created Official Razorpay Doorstep QR {data.get('id')} for Order #{base_display} (₹{total_amount})")
+                log.info(f"✅ Created Official Razorpay Doorstep Square QR {data.get('id')} for Order #{base_display} (₹{total_amount})")
                 try:
                     await set_cache(cache_key, qr_info, ttl=1800)
                 except Exception:
@@ -694,7 +701,9 @@ async def get_doorstep_qr(
                         # Broadcast instant real-time event to Rider & Admin
                         try:
                             from utils.supabase_broadcast import broadcast_supabase_realtime
-                            topics = ["orders", f"order:{order.id}"]
+                            topics = ["orders", f"order:{order.id}", f"order-payment-{order.id}"]
+                            if order.readableId:
+                                topics.append(f"order-payment-{order.readableId}")
                             if order.deliveryUserId:
                                 topics.append(f"rider_{order.deliveryUserId}")
                             await broadcast_supabase_realtime(

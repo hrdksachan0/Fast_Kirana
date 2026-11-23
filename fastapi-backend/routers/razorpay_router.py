@@ -462,7 +462,9 @@ async def razorpay_webhook(
                     try:
                         from utils.supabase_broadcast import broadcast_supabase_realtime
                         for o in matched_orders:
-                            topics = ["orders", f"order:{o.id}"]
+                            topics = ["orders", f"order:{o.id}", f"order-payment-{o.id}"]
+                            if o.readableId:
+                                topics.append(f"order-payment-{o.readableId}")
                             if o.deliveryUserId:
                                 topics.append(f"rider_{o.deliveryUserId}")
                             await broadcast_supabase_realtime(

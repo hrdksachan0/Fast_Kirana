@@ -312,6 +312,13 @@ async def release_reserved_inventory(stock_key: str, quantity_to_refund: int) ->
 
 # Backward-compatible function aliases
 get_cache = get_cached
-set_cache = set_cached
+
+async def set_cache(key: str, value: Any, ttl: Optional[int] = None, ttl_seconds: Optional[int] = None) -> bool:
+    """
+    Flexible alias accepting either ttl or ttl_seconds.
+    """
+    effective_ttl = ttl if ttl is not None else (ttl_seconds if ttl_seconds is not None else 60)
+    return await set_cached(key, value, ttl_seconds=effective_ttl)
+
 
 
