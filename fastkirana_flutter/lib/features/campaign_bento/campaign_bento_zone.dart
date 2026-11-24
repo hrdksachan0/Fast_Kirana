@@ -8,6 +8,8 @@ import '../../providers/store_hub_provider.dart';
 import 'widgets/daily_restock_card.dart';
 import 'widgets/seasonal_switch_up_card.dart';
 import 'widgets/gifting_boutique_card.dart';
+import 'widgets/fresh_market_card.dart';
+import 'widgets/value_picks_card.dart';
 
 class SingleCampaignBentoCard extends ConsumerWidget {
   final CampaignCardType type;
@@ -44,11 +46,11 @@ class SingleCampaignBentoCard extends ConsumerWidget {
       case CampaignCardType.seasonalSwitchUp:
         return SeasonalSwitchUpCard(card: card);
       case CampaignCardType.freshMarket:
-        return const SizedBox.shrink(); // Hidden (bloom card)
+        return FreshMarketCard(card: card);
       case CampaignCardType.dailyRestock:
         return DailyRestockCard(card: card);
       case CampaignCardType.valuePicks:
-        return const SizedBox.shrink(); // Hidden (value card)
+        return ValuePicksCard(card: card);
       case CampaignCardType.giftingBoutique:
         return GiftingBoutiqueCard(card: card);
       case CampaignCardType.movieNight:
@@ -92,9 +94,7 @@ class CampaignBentoZone extends ConsumerWidget {
         .where((c) =>
             c.isVisibleForHub(hub.id) &&
             c.type != CampaignCardType.movieNight &&
-            c.type != CampaignCardType.breakfastClub &&
-            c.type != CampaignCardType.freshMarket &&
-            c.type != CampaignCardType.valuePicks)
+            c.type != CampaignCardType.breakfastClub)
         .toList();
     activeCards.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     if (activeCards.isEmpty) return const SizedBox.shrink();

@@ -189,7 +189,7 @@ export function useAdminOrders({
     // If we already have initialOrders from server and haven't altered filters, skip initial mount fetch
     if (isFirstMountRef.current) {
       isFirstMountRef.current = false
-      if (initialOrders && initialOrders.length > 0 && orderPage === 1 && orderStatusFilter === 'ALL' && !orderSearchQuery) {
+      if (Array.isArray(initialOrders) && initialOrders.length > 0 && orderPage === 1 && orderStatusFilter === 'ALL' && !orderSearchQuery) {
         prevKnownOrderIds.current = new Set(initialOrders.map((o: any) => o.id))
       } else {
         fetchOrders()

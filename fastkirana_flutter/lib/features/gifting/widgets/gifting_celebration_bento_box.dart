@@ -39,10 +39,10 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFF3CDD7), width: 1.2),
         boxShadow: [
           BoxShadow(
@@ -58,7 +58,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
         children: [
           // 1. Sleek Soft-Rose Luxury Header Band (Zero harsh contrast)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFFFFF0F3), Color(0xFFFFE4E8)],
@@ -159,7 +159,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                     ? (availableWidth / occasions.length).clamp(76.0, 94.0)
                     : 84.0;
                 final tabWidth = calculatedTabWidth;
-                const tabHeight = 104.0;
+                const tabHeight = 86.0;
                 final fullWidth = math.max(
                   constraints.maxWidth,
                   sidePadding * 2 + (tabWidth * occasions.length),
@@ -182,7 +182,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                         painter: _GiftingConnectedTabPainter(
                           x: animX,
                           width: tabWidth,
-                          radius: 22,
+                          radius: 20,
                           color: const Color(0xFFF3CDD7),
                           fill: Colors.white,
                           lineWidth: 1.2,
@@ -214,7 +214,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
           // 3. Products Shelf Inside the Bento Box
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -248,7 +248,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // 2-Column Spacious Luxury Grid
                 if (products.isEmpty)
@@ -274,14 +274,15 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                   )
                 else
                   GridView.builder(
+                    padding: EdgeInsets.zero,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: products.length,
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-                      childAspectRatio: 0.69,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 12,
+                      childAspectRatio: Responsive.isTablet(context) ? 0.76 : 0.72,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
                     ),
                     itemBuilder: (context, index) {
                       final product = products[index];
@@ -374,9 +375,9 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
             AnimatedContainer(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
-              width: isSelected ? 52 : 46,
-              height: isSelected ? 52 : 46,
-              padding: EdgeInsets.all(isSelected ? 3.0 : 3.5),
+              width: isSelected ? 48 : 42,
+              height: isSelected ? 48 : 42,
+              padding: EdgeInsets.all(isSelected ? 2.5 : 3.0),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
@@ -393,7 +394,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                       ),
                 border: Border.all(
                   color: Colors.white,
-                  width: isSelected ? 2.2 : 1.5,
+                  width: isSelected ? 2.0 : 1.5,
                 ),
                 boxShadow: isSelected
                     ? [
@@ -416,7 +417,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: Colors.white,
                 ),
-                padding: const EdgeInsets.all(2.5),
+                padding: const EdgeInsets.all(2.0),
                 child: ClipOval(
                   child: imgUrl.startsWith('assets/')
                       ? Image.asset(
@@ -425,7 +426,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                           errorBuilder: (_, __, ___) => Container(
                             color: const Color(0xFFFFF1F2),
                             child: Center(
-                              child: Text(occ.emoji, style: const TextStyle(fontSize: 20)),
+                              child: Text(occ.emoji, style: const TextStyle(fontSize: 18)),
                             ),
                           ),
                         )
@@ -435,26 +436,26 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                           placeholder: (_, __) => Container(
                             color: const Color(0xFFFFF1F2),
                             child: Center(
-                              child: Text(occ.emoji, style: const TextStyle(fontSize: 20)),
+                              child: Text(occ.emoji, style: const TextStyle(fontSize: 18)),
                             ),
                           ),
                           errorWidget: (_, __, ___) => Container(
                             color: const Color(0xFFFFF1F2),
                             child: Center(
-                              child: Text(occ.emoji, style: const TextStyle(fontSize: 20)),
+                              child: Text(occ.emoji, style: const TextStyle(fontSize: 18)),
                             ),
                           ),
                         ),
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 3),
 
             // 2. Name BELOW Image (name image ke nichee)
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 180),
               style: GoogleFonts.plusJakartaSans(
-                fontSize: isSelected ? 11.5 : 10.5,
+                fontSize: isSelected ? 11.0 : 10.0,
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
                 color: isSelected ? const Color(0xFF881337) : const Color(0xFF641E30),
                 height: 1.15,
@@ -514,8 +515,8 @@ class _GiftingConnectedTabPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final bottom = size.height - 1.0;
-    const filletR = 24.0;
-    final topR = radius.clamp(18.0, 28.0);
+    const filletR = 18.0;
+    final topR = radius.clamp(16.0, 24.0);
     const top = 1.0;
     const k = 0.55228475;
     const invK = 1.0 - k;
@@ -644,10 +645,10 @@ class _LuxuryGiftingCard extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
           color: const Color(0xFFFFFDFB),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFF2D7DF), width: 1.0),
           boxShadow: [
             BoxShadow(
@@ -740,7 +741,7 @@ class _LuxuryGiftingCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
 
             // 2. Unit Pill
             Container(

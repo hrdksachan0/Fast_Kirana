@@ -29,7 +29,6 @@ import '../../providers/auth_provider.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/delivery_header.dart';
 import 'widgets/doorstep_cashfree_qr_sheet.dart';
-import 'widgets/delivery_payment_sheet.dart';
 import 'widgets/delivery_success_celebration_dialog.dart';
 import 'widgets/delivery_wallet_tab.dart';
 import 'widgets/delivery_history_tab.dart';
@@ -1588,41 +1587,44 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     );
   }
 
-  /// Modal Matching Exact WebApp Flow (Screenshots 1, 2, 3, 4)
-  void _showDeliveryConfirmationModal(Map<String, dynamic> order, double lat, double lng) {
+  /// Direct 1-Slide Delivery Completion — zero Cash/Online popup confusion!
+  /// Any COD/Unpaid order collected at doorstep counts directly into Rider Cash in Hand.
+  Future<void> _showDeliveryConfirmationModal(Map<String, dynamic> order, double lat, double lng) async {
     final orderId = order['id']?.toString() ?? '';
-    final orderNum = order['readableId'] ?? orderId.substring(0, math.min(8, orderId.length));
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
     final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
     final isAlreadyPaid = rawPayStatus == 'PAID';
-    final isCod = !isAlreadyPaid; // If not yet PAID, rider must collect payment before delivering!
-    final wallet = _walletInfo?['wallet'] ?? {};
-    final cashInHand = (wallet['cashInHand'] as num?)?.toDouble() ?? 0.0;
-    final cashLimit = (wallet['cashLimit'] as num?)?.toDouble() ?? 10000.0;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => DeliveryPaymentSheet(
-        order: order,
-        orderNum: orderNum,
-        total: total,
-        isCod: isCod,
-        cashInHand: cashInHand,
-        cashLimit: cashLimit,
-        lat: lat,
-        lng: lng,
-        onConfirmDelivery: (extra) async {
-          Navigator.pop(ctx);
-          await _updateOrderStatus(orderId, 'DELIVERED', extra: extra);
-        },
-        onOpenDoorstepQr: () {
-          Navigator.pop(ctx);
-          _showDoorstepUpiQrModal(order);
-        },
-      ),
-    );
+    final extra = isAlreadyPaid
+        ? <String, dynamic>{
+            'paymentMethod': 'ONLINE',
+            'isRiderCash': false,
+            'paymentCollectedBy': 'ONLINE',
+          }
+        : <String, dynamic>{
+            'paymentMethod': 'COD',
+            'isRiderCash': true,
+            'paymentCollectedBy': 'RIDER',
+            'cashAmount': total,
+          };
+
+    await _updateOrderStatus(orderId, 'DELIVERED', extra: extra);
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF008744),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            isAlreadyPaid
+                ? 'Delivered! (Paid Online • ₹0 Cash)'
+                : 'Delivered! ₹${total.toInt()} added to your Cash in Hand',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ),
+      );
+    }
   }
 
   void _handleBackPress() {

@@ -4,6 +4,7 @@ import 'package:flutter_bounceable/flutter_bounceable.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/services/location_service.dart';
+import '../../../core/utils/address_formatter.dart';
 import '../../../data/models/address.dart';
 import '../../../providers/address_provider.dart';
 import '../../../widgets/address_selector_sheet.dart';
@@ -187,13 +188,15 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
 
           const SizedBox(height: 7),
 
-          // Row 2: Full Address Clean Text Line
+          // Row 2: Full Address Clean Deduplicated Text Line
           Text(
             selectedAddress != null && selectedAddress.fullAddress.isNotEmpty
-                ? selectedAddress.fullAddress
-                    .replaceAll(RegExp(r'^[.,\s]+'), '')
-                    .replaceAll(RegExp(r',\s*,+'), ', ')
-                    .trim()
+                ? AddressFormatter.formatCleanSingleLine(
+                    selectedAddress.fullAddress,
+                    areaFallback: selectedAddress.area.isNotEmpty
+                        ? selectedAddress.area
+                        : selectedAddress.city,
+                  )
                 : 'Please select a delivery address to place your order.',
             style: GoogleFonts.inter(
               fontSize: Responsive.scaledFontSize(context, 12.5),

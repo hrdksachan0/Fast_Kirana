@@ -701,14 +701,15 @@ class _RiderActiveDeliveryCardState extends State<RiderActiveDeliveryCard>
 
                 const SizedBox(height: 12),
 
-                // 6. REALISTIC HIGH-GLOSS SLIDE-TO-DELIVER SLIDER (FastMinute Brand Green + Specular Sheen)
+                // 6. SWIGGY-STYLE 64px FULL-PILL SLIDE-TO-DELIVER SLIDER (Round White Thumb, Matte Green)
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    const double thumbWidth = 52;
-                    const double pad = 4;
+                    const double sliderHeight = 64;
+                    const double pad = 5;
+                    const double thumbWidth = sliderHeight - (pad * 2); // 54x54 perfect circle
                     final double maxDrag = math.max(1.0, constraints.maxWidth - thumbWidth - (pad * 2));
                     final double thumbLeft = pad + (_slideProgress * maxDrag);
-                    final double textOpacity = (1.0 - _slideProgress * 1.5).clamp(0.0, 1.0);
+                    final double textOpacity = (1.0 - _slideProgress * 1.45).clamp(0.0, 1.0);
                     final bool isNearComplete = _slideProgress >= 0.78;
 
                     return GestureDetector(
@@ -740,8 +741,7 @@ class _RiderActiveDeliveryCardState extends State<RiderActiveDeliveryCard>
                                   _slideCompleted = true;
                                 });
                                 widget.onShowConfirmation?.call(order, lat, lng);
-                                // Reset slider cleanly if rider cancels confirmation sheet
-                                Future.delayed(const Duration(milliseconds: 700), () {
+                                Future.delayed(const Duration(milliseconds: 900), () {
                                   if (mounted && !widget.isUpdating) {
                                     setState(() {
                                       _slideProgress = 0.0;
@@ -751,7 +751,6 @@ class _RiderActiveDeliveryCardState extends State<RiderActiveDeliveryCard>
                                   }
                                 });
                               } else {
-                                // Smooth elastic return with easeOutBack curve
                                 _springAnimation = Tween<double>(begin: _slideProgress, end: 0.0).animate(
                                   CurvedAnimation(parent: _springController, curve: Curves.easeOutBack),
                                 );
@@ -760,14 +759,14 @@ class _RiderActiveDeliveryCardState extends State<RiderActiveDeliveryCard>
                               }
                             },
                       child: Container(
-                        height: 54,
+                        height: sliderHeight,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          color: AppDesignSystem.success,
-                          borderRadius: BorderRadius.circular(16),
+                          color: const Color(0xFF008744),
+                          borderRadius: BorderRadius.circular(32),
                           boxShadow: [
                             BoxShadow(
-                              color: AppDesignSystem.success.withValues(alpha: 0.32),
+                              color: const Color(0xFF008744).withValues(alpha: 0.28),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
@@ -776,21 +775,21 @@ class _RiderActiveDeliveryCardState extends State<RiderActiveDeliveryCard>
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // 1. Clean Active Progress Fill following thumb
+                            // 1. Matte Darker Green Fill Following Thumb
                             Positioned(
                               left: 0,
                               top: 0,
                               bottom: 0,
-                              width: (thumbLeft + thumbWidth + pad).clamp(0.0, constraints.maxWidth),
+                              width: (thumbLeft + thumbWidth * 0.5 + pad).clamp(0.0, constraints.maxWidth),
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: AppDesignSystem.emerald700,
-                                  borderRadius: BorderRadius.circular(16),
+                                  color: const Color(0xFF006B35),
+                                  borderRadius: BorderRadius.circular(32),
                                 ),
                               ),
                             ),
 
-                            // 2. Center CTA label with dynamic opacity
+                            // 2. Clean Sentence-Case Center Label + Double Chevron
                             if (widget.isUpdating)
                               const SizedBox(
                                 width: 22,
@@ -801,27 +800,49 @@ class _RiderActiveDeliveryCardState extends State<RiderActiveDeliveryCard>
                               Opacity(
                                 opacity: textOpacity,
                                 child: Transform.translate(
-                                  offset: Offset(_slideProgress * 15.0, 0),
+                                  offset: Offset(_slideProgress * 12.0, 0),
                                   child: Padding(
-                                    padding: const EdgeInsets.only(left: 36),
-                                    child: Text(
-                                      !isPaid
-                                          ? 'SLIDE TO COLLECT ₹${total.toInt()} & DELIVER ➔'
-                                          : 'SLIDE TO DELIVER ➔➔',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: Responsive.scaledFontSize(context, 12.2),
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                        letterSpacing: 0.35,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    padding: const EdgeInsets.only(left: 42, right: 16),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            !isPaid
+                                                ? 'Collect ₹${total.toInt()} & Deliver'
+                                                : 'Slide to Deliver',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 15),
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                              letterSpacing: -0.1,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.chevron_right_rounded,
+                                          size: 18,
+                                          color: Colors.white.withValues(alpha: 0.75),
+                                        ),
+                                        Transform.translate(
+                                          offset: const Offset(-8, 0),
+                                          child: Icon(
+                                            Icons.chevron_right_rounded,
+                                            size: 18,
+                                            color: Colors.white.withValues(alpha: 0.45),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
                               ),
 
-                            // 3. Tactile Clean White Thumb Knob with Morphing State
+                            // 3. Round White 54x54 Thumb Knob
                             Positioned(
                               left: thumbLeft,
                               top: pad,
@@ -831,14 +852,15 @@ class _RiderActiveDeliveryCardState extends State<RiderActiveDeliveryCard>
                                 duration: const Duration(milliseconds: 140),
                                 child: Container(
                                   width: thumbWidth,
+                                  height: thumbWidth,
                                   decoration: BoxDecoration(
-                                    color: isNearComplete ? AppDesignSystem.emerald700 : Colors.white,
-                                    borderRadius: BorderRadius.circular(13),
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.20),
-                                        blurRadius: 7,
-                                        offset: const Offset(0, 2.5),
+                                        color: Colors.black.withValues(alpha: 0.18),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
                                       ),
                                     ],
                                   ),
@@ -848,13 +870,13 @@ class _RiderActiveDeliveryCardState extends State<RiderActiveDeliveryCard>
                                       child: isNearComplete
                                           ? const Icon(
                                               Icons.check_rounded,
-                                              color: Colors.white,
+                                              color: Color(0xFF008744),
                                               size: 26,
                                               key: ValueKey('check'),
                                             )
                                           : const Icon(
-                                              Icons.double_arrow_rounded,
-                                              color: AppDesignSystem.success,
+                                              Icons.arrow_forward_rounded,
+                                              color: Color(0xFF008744),
                                               size: 24,
                                               key: ValueKey('arrow'),
                                             ),

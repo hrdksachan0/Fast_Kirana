@@ -24,7 +24,7 @@ export function CookieConsentBanner() {
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false)
   const [marketingEnabled, setMarketingEnabled] = useState(false)
 
-  const hasCartItems = useCartStore((s) => s.items.length > 0)
+  const hasCartItems = useCartStore((s) => (s?.items?.length || 0) > 0)
   const bottomOffsetClass = hasCartItems ? 'bottom-[136px]' : 'bottom-[74px] md:bottom-6'
 
   useEffect(() => {

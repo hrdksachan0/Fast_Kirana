@@ -66,7 +66,7 @@ export function LastOrderBanner() {
   const [lastOrder, setLastOrder] = useState<LastOrder | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
-  const hasCartItems = useCartStore((s) => s.items.length > 0)
+  const hasCartItems = useCartStore((s) => (s?.items?.length || 0) > 0)
 
   useEffect(() => {
     if (authStatus === 'authenticated') {

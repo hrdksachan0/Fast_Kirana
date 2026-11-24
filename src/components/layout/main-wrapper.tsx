@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export function MainWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const hasCartItems = useCartStore((s) => s.items.length > 0)
+  const hasCartItems = useCartStore((s) => (s?.items?.length || 0) > 0)
   const isCategoryPage = pathname?.startsWith('/category/')
   const isStorefrontPage = pathname?.startsWith('/food/') || pathname?.startsWith('/restaurant') || pathname?.startsWith('/cafe') || pathname?.startsWith('/cart') || pathname?.startsWith('/checkout') || isCategoryPage
 

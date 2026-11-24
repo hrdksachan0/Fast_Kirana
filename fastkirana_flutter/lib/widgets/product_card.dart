@@ -438,42 +438,58 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               // Top-Left Badges (Discount % OFF / Bestseller)
                               if (resolvedDiscount > 0)
                                 Positioned(
-                                  top: s(4),
-                                  left: s(4),
+                                  top: s(5),
+                                  left: s(5),
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: s(4.5), vertical: s(2)),
+                                    padding: EdgeInsets.symmetric(horizontal: s(6.5), vertical: s(3.2)),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF0C831F),
-                                      borderRadius: BorderRadius.circular(s(3.5)),
+                                      borderRadius: BorderRadius.circular(s(5)),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF0C831F).withValues(alpha: 0.25),
+                                          blurRadius: s(4),
+                                          offset: Offset(0, s(1.5)),
+                                        ),
+                                      ],
                                     ),
                                     child: Text(
                                       '$resolvedDiscount% OFF',
                                       style: GoogleFonts.inter(
-                                        fontSize: s(7.5),
+                                        fontSize: s(9.5),
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
                                         letterSpacing: 0.2,
+                                        height: 1.05,
                                       ),
                                     ),
                                   ),
                                 )
                               else if (product.isBestsellerProduct)
                                 Positioned(
-                                  top: s(4),
-                                  left: s(4),
+                                  top: s(5),
+                                  left: s(5),
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: s(4.5), vertical: s(2)),
+                                    padding: EdgeInsets.symmetric(horizontal: s(6.5), vertical: s(3.2)),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF2563EB),
-                                      borderRadius: BorderRadius.circular(s(3.5)),
+                                      borderRadius: BorderRadius.circular(s(5)),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                                          blurRadius: s(4),
+                                          offset: Offset(0, s(1.5)),
+                                        ),
+                                      ],
                                     ),
                                     child: Text(
                                       'BESTSELLER',
                                       style: GoogleFonts.inter(
-                                        fontSize: s(7.2),
+                                        fontSize: s(9.0),
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
                                         letterSpacing: 0.2,
+                                        height: 1.05,
                                       ),
                                     ),
                                   ),

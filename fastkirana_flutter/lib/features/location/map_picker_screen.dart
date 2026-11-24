@@ -509,67 +509,6 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                     ],
                   ),
                 ),
-                if (_activeHubs.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 34,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: _activeHubs.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, i) {
-                        final hub = _activeHubs[i];
-                        final isSelected = _matchedHub?.id == hub.id;
-                        return Bounceable(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            _animateTo(hub.latitude, hub.longitude, zoom: 16.5);
-                            _updateLocationDetails(hub.latitude, hub.longitude);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF16A34A) : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
-                                width: 1.1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: isSelected ? 0.15 : 0.04),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.storefront_rounded,
-                                  size: 14,
-                                  color: isSelected ? Colors.white : const Color(0xFF16A34A),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '${hub.city} Hub',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 11.5),
-                                    fontWeight: FontWeight.w800,
-                                    color: isSelected ? Colors.white : slateDark,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -577,7 +516,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
           // 4. FLOATING MAP TYPE TOGGLE (Satellite / Map) + "USE CURRENT LOCATION" PILL
           Positioned(
             right: 16,
-            bottom: 242,
+            bottom: 292,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
@@ -856,11 +795,67 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                     Bounceable(
                       onTap: () async {
                         if (!_isServiceable) {
+                          HapticFeedback.heavyImpact();
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              backgroundColor: AppDesignSystem.red600,
-                              content: Text('Delivery is currently unavailable at this location'),
+                            SnackBar(
+                              elevation: 10,
                               behavior: SnackBarBehavior.floating,
+                              backgroundColor: const Color(0xFF0F172A),
+                              margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color: const Color(0xFFEF4444).withValues(alpha: 0.45),
+                                  width: 1.2,
+                                ),
+                              ),
+                              duration: const Duration(seconds: 3),
+                              content: Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.18),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.location_off_rounded,
+                                      color: Color(0xFFF87171),
+                                      size: 19,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Outside Delivery Area',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                            letterSpacing: -0.1,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Move the pin inside the highlighted zone to continue',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFFCBD5E1),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                           return;

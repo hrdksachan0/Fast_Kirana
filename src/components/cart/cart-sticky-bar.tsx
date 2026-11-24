@@ -74,7 +74,7 @@ export function CartStickyBar() {
     isMobileMenuOpen ||
     !!pendingConflictProduct
 
-  if (!mounted || items.length === 0 || isModalOrDrawerOpen || isIgnoredPage) return null
+  if (!mounted || !items || items.length === 0 || isModalOrDrawerOpen || isIgnoredPage) return null
 
   const subtotal = getSubtotal()
 
@@ -137,9 +137,9 @@ export function CartStickyBar() {
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {/* Compact Overlapping Item Previews */}
           <div className="flex items-center shrink-0">
-            {items.length > 0 ? (
+            {(items?.length || 0) > 0 ? (
               <div className="flex items-center -space-x-2">
-                {items.slice(0, 2).map((it, idx) => (
+                {(items || []).slice(0, 2).map((it, idx) => (
                   <div
                     key={`${it.product.id}-${idx}`}
                     className="relative w-6 h-6 rounded-full border-[1.5px] border-white/90 overflow-hidden bg-white shadow-xs shrink-0"
@@ -158,12 +158,12 @@ export function CartStickyBar() {
                     )}
                   </div>
                 ))}
-                {items.length > 2 && (
+                {(items?.length || 0) > 2 && (
                   <div
                     className="relative w-6 h-6 rounded-full border-[1.5px] border-white/90 bg-black/60 text-white text-[8px] font-black flex items-center justify-center shadow-xs shrink-0"
                     style={{ zIndex: 5 }}
                   >
-                    +{items.length - 2}
+                    +{(items?.length || 0) - 2}
                   </div>
                 )}
               </div>

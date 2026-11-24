@@ -890,7 +890,7 @@ export function OrdersTab({
     return matchesFilter && matchesShop && matchesMethod && matchesRoute && matchesSearch
   })
 
-  const activeOrdersCount = rawActiveList.length
+  const activeOrdersCount = rawActiveList?.length || 0
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -907,7 +907,7 @@ export function OrdersTab({
             }`}
           >
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-            <span>🔥 Live Action Queue ({totalActiveQueueCount || rawActiveList.length})</span>
+            <span>🔥 Live Action Queue ({totalActiveQueueCount || rawActiveList?.length || 0})</span>
           </button>
 
           <button
@@ -919,7 +919,7 @@ export function OrdersTab({
                 : 'bg-muted/20 border-border hover:bg-muted text-text-secondary'
             }`}
           >
-            <span>📜 Completed & Past Orders ({totalHistoryCount || rawHistoryList.length})</span>
+            <span>📜 Completed & Past Orders ({totalHistoryCount || rawHistoryList?.length || 0})</span>
           </button>
         </div>
 
@@ -941,7 +941,7 @@ export function OrdersTab({
               <h3 className="font-black text-text-primary text-base sm:text-lg flex items-center gap-2">
                 🔥 Live Action Queue
                 <span className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2.5 py-0.5 rounded-full font-black border border-amber-500/20">
-                  {totalActiveQueueCount || rawActiveList.length} Active
+                  {totalActiveQueueCount || rawActiveList?.length || 0} Active
                 </span>
               </h3>
             </div>
@@ -1027,7 +1027,7 @@ export function OrdersTab({
                 { key: 'SHIPPED', label: '🛵 On the Way' },
               ].map((pill) => {
                 const count = pill.key === 'ALL' 
-                  ? (totalActiveQueueCount || rawActiveList.length)
+                  ? (totalActiveQueueCount || rawActiveList?.length || 0)
                   : (orderCounts[pill.key] ?? 0)
                 const isActive = orderStatusFilter === pill.key || (orderStatusFilter === 'ALL' && pill.key === 'ALL')
                 const isPaymentPendingAlert = pill.key === 'PAYMENT_PENDING' && count > 0 && !isActive
@@ -1162,13 +1162,13 @@ export function OrdersTab({
 
           {/* Active Orders - Mobile Card View */}
           <div className="md:hidden space-y-2.5 mb-4">
-            {filteredActiveOrders.length === 0 ? (
+            {(filteredActiveOrders?.length || 0) === 0 ? (
               <div className="text-center py-8 text-text-secondary text-[11px] font-bold bg-muted/20 rounded-2xl border border-border/40 p-4">
                 🎉 No active orders in this queue right now. All caught up!
               </div>
             ) : (
               filteredActiveOrders.map((o) => {
-                const pendingIdx = livePendingOrders.findIndex((po) => po.id === o.id)
+                const pendingIdx = (livePendingOrders || []).findIndex((po) => po.id === o.id)
                 const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
                 return (
                   <MobileOrderCard
@@ -1216,7 +1216,7 @@ export function OrdersTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 font-semibold">
-                {filteredActiveOrders.length === 0 ? (
+                {(filteredActiveOrders?.length || 0) === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center py-8 text-text-secondary text-[11px] font-bold">
                       🎉 No active orders in this queue right now. All caught up!
@@ -1743,7 +1743,7 @@ export function OrdersTab({
             <h3 className="font-extrabold text-text-primary text-base sm:text-lg flex items-center gap-2">
               📜 Completed &amp; Past Orders History
               <span className="text-xs bg-muted text-text-secondary px-2.5 py-0.5 rounded-full font-bold border border-border">
-                {rawHistoryList.length} Archived
+                {rawHistoryList?.length || 0} Archived
               </span>
             </h3>
           </div>
@@ -1757,7 +1757,7 @@ export function OrdersTab({
                 { key: 'CANCELLED', label: '❌ Cancelled', status: 'CANCELLED' },
               ].map((pill) => {
                 const count = pill.key === 'ALL_HISTORY' 
-                  ? rawHistoryList.length 
+                  ? (rawHistoryList?.length || 0) 
                   : (orderCounts[pill.status] ?? 0)
                 const isActive = orderStatusFilter === pill.status || (orderStatusFilter === 'ALL' && pill.key === 'ALL_HISTORY')
                 return (
@@ -1883,7 +1883,7 @@ export function OrdersTab({
 
           {/* History Orders - Mobile Card View */}
           <div className="md:hidden space-y-2.5 mb-4">
-            {filteredHistoryOrders.length === 0 ? (
+            {(filteredHistoryOrders?.length || 0) === 0 ? (
               <div className="text-center py-8 text-text-secondary text-[11px] font-bold bg-muted/20 rounded-2xl border border-border/40 p-4">
                 🎉 No past orders found with these filters.
               </div>
@@ -1930,7 +1930,7 @@ export function OrdersTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 font-semibold text-xs opacity-90">
-                {filteredHistoryOrders.length === 0 ? (
+                {(filteredHistoryOrders?.length || 0) === 0 ? (
                   <tr>
                     <td colSpan={7} className="text-center py-6 text-text-secondary text-[11px] font-bold">
                       No history orders in this status.

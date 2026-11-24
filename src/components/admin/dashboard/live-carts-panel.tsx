@@ -30,7 +30,7 @@ export interface LiveCartsPanelProps {
 }
 
 export function LiveCartsPanel({
-  activeCarts,
+  activeCarts = [],
   isLoadingCarts,
   onRefresh,
   onSendCartNotification,
@@ -61,7 +61,7 @@ export function LiveCartsPanel({
         </button>
       </div>
 
-      {activeCarts.length === 0 ? (
+      {(activeCarts?.length || 0) === 0 ? (
         <div className="text-center py-8">
           <span className="text-2xl">🛒</span>
           <p className="text-xs text-text-secondary mt-2">
@@ -81,7 +81,7 @@ export function LiveCartsPanel({
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40 font-medium">
-              {activeCarts.map((cart) => {
+              {(activeCarts || []).map((cart) => {
                 const rawDateStr = typeof cart.updatedAt === 'string' ? cart.updatedAt.trim() : ''
                 const dateToParse = rawDateStr && !rawDateStr.endsWith('Z') && !rawDateStr.includes('+')
                   ? `${rawDateStr}Z`

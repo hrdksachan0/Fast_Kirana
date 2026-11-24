@@ -26,7 +26,7 @@ export function MobileBottomNav() {
   const lastScrollY = useRef(0)
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  const hasCartItems = useCartStore((s) => s.items.length > 0)
+  const hasCartItems = useCartStore((s) => (s?.items?.length || 0) > 0)
 
   // 4 Bottom Navigation Tabs: Home · Search · Category · Account
   const navTabs: NavItem[] = useMemo(() => [

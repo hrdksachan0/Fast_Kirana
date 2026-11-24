@@ -150,7 +150,7 @@ export function StoreControlBar({
           <div className="flex flex-wrap items-center gap-2 self-stretch lg:self-auto justify-start sm:justify-end w-full lg:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
             
             {/* SuperAdmin Multi-Hub Switcher */}
-            {isSuperAdmin && storesList.length > 0 && (
+            {isSuperAdmin && (storesList?.length || 0) > 0 && (
               <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-2xl border border-border/70">
                 <span className="text-[10px] font-black uppercase tracking-wider text-text-secondary pl-2 hidden sm:inline">
                   Hub:
@@ -161,7 +161,7 @@ export function StoreControlBar({
                   className="bg-card border border-border/80 hover:border-primary text-text-primary text-xs font-black uppercase tracking-wider rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs transition-all"
                   title="Switch between Darkstore Hubs"
                 >
-                  {storesList.map((store) => (
+                  {(storesList || []).map((store) => (
                     <option key={store.id} value={store.id} className="bg-card text-text-primary font-bold">
                       🏢 {store.name} ({store.id})
                     </option>
@@ -192,7 +192,7 @@ export function StoreControlBar({
             )}
 
             {/* SuperAdmin Kitchen Quick Switcher */}
-            {isSuperAdmin && restaurantsList && restaurantsList.length > 0 && (
+            {isSuperAdmin && (restaurantsList?.length || 0) > 0 && (
               <select
                 onChange={(e) => {
                   if (e.target.value) {
@@ -204,9 +204,9 @@ export function StoreControlBar({
                 title="Open Restaurant Kitchen Console"
               >
                 <option value="" disabled className="bg-card text-text-primary font-bold">
-                  🍽️ Kitchen Console ({restaurantsList.length})
+                  🍽️ Kitchen Console ({restaurantsList?.length || 0})
                 </option>
-                {restaurantsList.map((rest) => (
+                {(restaurantsList || []).map((rest) => (
                   <option key={rest.id} value={rest.id} className="bg-card text-text-primary font-bold">
                     🍽️ {rest.name}
                   </option>

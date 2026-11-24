@@ -27,16 +27,16 @@ interface BottleneckBannerProps {
 }
 
 export function BottleneckBanner({
-  delayedOrders,
-  pickerDelays,
-  chefDelays,
-  riderDelays,
-  livePendingOrders,
+  delayedOrders = [],
+  pickerDelays = [],
+  chefDelays = [],
+  riderDelays = [],
+  livePendingOrders = [],
   isChimeMuted,
   onToggleChime,
   onInspectOrder,
 }: BottleneckBannerProps) {
-  if (delayedOrders.length === 0) return null
+  if (!delayedOrders || delayedOrders.length === 0) return null
 
   return (
     <motion.div
@@ -59,7 +59,7 @@ export function BottleneckBanner({
             <h3 className="text-sm font-black text-rose-500 flex items-center gap-2">
               Operational Bottlenecks Detected
               <span className="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-bold text-rose-600">
-                {delayedOrders.length} {delayedOrders.length === 1 ? 'order' : 'orders'} delayed
+                {(delayedOrders?.length || 0)} {(delayedOrders?.length || 0) === 1 ? 'order' : 'orders'} delayed
               </span>
             </h3>
             <p className="text-xs text-text-secondary mt-0.5 max-w-2xl font-medium">
@@ -93,29 +93,29 @@ export function BottleneckBanner({
       </div>
 
       <div className="flex flex-wrap gap-2 mt-4">
-        {pickerDelays.length > 0 && (
+        {(pickerDelays?.length || 0) > 0 && (
           <div className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-600">
             <ShoppingBag className="h-3.5 w-3.5" />
-            <span>Grocery Picker Delay: {pickerDelays.length}</span>
+            <span>Grocery Picker Delay: {pickerDelays?.length || 0}</span>
           </div>
         )}
-        {chefDelays.length > 0 && (
+        {(chefDelays?.length || 0) > 0 && (
           <div className="flex items-center gap-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 text-xs font-semibold text-orange-600">
             <Utensils className="h-3.5 w-3.5" />
-            <span>Cafe Chef Delay: {chefDelays.length}</span>
+            <span>Cafe Chef Delay: {chefDelays?.length || 0}</span>
           </div>
         )}
-        {riderDelays.length > 0 && (
+        {(riderDelays?.length || 0) > 0 && (
           <div className="flex items-center gap-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 text-xs font-semibold text-rose-600">
             <Clock className="h-3.5 w-3.5" />
-            <span>Rider Dispatch Delay: {riderDelays.length}</span>
+            <span>Rider Dispatch Delay: {riderDelays?.length || 0}</span>
           </div>
         )}
       </div>
 
       <div className="mt-4 border-t border-rose-500/10 pt-3">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1 scrollbar-none">
-          {delayedOrders.map((order) => {
+          {(delayedOrders || []).map((order) => {
             const isRestaurant = !!order.restaurantId || order.orderType === 'RESTAURANT'
             const isPacked = order.status === 'PACKED'
             const baseTime = order.status === 'PENDING' ? order.createdAt : (order.updatedAt || order.createdAt)
@@ -133,7 +133,7 @@ export function BottleneckBanner({
               delayColor = 'border-orange-500/20 bg-orange-500/5 text-orange-700 dark:text-orange-400'
             }
 
-            const pendingIdx = livePendingOrders.findIndex((po) => po.id === order.id)
+            const pendingIdx = (livePendingOrders || []).findIndex((po) => po.id === order.id)
             const fifoRank = pendingIdx !== -1 ? pendingIdx + 1 : null
 
             return (

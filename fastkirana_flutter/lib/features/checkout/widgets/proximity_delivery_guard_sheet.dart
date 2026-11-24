@@ -114,46 +114,44 @@ class ProximityDeliveryGuardSheet extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 46,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppDesignSystem.primary.withValues(alpha: 0.35),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
+                        SizedBox(
+                          width: 48,
+                          height: 54,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              // Teardrop Pin Shape rotated -45 deg
+                              // Teardrop Pin Shape rotated +45 deg so bottomRight tip points straight DOWN
                               Transform.rotate(
-                                angle: -0.785398, // -45 deg
+                                angle: 0.785398, // +45 deg clockwise -> tip points straight down
                                 child: Container(
                                   width: 42,
                                   height: 42,
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
                                       colors: [Color(0xFFE20A22), Color(0xFFB30013)],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                    borderRadius: BorderRadius.only(
+                                    borderRadius: const BorderRadius.only(
                                       topLeft: Radius.circular(24),
                                       topRight: Radius.circular(24),
                                       bottomLeft: Radius.circular(24),
-                                      bottomRight: Radius.circular(0),
+                                      bottomRight: Radius.circular(3),
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppDesignSystem.primary.withValues(alpha: 0.35),
+                                        blurRadius: 14,
+                                        offset: const Offset(3, 5),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
                               // Central White Circle Dot
                               Container(
-                                width: 16,
-                                height: 16,
+                                width: 15,
+                                height: 15,
                                 decoration: const BoxDecoration(
                                   color: Colors.white,
                                   shape: BoxShape.circle,

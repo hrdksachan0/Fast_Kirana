@@ -12,7 +12,7 @@ export function PWARegistration() {
   const [isIOS, setIsIOS] = useState(false)
   const [showIOSInstructions, setShowIOSInstructions] = useState(false)
   const pathname = usePathname()
-  const hasCartItems = useCartStore((s) => s.items.length > 0)
+  const hasCartItems = useCartStore((s) => (s?.items?.length || 0) > 0)
   const isTabBarVisible = useUIStore((s) => s.isTabBarVisible)
 
   useEffect(() => {

@@ -30,7 +30,7 @@ export function PushNotificationConsent() {
     dismiss()
   }
 
-  const hasCartItems = useCartStore((s) => s.items.length > 0)
+  const hasCartItems = useCartStore((s) => (s?.items?.length || 0) > 0)
   const bottomOffsetClass = hasCartItems ? "bottom-[136px]" : "bottom-[72px]"
 
   if (status !== 'authenticated') return null

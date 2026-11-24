@@ -217,7 +217,7 @@ export function AdminDashboard({
 
   // Fetch / refresh stores and restaurants list only if not pre-populated by server
   useEffect(() => {
-    if (initialStores && initialStores.length > 0 && initialRestaurants && initialRestaurants.length > 0) {
+    if ((initialStores?.length || 0) > 0 && (initialRestaurants?.length || 0) > 0) {
       return
     }
     let isMounted = true
@@ -872,8 +872,8 @@ export function AdminDashboard({
       { key: 'price-history' as TabType, label: 'Rate History', icon: History },
       { key: 'users' as TabType, label: 'Staff & Customers', icon: Users, count: userHook.userTotal },
       { key: 'rider-cash' as TabType, label: '🛵 Rider Fleet & Cash', icon: Wallet },
-      { key: 'reviews' as TabType, label: 'Reviews', icon: Star, count: reviewCouponHook.reviews.length },
-      { key: 'coupons' as TabType, label: 'Offers', icon: Ticket, count: reviewCouponHook.coupons.length },
+      { key: 'reviews' as TabType, label: 'Reviews', icon: Star, count: reviewCouponHook.reviews?.length || 0 },
+      { key: 'coupons' as TabType, label: 'Offers', icon: Ticket, count: reviewCouponHook.coupons?.length || 0 },
       { key: 'banners' as TabType, label: 'Promo Banners', icon: ImageIcon },
       { key: 'campaigns' as TabType, label: 'Campaign Manager', icon: ImageIcon },
       { key: 'bento-cards' as TabType, label: '6-Card Bento', icon: LayoutGrid },
@@ -892,8 +892,8 @@ export function AdminDashboard({
     storeCategoryCount,
     storeAlertsCount,
     userHook.userTotal,
-    reviewCouponHook.reviews.length,
-    reviewCouponHook.coupons.length,
+    reviewCouponHook.reviews?.length,
+    reviewCouponHook.coupons?.length,
   ])
 
   const activeStoreHub =
@@ -948,7 +948,7 @@ export function AdminDashboard({
       )}
 
       {/* Live Orders Roller Alert Strip (Swiggy / Zomato Merchant Style) */}
-      {livePendingOrders.length > 0 && (
+      {(livePendingOrders?.length || 0) > 0 && (
         <div className="relative overflow-hidden rounded-2xl border border-rose-500/40 bg-gradient-to-r from-rose-500/15 via-amber-500/15 to-rose-500/15 p-4 shadow-sm backdrop-blur-md animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="relative flex h-3.5 w-3.5 shrink-0">
@@ -957,11 +957,11 @@ export function AdminDashboard({
             </span>
             <div>
               <div className="text-xs font-black text-rose-900 uppercase tracking-wider flex items-center gap-2">
-                <span>🚨 {livePendingOrders.length} New Live {livePendingOrders.length === 1 ? 'Order' : 'Orders'} Awaiting Action</span>
+                <span>🚨 {livePendingOrders?.length || 0} New Live {(livePendingOrders?.length || 0) === 1 ? 'Order' : 'Orders'} Awaiting Action</span>
                 <span className="text-[10px] bg-rose-600/15 text-rose-800 border border-rose-500/30 px-2 py-0.5 rounded-full font-black animate-pulse">Buzzer Ringing</span>
               </div>
               <p className="text-[11px] text-text-secondary mt-0.5">
-                Latest order #{((livePendingOrders[0]?.readableId || livePendingOrders[0]?.id) as string).slice(0, 8)} • ₹{Math.round(livePendingOrders[0]?.total || 0)}
+                Latest order #{((livePendingOrders?.[0]?.readableId || livePendingOrders?.[0]?.id || '') as string).slice(0, 8)} • ₹{Math.round(livePendingOrders?.[0]?.total || 0)}
               </p>
             </div>
           </div>

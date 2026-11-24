@@ -70,12 +70,16 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
     final wallet = ref.watch(walletNotifierProvider);
     final bool canPayWithWallet = wallet.totalUsable >= widget.grandTotal;
 
-    return Container(
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: const TextScaler.linear(0.90),
+      ),
+      child: Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
       child: SafeArea(
         top: false,
         child: Column(
@@ -85,15 +89,15 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
             // Pull Handle
             Center(
               child: Container(
-                width: 44,
-                height: 4.5,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: AppDesignSystem.slate300,
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
 
             // Header Row
             Row(
@@ -531,46 +535,47 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                 ],
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
 
             // Confirm Action Button
             SizedBox(
-              height: 52,
+              height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppDesignSystem.green700,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 2,
                 ),
                 onPressed: widget.isPlacingOrder ? null : widget.onConfirm,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
                         _selectedPayment == 'wallet'
                             ? 'Pay ₹${widget.grandTotal.toInt()} with Wallet'
                             : (_selectedPayment == 'online'
                                 ? 'Pay ₹${widget.grandTotal.toInt()} Online'
                                 : 'Place Order • Pay ₹${widget.grandTotal.toInt()} on Delivery'),
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 15.0),
-                          fontWeight: FontWeight.w900,
+                          fontSize: 14.0,
+                          fontWeight: FontWeight.w800,
                           color: Colors.white,
-                          letterSpacing: 0.2,
+                          letterSpacing: 0.1,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
-                  ],
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_rounded, size: 17, color: Colors.white),
+                    ],
+                  ),
                 ),
               ),
             ),
           ],
         ),
+      ),
       ),
     );
   }

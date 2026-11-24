@@ -188,9 +188,9 @@ class ProductBadge extends StatelessWidget {
     return ProductBadge(
       s: s,
       margin: EdgeInsets.only(bottom: s * 3),
-      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      padding: EdgeInsets.symmetric(horizontal: s * 7, vertical: s * 3),
       gradient: const LinearGradient(colors: [Color(0xFFD97706), Color(0xFFF59E0B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      radius: s * 5,
+      radius: s * 5.5,
       shadowColor: const Color(0xFFD97706),
       shadowAlpha: 0.35,
       shadowBlur: s * 4,
@@ -198,9 +198,9 @@ class ProductBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('🔥', style: TextStyle(fontSize: s * 8)),
+          Text('🔥', style: TextStyle(fontSize: s * 9.5)),
           SizedBox(width: s * 2.5),
-          Text('BESTSELLER', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+          Text('BESTSELLER', style: GoogleFonts.inter(fontSize: s * 9.0, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
         ],
       ),
     );
@@ -210,9 +210,9 @@ class ProductBadge extends StatelessWidget {
     return ProductBadge(
       s: s,
       margin: EdgeInsets.only(bottom: s * 3),
-      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      padding: EdgeInsets.symmetric(horizontal: s * 7, vertical: s * 3),
       gradient: const LinearGradient(colors: [Color(0xFFEA580C), Color(0xFFDC2626)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      radius: s * 5,
+      radius: s * 5.5,
       shadowColor: const Color(0xFFEA580C),
       shadowAlpha: 0.35,
       shadowBlur: s * 4,
@@ -220,9 +220,9 @@ class ProductBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('🔥', style: TextStyle(fontSize: s * 8)),
+          Text('🔥', style: TextStyle(fontSize: s * 9.5)),
           SizedBox(width: s * 2.5),
-          Text(text ?? 'BOGO', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+          Text(text ?? 'BOGO', style: GoogleFonts.inter(fontSize: s * 9.0, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
         ],
       ),
     );
@@ -232,9 +232,9 @@ class ProductBadge extends StatelessWidget {
     return ProductBadge(
       s: s,
       margin: EdgeInsets.only(bottom: s * 3),
-      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      padding: EdgeInsets.symmetric(horizontal: s * 7, vertical: s * 3),
       gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      radius: s * 5,
+      radius: s * 5.5,
       shadowColor: const Color(0xFF7C3AED),
       shadowAlpha: 0.35,
       shadowBlur: s * 4,
@@ -242,9 +242,9 @@ class ProductBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('⚡', style: TextStyle(fontSize: s * 8)),
+          Text('⚡', style: TextStyle(fontSize: s * 9.5)),
           SizedBox(width: s * 2.5),
-          Text('TRENDING', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+          Text('TRENDING', style: GoogleFonts.inter(fontSize: s * 9.0, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
         ],
       ),
     );
@@ -254,14 +254,14 @@ class ProductBadge extends StatelessWidget {
     return ProductBadge(
       s: s,
       margin: EdgeInsets.only(bottom: s * 3),
-      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      padding: EdgeInsets.symmetric(horizontal: s * 7, vertical: s * 3),
       gradient: const LinearGradient(colors: [Color(0xFFDC2626), Color(0xFFEA580C)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      radius: s * 5,
+      radius: s * 5.5,
       shadowColor: const Color(0xFFDC2626),
       shadowAlpha: 0.35,
       shadowBlur: s * 4,
       shadowOffset: Offset(0, s),
-      child: Text('⚡ DEAL', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+      child: Text('⚡ DEAL', style: GoogleFonts.inter(fontSize: s * 9.0, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
     );
   }
 
@@ -269,14 +269,14 @@ class ProductBadge extends StatelessWidget {
     return ProductBadge(
       s: s,
       margin: EdgeInsets.only(bottom: s * 3),
-      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      padding: EdgeInsets.symmetric(horizontal: s * 7, vertical: s * 3),
       gradient: const LinearGradient(colors: [Color(0xFF059669), Color(0xFF10B981)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      radius: s * 5,
+      radius: s * 5.5,
       shadowColor: const Color(0xFF059669),
       shadowAlpha: 0.35,
       shadowBlur: s * 4,
       shadowOffset: Offset(0, s),
-      child: Text('🌿 PURE', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+      child: Text('🌿 PURE', style: GoogleFonts.inter(fontSize: s * 9.0, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
     );
   }
 
@@ -284,14 +284,14 @@ class ProductBadge extends StatelessWidget {
     return ProductBadge(
       s: s,
       margin: EdgeInsets.only(bottom: s * 3),
-      padding: EdgeInsets.symmetric(horizontal: s * 5.5, vertical: s * 2),
+      padding: EdgeInsets.symmetric(horizontal: s * 7, vertical: s * 3),
       gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      radius: s * 5,
+      radius: s * 5.5,
       shadowColor: const Color(0xFF8B5CF6),
       shadowAlpha: 0.35,
       shadowBlur: s * 4,
       shadowOffset: Offset(0, s),
-      child: Text('✨ MUST TRY', style: GoogleFonts.inter(fontSize: s * 7.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
+      child: Text('✨ MUST TRY', style: GoogleFonts.inter(fontSize: s * 9.0, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.3)),
     );
   }
 
@@ -299,7 +299,7 @@ class ProductBadge extends StatelessWidget {
     return ProductBadge(
       s: s,
       margin: EdgeInsets.zero,
-      padding: EdgeInsets.symmetric(horizontal: s * 6, vertical: s * 2.5),
+      padding: EdgeInsets.symmetric(horizontal: s * 7, vertical: s * 3.2),
       gradient: const LinearGradient(
         colors: [Color(0xFFE11D48), Color(0xFFF97316)],
         begin: Alignment.topLeft,
@@ -313,10 +313,10 @@ class ProductBadge extends StatelessWidget {
       child: Text(
         '$percent% OFF',
         style: GoogleFonts.plusJakartaSans(
-          fontSize: s * 8.5,
+          fontSize: s * 10.0,
           fontWeight: FontWeight.w900,
           color: Colors.white,
-          letterSpacing: 0.4,
+          letterSpacing: 0.3,
         ),
       ),
     );

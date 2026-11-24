@@ -105,7 +105,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   bool _isProcessingPayment = false;
   bool _isCancelling = false;
   bool _isMapExpanded = false;
+  bool _isManualRefreshing = false;
 
+  // Animation controller for manual refresh button spin
+  late AnimationController _refreshAnimController;
   // Animation controller for smooth rider marker movement
   late AnimationController _riderAnimController;
   // Animation controller for flowing/pulsing animated Polyline tween
@@ -137,6 +140,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     super.initState();
     // Initialize animation & confetti controllers first so subroutines (_setupCoordinatesFromOrder) never hit LateInitializationError
     _confettiController = ConfettiController(duration: const Duration(seconds: 4));
+    _refreshAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
     _riderAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -197,6 +204,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _pollTimer?.cancel();
     _etaUpdateTimer?.cancel();
     _sseLineSubscription?.cancel();
+    try {
+      _refreshAnimController.dispose();
+    } catch (_) {}
     try {
       _riderAnimController.dispose();
     } catch (_) {}
@@ -529,7 +539,14 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       var cleanId = widget.orderId.trim();
       if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
 
-      final order = await repo.getOrder(cleanId);
+      Order? order = await repo.getOrder(cleanId);
+      if (order == null && _order != null && _order!.id.isNotEmpty && _order!.id != cleanId) {
+        order = await repo.getOrder(_order!.id);
+      }
+      if (order == null && _order?.readableId != null && _order!.readableId!.isNotEmpty && _order!.readableId != cleanId) {
+        order = await repo.getOrder(_order!.readableId!);
+      }
+
       if (order == null) {
         if (mounted) {
           setState(() => _isLoading = false);
@@ -551,7 +568,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         _triggerStatusHaptic(order.status, prevStatus);
 
         _setupCoordinatesFromOrder(order);
-        _syncRiderLocationFromEndpoint(order);
+        await _syncRiderLocationFromEndpoint(order);
 
         // Re-subscribe with newly discovered order IDs (readableId, combinedId)
         final newKeys = _collectTrackingChannelKeys();
@@ -560,6 +577,41 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     } catch (e) {
       debugPrint('[OrderTracking] Fetch error: $e');
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleManualRefresh() async {
+    if (_isManualRefreshing || !mounted) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _isManualRefreshing = true);
+    _refreshAnimController.repeat();
+
+    try {
+      await _fetchLiveOrder();
+      if (_order != null) {
+        await _syncRiderLocationFromEndpoint(_order!);
+      }
+      if (mounted) {
+        _refreshMapElements();
+        _calculateETA();
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) _fitMapBounds();
+        });
+        AppToast.showSuccess(
+          context,
+          'Updated',
+          subtitle: 'Live order tracking refreshed',
+          duration: const Duration(milliseconds: 1400),
+        );
+      }
+    } catch (e) {
+      debugPrint('[OrderTracking] Manual refresh error: $e');
+    } finally {
+      if (mounted) {
+        _refreshAnimController.stop();
+        _refreshAnimController.reset();
+        setState(() => _isManualRefreshing = false);
+      }
     }
   }
 
@@ -1783,11 +1835,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           IconButton(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            icon: const Icon(Icons.refresh_rounded, color: slateDark, size: 20),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              _fetchLiveOrder();
-            },
+            tooltip: 'Refresh tracking',
+            icon: RotationTransition(
+              turns: _refreshAnimController,
+              child: const Icon(Icons.refresh_rounded, color: slateDark, size: 20),
+            ),
+            onPressed: _isManualRefreshing ? null : _handleManualRefresh,
           ),
           const SizedBox(width: 4),
         ],
@@ -2081,7 +2134,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                             }
 
                                             return Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
                                                 borderRadius: BorderRadius.circular(16),
@@ -2234,30 +2287,30 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                             );
                                           },
                                         ),
-                                        const SizedBox(height: 12),
+                                        const SizedBox(height: 8),
 
                                     // Store Preparing Card (displayed during preparing / confirmed stages)
-                                    if (statusStep < 3) ...[
+                                    if (statusStep < 2) ...[
                                       TrackingPreparingCard(order: _order),
-                                      const SizedBox(height: 11),
+                                      const SizedBox(height: 8),
                                     ],
 
                                     // Refund Notice Card (If applicable)
                                     if ((_order?.refundAmount ?? 0) > 0 || ((_order?.notes ?? '').toLowerCase().contains('refund'))) ...[
                                       TrackingRefundNoticeCard(order: _order),
-                                      const SizedBox(height: 11),
+                                      const SizedBox(height: 8),
                                     ],
 
                                     // Gift Card Share & Live Tracking Card (When order is a gift or has gift card)
                                     if (_isGiftOrder(_order)) ...[
                                       _buildTrackingGiftShareCard(_order!),
-                                      const SizedBox(height: 11),
+                                      const SizedBox(height: 8),
                                     ],
 
                                     // 2. Rider Profile & Contact Card (When Assigned/Out for Delivery)
                                     if (statusStep >= 2 && !isDelivered && !isCancelled) ...[
                                       TrackingRiderCard(order: _order),
-                                      const SizedBox(height: 11),
+                                      const SizedBox(height: 8),
                                     ],
 
                                     // 3. Multi-Stage Order Stepper (Live status, ETA & milestones)
@@ -2270,7 +2323,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                                       etaText: _etaText,
                                       distanceText: _distanceText,
                                     ),
-                                    const SizedBox(height: 11),
+                                    const SizedBox(height: 8),
 
                                     // Pre-Confirmation Cancel Option Banner (5-min window)
                                     if (canCancel) ...[

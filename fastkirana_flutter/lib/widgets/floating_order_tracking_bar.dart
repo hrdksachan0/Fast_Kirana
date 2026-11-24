@@ -137,21 +137,22 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
   String _getOrderSubtitle(Order order) {
     switch (order.status) {
       case OrderStatus.shipped:
-        return '🛵 Delivery partner on the way';
+        return 'Delivery partner on the way';
       case OrderStatus.packed:
-        return '📦 Order packed & awaiting pickup';
+        return 'Order packed & awaiting pickup';
       case OrderStatus.confirmed:
-        return '⚡ Order confirmed • Preparing';
+        return 'Order confirmed • Preparing';
       case OrderStatus.adminPending:
-        return '⏳ Verifying order details';
+        return 'Verifying order details';
       case OrderStatus.pending:
-        return '⏳ Order received • Confirming';
+        return 'Order received • Confirming';
       default:
         final shop = order.shopName;
         if (shop != null && shop.isNotEmpty) {
-          return shop.toLowerCase().contains('dark') ? '🏪 FastMinute Dark Store' : '🏪 $shop';
+          final cleanShop = shop.replaceAll('FastKirana', 'FastMinute').replaceAll('fastkirana', 'fastminute');
+          return cleanShop.toLowerCase().contains('dark') ? 'FastMinute Dark Store' : cleanShop;
         }
-        return '🏪 FastMinute Dark Store';
+        return 'FastMinute Dark Store';
     }
   }
 
@@ -172,7 +173,8 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
     final latestOrder = activeOrders.first;
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final barWidth = (screenWidth * 0.92).clamp(280.0, 420.0);
+    final isCompact = screenWidth < 390;
+    final barWidth = (screenWidth * (isCompact ? 0.94 : 0.92)).clamp(290.0, 440.0);
 
     // Dynamic styling based on order status
     final Color dotColor;
@@ -331,178 +333,192 @@ class _FloatingOrderTrackingBarState extends ConsumerState<FloatingOrderTracking
 
                       // Main Bar Content
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isCompact ? 8.0 : 10.0,
+                          vertical: isCompact ? 7.0 : 9.0,
+                        ),
                         child: Row(
-                  children: [
-                    // 1. Left Animated Status Icon Badge
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: iconGradient,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: iconBorder,
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          iconEmoji,
-                          style: TextStyle(
-                            fontSize: Responsive.scaledFontSize(context, 18),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 9),
-
-                    // 2. Middle Content (Line 1: Order ID + Status Pill | Line 2: Contextual Status Subtitle)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Builder(
-                                builder: (context) {
-                                  var cleanId = (latestOrder.readableId != null && latestOrder.readableId!.isNotEmpty)
-                                      ? latestOrder.readableId!
-                                      : (latestOrder.id.length > 6 ? latestOrder.id.substring(latestOrder.id.length - 6).toUpperCase() : latestOrder.id);
-                                  if (cleanId.startsWith('FK-') && cleanId.length > 8) {
-                                    cleanId = cleanId.substring(cleanId.length - 4);
-                                  }
-                                  final formattedId = cleanId.startsWith('#') ? cleanId : '#$cleanId';
-                                  return Text(
-                                    formattedId,
-                                    style: GoogleFonts.inter(
-                                      fontSize: Responsive.scaledFontSize(context, 12.5),
-                                      fontWeight: FontWeight.w900,
-                                      color: AppDesignSystem.slate900,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  );
-                                },
+                          children: [
+                            // 1. Left Animated Status Icon Badge
+                            Container(
+                              width: isCompact ? 33 : 38,
+                              height: isCompact ? 33 : 38,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: iconGradient,
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
+                                border: Border.all(
+                                  color: iconBorder,
+                                  width: 1.2,
+                                ),
                               ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: statusBgColor,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: statusBorderColor,
-                                    width: 1,
+                              child: Center(
+                                child: Text(
+                                  iconEmoji,
+                                  style: TextStyle(
+                                    fontSize: isCompact ? 15.5 : 18.0,
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    AnimatedBuilder(
-                                      animation: _pulseAnimation,
-                                      builder: (context, child) {
-                                        return Container(
-                                          width: 6,
-                                          height: 6,
+                              ),
+                            ),
+                            SizedBox(width: isCompact ? 7 : 9),
+
+                            // 2. Middle Content (Line 1: Order ID + Status Pill | Line 2: Contextual Status Subtitle)
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Builder(
+                                          builder: (context) {
+                                            var cleanId = (latestOrder.readableId != null && latestOrder.readableId!.isNotEmpty)
+                                                ? latestOrder.readableId!
+                                                : (latestOrder.id.length > 6 ? latestOrder.id.substring(latestOrder.id.length - 6).toUpperCase() : latestOrder.id);
+                                            if (cleanId.startsWith('FK-') && cleanId.length > 8) {
+                                              cleanId = cleanId.substring(cleanId.length - 4);
+                                            }
+                                            final formattedId = cleanId.startsWith('#') ? cleanId : '#$cleanId';
+                                            return Text(
+                                              formattedId,
+                                              style: GoogleFonts.inter(
+                                                fontSize: isCompact ? 11.5 : 12.5,
+                                                fontWeight: FontWeight.w900,
+                                                color: AppDesignSystem.slate900,
+                                                letterSpacing: -0.2,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        SizedBox(width: isCompact ? 4.5 : 6),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: isCompact ? 5.5 : 7, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: dotColor,
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: dotColor.withValues(alpha: 0.6 * _pulseAnimation.value),
-                                                blurRadius: 4 + 4 * _pulseAnimation.value,
-                                                spreadRadius: 1 * _pulseAnimation.value,
+                                            color: statusBgColor,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: statusBorderColor,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              AnimatedBuilder(
+                                                animation: _pulseAnimation,
+                                                builder: (context, child) {
+                                                  return Container(
+                                                    width: isCompact ? 5 : 6,
+                                                    height: isCompact ? 5 : 6,
+                                                    decoration: BoxDecoration(
+                                                      color: dotColor,
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: dotColor.withValues(alpha: 0.6 * _pulseAnimation.value),
+                                                          blurRadius: 4 + 4 * _pulseAnimation.value,
+                                                          spreadRadius: 1 * _pulseAnimation.value,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                latestOrder.status.displayName,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: isCompact ? 9.0 : 10.0,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: statusTextColor,
+                                                ),
                                               ),
                                             ],
                                           ),
-                                        );
-                                      },
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 4.5),
-                                    Text(
-                                      latestOrder.status.displayName,
+                                  ),
+                                  const SizedBox(height: 2),
+
+                                  // Line 2: Contextual Status Subtitle with Auto-Scale (Zero Truncation on Moto/Compact)
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      _getOrderSubtitle(latestOrder),
                                       style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 10),
-                                        fontWeight: FontWeight.w800,
-                                        color: statusTextColor,
+                                        fontSize: isCompact ? 9.5 : 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppDesignSystem.slate600,
+                                        letterSpacing: -0.2,
                                       ),
+                                      maxLines: 1,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 2.5),
-
-                          // Line 2: Contextual Status Subtitle
-                          Text(
-                            _getOrderSubtitle(latestOrder),
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10.5),
-                              fontWeight: FontWeight.w600,
-                              color: AppDesignSystem.slate600,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
+                            SizedBox(width: isCompact ? 6 : 8),
 
-                    // 3. Right: Compact Vibrant Track Pill Button
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF00B047), Color(0xFF008A38)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                            // 3. Right: Compact Vibrant Track Pill Button
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isCompact ? 9 : 12,
+                                vertical: isCompact ? 5.5 : 7,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF00B047), Color(0xFF008A38)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF00B047).withValues(alpha: 0.38),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Track',
+                                    style: GoogleFonts.inter(
+                                      fontSize: isCompact ? 10.5 : 11.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Icon(Icons.arrow_forward_rounded, color: Colors.white, size: isCompact ? 11.5 : 13),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF00B047).withValues(alpha: 0.38),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Track',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11.5),
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                          const SizedBox(width: 3.5),
-                          const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 13),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  ),
-),
-),
-);
+    );
   }
 }
 

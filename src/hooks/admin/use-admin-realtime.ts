@@ -269,7 +269,7 @@ export function useAdminRealtime({
   useEffect(() => {
     if (isFirstMountRef.current) {
       isFirstMountRef.current = false
-      if (initialOrders && initialOrders.length > 0) {
+      if (Array.isArray(initialOrders) && initialOrders.length > 0) {
         knownLiveOrderIds.current = new Set(initialOrders.map((o: any) => o.id))
         const first = initialOrders[0]
         if (
@@ -644,7 +644,7 @@ export function useAdminRealtime({
     }, 3500)
 
     return () => clearInterval(buzzerInterval)
-  }, [livePendingOrders.length, isChimeMuted])
+  }, [livePendingOrders?.length || 0, isChimeMuted])
 
   // Filter delayed orders
   const delayedOrders = useMemo(() => {
@@ -682,12 +682,12 @@ export function useAdminRealtime({
   // Warning chime manager
   useEffect(() => {
     if (isChimeMuted) return
-    if (delayedOrders.length === 0) return
+    if (!delayedOrders || delayedOrders.length === 0) return
 
     playWarningChime()
     const chimeInterval = setInterval(playWarningChime, 20000)
     return () => clearInterval(chimeInterval)
-  }, [delayedOrders.length, isChimeMuted, playWarningChime])
+  }, [delayedOrders?.length || 0, isChimeMuted, playWarningChime])
 
   const pickerDelays = useMemo(
     () =>

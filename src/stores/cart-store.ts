@@ -181,18 +181,18 @@ export const useCartStore = create<CartState>()(
       },
 
       getTotalItems: () => {
-        return get().items.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
+        return (get().items || []).reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
       },
 
       getSubtotal: () => {
-        return get().items.reduce(
+        return (get().items || []).reduce(
           (sum, item) => sum + (Number(item?.product?.price) || 0) * (Number(item?.quantity) || 0),
           0
         )
       },
 
       getMrpTotal: () => {
-        return get().items.reduce((sum, item) => {
+        return (get().items || []).reduce((sum, item) => {
           const mrp = Number(item?.product?.mrp) || Number(item?.product?.price) || 0
           return sum + mrp * (Number(item?.quantity) || 0)
         }, 0)
@@ -204,7 +204,7 @@ export const useCartStore = create<CartState>()(
       },
       updateCartProduct: (productId: string, updates: Partial<CartProduct>) => {
         set((state) => ({
-          items: state.items
+          items: (state.items || [])
             .map((item) => {
               if (item.product.id !== productId) return item
               const newProduct = { ...item.product, ...updates }
@@ -227,7 +227,7 @@ export const useCartStore = create<CartState>()(
       },
       updateItemNotes: (productId: string, notes: string) => {
         set((state) => ({
-          items: state.items.map((item) =>
+          items: (state.items || []).map((item) =>
             item.product.id === productId ? { ...item, notes } : item
           ),
         }))
