@@ -4327,8 +4327,8 @@ async def update_order(
                     if order.storeId:
                         hub_res = await db.execute(select(DarkStore).where(DarkStore.id == order.storeId))
                         hub_row = hub_res.scalars().first()
-                        if hub_row and hub_row.lat and hub_row.lng:
-                            hub_lat, hub_lng = float(hub_row.lat), float(hub_row.lng)
+                        if hub_row and getattr(hub_row, "latitude", None) and getattr(hub_row, "longitude", None):
+                            hub_lat, hub_lng = float(hub_row.latitude), float(hub_row.longitude)
 
                     rider_dist_from_hub_m = get_distance_km(hub_lat, hub_lng, d_lat, d_lng) * 1000.0
                     # Guard 2 & 6: Rider must be 80m..12km away from Darkstore Hub

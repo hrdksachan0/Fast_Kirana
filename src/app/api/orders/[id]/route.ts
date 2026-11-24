@@ -1092,7 +1092,7 @@ export async function PATCH(
       // 🛡️ 7-Guard Rider Doorstep GPS Auto-Learn (fixes old/fallback customer pins once, never overwrites real pins)
       const learnedLat = deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : NaN
       const learnedLng = deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : NaN
-      const rawAcc = body?.deliveryGpsAccuracy
+      const rawAcc = (body as any)?.deliveryGpsAccuracy
       const gpsAcc = rawAcc !== undefined && rawAcc !== null ? parseFloat(String(rawAcc)) : null
       const isDeliveryCaller = userRole === 'DELIVERY' || paymentCollectedBy === 'RIDER'
 
@@ -1122,11 +1122,11 @@ export async function PATCH(
           if (existingOrder.storeId) {
             const hub = await prisma.darkStore.findUnique({
               where: { id: existingOrder.storeId },
-              select: { lat: true, lng: true },
+              select: { latitude: true, longitude: true },
             })
-            if (hub?.lat && hub?.lng) {
-              hubLat = hub.lat
-              hubLng = hub.lng
+            if (hub?.latitude && hub?.longitude) {
+              hubLat = hub.latitude
+              hubLng = hub.longitude
             }
           }
 
