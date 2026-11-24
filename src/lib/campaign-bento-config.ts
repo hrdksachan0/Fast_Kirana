@@ -136,6 +136,9 @@ export const campaignBentoConfigSchema = z
         title: shortText.min(1).default('Fresh Market'),
         subtitle: shortText.default('Farm-fresh essentials, ready to add'),
         headerImage: campaignImageSchema.default('/navratri/bloom-panoramic-header.svg'),
+        pillLabel: shortText.optional(),
+        ctaLabel: shortText.optional(),
+        destinationCategorySlug: shortText.optional(),
         tabs: z.array(freshMarketTabSchema).min(1).max(5),
       })
       .strict(),
@@ -204,7 +207,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   version: 1,
   enabled: false,
   seasonalSwitchUp: {
-    enabled: true,
+    enabled: false,
     sortOrder: 1,
     badge: '01',
     backgroundColor: '#D6EEFF',
@@ -229,13 +232,13 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
     items: [],
   },
   freshMarket: {
-    enabled: true,
+    enabled: false,
     sortOrder: 2,
     badge: '02',
-    backgroundColor: '#E2EFFF',
-    borderColor: '#CFE4FD',
+    backgroundColor: '#E6F9EE',
+    borderColor: '#BBEFD2',
     accentColor: '#15803D',
-    textColor: '#0F172A',
+    textColor: '#064E3B',
     minInStockItems: 1,
     scheduleEnabled: false,
     startDate: null,
@@ -243,8 +246,11 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
     timeSlot: 'ALL_DAY',
     targetHubs: ['all'],
     title: 'Fresh Market',
-    subtitle: 'Farm-fresh essentials, ready to add',
+    subtitle: 'Handpicked daily farm-fresh essentials',
     headerImage: '/navratri/bloom-panoramic-header.svg',
+    pillLabel: 'FARM FRESH',
+    ctaLabel: 'See all fresh picks',
+    destinationCategorySlug: 'fruits-vegetables',
     tabs: [
       {
         id: 'sabzi',
@@ -383,7 +389,7 @@ export const defaultCampaignBentoConfig: CampaignBentoConfig = {
     ],
   },
   valuePicks: {
-    enabled: true,
+    enabled: false,
     sortOrder: 3,
     badge: '03',
     backgroundColor: '#FEFCE8',

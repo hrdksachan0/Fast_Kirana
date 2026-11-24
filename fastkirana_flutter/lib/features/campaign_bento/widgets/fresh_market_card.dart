@@ -3,22 +3,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../campaign_bento_models.dart';
-import '../campaign_bento_provider.dart';
 import 'campaign_artwork.dart';
-import '../../../providers/cart_provider.dart';
-import '../../../providers/store_settings_provider.dart';
 import '../../../providers/product_provider.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/product.dart';
-import '../../categories/category_products_screen.dart';
 import '../../../core/utils/category_transition_helper.dart';
-import '../../../core/routes/page_transitions.dart';
+import '../../../core/theme/responsive.dart';
+import '../../../widgets/product_card.dart';
 
-/// Thematic Curated Bento Card matching Zepto's signature "bloom" archetype:
-/// - Full panoramic summer fruit skyline banner with cloud typography ("bloom")
-/// - Soft sky-blue card surface with 24px curvature
-/// - 3-Card horizontal peeking carousel with "select >" bronze badge, wishlist heart, and floating pink '+' button
-/// - Full-width rounded "See All ▸" footer button routing directly to Fruits & Vegetables category
+/// Fresh Market ("bloom") Curated Bento Card — 100% Server-Driven:
+/// - Background, border, accent, text colors, header image, pill label,
+///   title, subtitle, CTA label, destination category & products all come
+///   live from [widget.card] (synced via `/api/campaign-bento`).
+/// - Product shelf uses the app's real grocery [ProductCard].
 class FreshMarketCard extends ConsumerStatefulWidget {
   final CampaignBentoCardConfig card;
 
@@ -29,32 +26,24 @@ class FreshMarketCard extends ConsumerStatefulWidget {
 }
 
 class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
-  void _increment(CampaignBentoItemConfig item) {
-    HapticFeedback.lightImpact();
-    ref.read(campaignBentoProvider.notifier).addItemToCart(item, quantity: 1);
-  }
-
-  void _decrement(CampaignBentoItemConfig item) {
-    HapticFeedback.lightImpact();
-    ref.read(cartProvider.notifier).decrement(item.id);
-  }
-
   void _navigateToCategory() {
     HapticFeedback.lightImpact();
     final categoriesAsync = ref.read(categoriesProvider);
     final allCats = categoriesAsync.value ?? [];
-    final match = allCats.firstWhere(
-      (c) =>
-          c.slug.toLowerCase().contains('fruit') ||
-          c.name.toLowerCase().contains('fruit') ||
-          c.slug.toLowerCase().contains('veg') ||
-          c.name.toLowerCase().contains('veg'),
-      orElse: () => const Category(
-        id: 'CAT-FRUITS',
-        name: 'Fruits & Vegetables',
-        slug: 'fruits-vegetables',
-      ),
-    );
+    final targetSlug = (widget.card.destinationRoute ?? '').trim().toLowerCase();
+
+    Category match;
+    if (targetSlug.isNotEmpty) {
+      match = allCats.firstWhere(
+        (c) =>
+            c.slug.toLowerCase() == targetSlug ||
+            c.slug.toLowerCase().contains(targetSlug) ||
+            c.name.toLowerCase().contains(targetSlug),
+        orElse: () => _defaultProduceCategory(allCats),
+      );
+    } else {
+      match = _defaultProduceCategory(allCats);
+    }
 
     CategoryTransitionHelper.pushCategoryWithTransition(
       context,
@@ -63,33 +52,64 @@ class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
     );
   }
 
-  List<CampaignBentoItemConfig> _resolveBloomItems(
+  Category _defaultProduceCategory(List<Category> allCats) {
+    return allCats.firstWhere(
+      (c) =>
+          c.slug.toLowerCase().contains('fruit') ||
+          c.name.toLowerCase().contains('fruit') ||
+          c.slug.toLowerCase().contains('veg') ||
+          c.name.toLowerCase().contains('veg') ||
+          c.slug.toLowerCase().contains('fresh'),
+      orElse: () => const Category(
+        id: 'CAT-FRUITS',
+        name: 'Fruits & Vegetables',
+        slug: 'fruits-vegetables',
+      ),
+    );
+  }
+
+  /// Resolves real in-stock grocery [Product] objects for the Bloom shelf.
+  /// 1. Matches admin-configured items in [widget.card.items] against live catalog.
+  /// 2. Falls back to live Fruits/Vegetables/Fresh produce in catalog.
+  /// 3. Backfills with top in-stock grocery staples if produce count is low.
+  List<Product> _resolveRealProducts(
     List<Product> catalog,
     List<Category> categories,
   ) {
-    final List<CampaignBentoItemConfig> resolved = [];
+    final List<Product> resolved = [];
     final Set<String> seenIds = {};
+    final Map<String, Product> catalogById = {
+      for (final p in catalog) p.id: p,
+    };
 
-    // 1. Strictly show products configured by admin in widget.card.items
+    bool isEligibleGrocery(Product p) {
+      if (!p.isAvailable || p.stock <= 0) return false;
+      if (p.restaurantId != null && p.restaurantId!.isNotEmpty) return false;
+      if (p.menuSection != null && p.menuSection!.isNotEmpty) return false;
+      return true;
+    }
+
+    // 1. Prefer real DB products configured by admin in widget.card.items
     for (final item in widget.card.items) {
-      if (seenIds.add(item.id)) {
-        resolved.add(item);
+      final candidate =
+          item.realProduct ?? catalogById[item.productId ?? item.id];
+      if (candidate != null &&
+          isEligibleGrocery(candidate) &&
+          seenIds.add(candidate.id)) {
+        resolved.add(candidate);
       }
     }
+    if (resolved.isNotEmpty) return resolved;
 
-    // If admin has configured items, strictly return ONLY those items!
-    if (resolved.isNotEmpty) {
-      return resolved;
-    }
-
-    // 2. Only if no items are configured, fallback to live Ghatampur catalog produce
+    // 2. Live produce from Fruits & Vegetables / Sabzi / Fresh categories
     final produceCatIds = categories
         .where((c) {
           final key = '${c.name} ${c.slug}'.toLowerCase();
           return key.contains('fruit') ||
               key.contains('veg') ||
               key.contains('sabzi') ||
-              key.contains('fresh');
+              key.contains('fresh') ||
+              key.contains('dairy');
         })
         .map((c) => c.id)
         .toSet();
@@ -103,45 +123,35 @@ class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
       'carrot', 'gajar', 'peas', 'matar', 'capsicum', 'shimla', 'brinjal', 'baingan',
     ];
 
-    final matches = catalog.where((p) {
-      if (seenIds.contains(p.id)) return false;
-      if (!p.isAvailable || p.stock <= 0) return false;
-      if (p.restaurantId != null && p.restaurantId!.isNotEmpty) return false;
-      if (p.menuSection != null && p.menuSection!.isNotEmpty) return false;
-
-      final catName = '${p.category?.name ?? ''} ${p.category?.slug ?? ''}'.toLowerCase();
-      final inProduceCat = (p.categoryId != null && produceCatIds.contains(p.categoryId)) ||
-          catName.contains('fruit') ||
-          catName.contains('veg') ||
-          catName.contains('sabzi');
-      if (inProduceCat) return true;
-
+    for (final p in catalog) {
+      if (seenIds.contains(p.id) || !isEligibleGrocery(p)) continue;
+      final catName =
+          '${p.category?.name ?? ''} ${p.category?.slug ?? ''}'.toLowerCase();
+      final inProduceCat =
+          (p.categoryId != null && produceCatIds.contains(p.categoryId)) ||
+              catName.contains('fruit') ||
+              catName.contains('veg') ||
+              catName.contains('sabzi') ||
+              catName.contains('fresh');
       final nameLower = p.name.toLowerCase();
-      return produceKeywords.any((k) => nameLower.contains(k));
-    });
+      final matchesKeyword =
+          produceKeywords.any((k) => nameLower.contains(k));
 
-    for (final p in matches) {
-      if (resolved.length >= 8) break;
-      seenIds.add(p.id);
-      final double mrp = p.mrp > p.price ? p.mrp : 0;
-      String? discountTag;
-      if (mrp > p.price) {
-        final saved = (mrp - p.price).round();
-        if (saved > 0) discountTag = '₹$saved OFF';
+      if ((inProduceCat || matchesKeyword) && seenIds.add(p.id)) {
+        resolved.add(p);
+        if (resolved.length >= 10) return resolved;
       }
-      resolved.add(CampaignBentoItemConfig(
-        id: p.id,
-        productId: p.id,
-        realProduct: p,
-        name: p.name,
-        weight: p.unit.isNotEmpty ? p.unit : '500 g',
-        price: p.price,
-        originalPrice: mrp > p.price ? mrp : null,
-        discountTag: discountTag,
-        image: (p.imageUrl != null && p.imageUrl!.isNotEmpty)
-            ? p.imageUrl!
-            : 'ref-fresh-tomato.png',
-      ));
+    }
+
+    // 3. Backfill with top in-stock grocery products so the shelf is never sparse
+    if (resolved.length < 6) {
+      for (final p in catalog) {
+        if (seenIds.contains(p.id) || !isEligibleGrocery(p)) continue;
+        if (seenIds.add(p.id)) {
+          resolved.add(p);
+          if (resolved.length >= 8) break;
+        }
+      }
     }
 
     return resolved;
@@ -149,32 +159,52 @@ class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(storeSettingsProvider).valueOrNull;
-    final isStoreOpen = settings?.groceryMartOpen ?? true;
     final catalog = ref.watch(homeProductCatalogProvider).valueOrNull ?? [];
     final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
-    final displayItems = _resolveBloomItems(catalog, categories);
+    final productsToShow = _resolveRealProducts(catalog, categories);
 
-    if (displayItems.isEmpty) return const SizedBox.shrink();
+    if (productsToShow.isEmpty) return const SizedBox.shrink();
+
+    final cardWidth = Responsive.productCardShelfWidth(context);
+    final shelfHeight = Responsive.productShelfHeight(context);
+
+    // 100% Server-editable palette & copy with crisp botanical defaults
+    final bgTop = widget.card.backgroundColor;
+    final bgMid = Color.lerp(bgTop, Colors.white, 0.55) ?? const Color(0xFFF3FDF7);
+    final borderColor = widget.card.borderColor;
+    final accentColor = widget.card.accentColor;
+    final textColor = widget.card.textColor;
+    final headerImage = (widget.card.heroImage ?? '').trim().isNotEmpty
+        ? widget.card.heroImage!.trim()
+        : 'bloom-panoramic-header.svg';
+    final pillLabel = (widget.card.specialRibbon ?? '').trim().isNotEmpty
+        ? widget.card.specialRibbon!.trim()
+        : 'FARM FRESH';
+    final headerTitle = widget.card.title.trim().isNotEmpty
+        ? widget.card.title.trim()
+        : 'Fresh Market';
+    final headerSubtitle = widget.card.subtitle.trim().isNotEmpty
+        ? widget.card.subtitle.trim()
+        : 'Handpicked daily farm-fresh essentials';
+    final ctaLabel = (widget.card.comboButtonLabel ?? '').trim().isNotEmpty
+        ? widget.card.comboButtonLabel!.trim()
+        : 'See all fresh picks';
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFE2EFFF),
-            Color(0xFFEFF6FF),
-            Color(0xFFF4F9FF),
-          ],
+          stops: const [0.0, 0.35, 1.0],
+          colors: [bgTop, bgMid, Colors.white],
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFCFE4FD), width: 1.2),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0284C7).withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
+            color: accentColor.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -182,72 +212,111 @@ class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Panoramic Branded Summer Fruit Header
-          _BloomPanoramicHeader(title: widget.card.title),
+          // 1. Server-Editable Panoramic Bloom Header with Soft Blend
+          _BloomPanoramicHeader(
+            image: headerImage,
+            pillLabel: pillLabel,
+            title: headerTitle,
+            subtitle: headerSubtitle,
+            itemCount: productsToShow.length,
+            bgTop: bgTop,
+            borderColor: borderColor,
+            accentColor: accentColor,
+            textColor: textColor,
+          ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
-          // 2. Horizontal 3-Product Shelf Carousel
+          // 2. Real Grocery ProductCard Horizontal Shelf
           SizedBox(
-            height: 236,
+            height: shelfHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: displayItems.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              itemCount: productsToShow.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
               itemBuilder: (context, index) {
-                final item = displayItems[index];
-                return _ThematicProductCard(
-                  item: item,
-                  isStoreOpen: isStoreOpen,
-                  onAdd: () => _increment(item),
-                  onIncrement: () => _increment(item),
-                  onDecrement: () => _decrement(item),
+                final product = productsToShow[index];
+                return SizedBox(
+                  width: cardWidth,
+                  child: ProductCard(
+                    product: product,
+                    width: cardWidth,
+                    showOutlet: false,
+                  ),
                 );
               },
             ),
           ),
 
-          // 3. Wide Full-Width "See All ▸" Footer Button
+          // 3. Server-Editable Footer CTA Bar with Live Product Thumbnails
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-            child: InkWell(
-              onTap: _navigateToCategory,
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+            child: Material(
+              color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              child: Container(
-                height: 42,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+              elevation: 0,
+              child: InkWell(
+                onTap: _navigateToCategory,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  height: 42,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [bgMid, Colors.white],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
                     ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'See All',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: borderColor,
+                      width: 1.1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 11,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      _LiveProductAvatarStack(
+                        products: productsToShow,
+                        accentColor: accentColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          ctaLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: accentColor.withValues(alpha: 0.14),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: accentColor,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -259,380 +328,244 @@ class _FreshMarketCardState extends ConsumerState<FreshMarketCard> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Panoramic Branded Header (Fruit Skyline + Cloud Typography)
+// Panoramic Branded Bloom Header + Clean Title Strip
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _BloomPanoramicHeader extends StatelessWidget {
+  final String image;
+  final String pillLabel;
   final String title;
-  const _BloomPanoramicHeader({this.title = 'Fresh Market'});
+  final String subtitle;
+  final int itemCount;
+  final Color bgTop;
+  final Color borderColor;
+  final Color accentColor;
+  final Color textColor;
 
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 76,
-      width: double.infinity,
-      child: CampaignArtwork(
-        image: 'bloom-panoramic-header.svg',
-        width: double.infinity,
-        height: 76,
-        fit: BoxFit.cover,
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Exact Replica Product Tile (Zepto "bloom" specification)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ThematicProductCard extends ConsumerWidget {
-  final CampaignBentoItemConfig item;
-  final bool isStoreOpen;
-  final VoidCallback onAdd;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
-
-  const _ThematicProductCard({
-    required this.item,
-    required this.isStoreOpen,
-    required this.onAdd,
-    required this.onIncrement,
-    required this.onDecrement,
+  const _BloomPanoramicHeader({
+    required this.image,
+    required this.pillLabel,
+    required this.title,
+    required this.subtitle,
+    required this.itemCount,
+    required this.bgTop,
+    required this.borderColor,
+    required this.accentColor,
+    required this.textColor,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider).value;
-    final inCartQty = cart?.items
-            .where((i) => i.productId == item.id || i.productId.startsWith('${item.id}_'))
-            .fold<int>(0, (sum, i) => sum + i.quantity) ??
-        0;
-
-    final origPrice = item.originalPrice ?? (item.price * 1.35).roundToDouble();
-    final discountAmount = (origPrice > item.price) ? (origPrice - item.price).round() : 0;
-
-    return Container(
-      width: 122,
-      padding: const EdgeInsets.all(7.5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.025),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Photo Container with "select >" badge, Heart & Floating Action Pill
-          Container(
-            height: 98,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Product Cutout Image
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: CampaignArtwork(
-                      image: item.effectiveImage,
-                      width: 82,
-                      height: 82,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-
-                // Top-Left: Signature "select >" Pill Badge
-                Positioned(
-                  top: 5,
-                  left: 5,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF78350F), // Rich warm bronze from reference
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'select',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        const SizedBox(width: 1.5),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 10,
-                          color: Colors.white,
-                        ),
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 82,
+          width: double.infinity,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CampaignArtwork(
+                image: image,
+                width: double.infinity,
+                height: 82,
+                fit: BoxFit.cover,
+              ),
+              // Soft bottom gradient to blend artwork seamlessly into the card surface
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 28,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        bgTop.withValues(alpha: 0.0),
+                        bgTop,
                       ],
                     ),
                   ),
                 ),
-
-                // Top-Right: Wishlist Heart Icon
-                Positioned(
-                  top: 5,
-                  right: 5,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      shape: BoxShape.circle,
+              ),
+              // Top-Left: Server-Editable Pill Badge
+              Positioned(
+                top: 8,
+                left: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: borderColor,
+                      width: 0.9,
                     ),
-                    child: const Icon(
-                      Icons.favorite_border_rounded,
-                      size: 13,
-                      color: Color(0xFF94A3B8),
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ),
-
-                // Bottom-Right: Signature Floating Action Pill (Pink '+' / Stepper / Closed)
-                Positioned(
-                  bottom: -6,
-                  right: 4,
-                  child: !isStoreOpen
-                      ? GestureDetector(
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Row(
-                                  children: [
-                                    Icon(Icons.schedule_rounded, color: Colors.white, size: 16),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'FastMinute Grocery Darkstore is currently closed at this hour.',
-                                        style: TextStyle(
-                                            fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                backgroundColor: const Color(0xFF0F172A),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            height: 26,
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFCBD5E1), width: 1.0),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.schedule_rounded, size: 10.5, color: Color(0xFF64748B)),
-                                SizedBox(width: 2.5),
-                                Text(
-                                  'CLOSED',
-                                  style: TextStyle(
-                                    fontSize: 8.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : item.isOutOfStock
-                          ? Container(
-                              height: 26,
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEE2E2),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFFCA5A5), width: 1.0),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'OUT',
-                                style: TextStyle(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFFDC2626),
-                                ),
-                              ),
-                            )
-                          : inCartQty > 0
-                          ? Container(
-                              height: 27,
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDB2777), // Pink/Rose from screenshot
-                                borderRadius: BorderRadius.circular(7),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFDB2777).withValues(alpha: 0.3),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GestureDetector(
-                                    onTap: onDecrement,
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 2.5),
-                                      child: Icon(Icons.remove, size: 13, color: Colors.white),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                                    child: Text(
-                                      '$inCartQty',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: onIncrement,
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 2.5),
-                                      child: Icon(Icons.add, size: 16, color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : GestureDetector(
-                              onTap: onAdd,
-                              child: Container(
-                                height: 32,
-                                width: 32,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: const Color(0xFFDB2777), // Pink/Rose border from screenshot
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.05),
-                                      blurRadius: 3,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.add,
-                                    size: 22,
-                                    color: Color(0xFFDB2777),
-                                  ),
-                                ),
-                              ),
-                            ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // 2. Price Row: Solid Green Pill + Strike MRP
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16A34A), // Solid green badge from screenshot
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '₹${item.price.toInt()}',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.eco_rounded,
+                        size: 11,
+                        color: accentColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        pillLabel.toUpperCase(),
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              if (origPrice > item.price) ...[
-                const SizedBox(width: 4),
-                Text(
-                  '₹${origPrice.toInt()}',
-                  style: GoogleFonts.inter(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF94A3B8),
-                    decoration: TextDecoration.lineThrough,
+              // Top-Right: Item Count Badge
+              Positioned(
+                top: 8,
+                right: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  decoration: BoxDecoration(
+                    color: textColor.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$itemCount picks',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.1,
+                    ),
                   ),
                 ),
-              ],
+              ),
             ],
           ),
-          const SizedBox(height: 2),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: textColor,
+                        letterSpacing: -0.35,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 1.5),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: textColor.withValues(alpha: 0.72),
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
-          // 3. Discount Text: e.g. "₹22 OFF"
-          if (discountAmount > 0)
-            Text(
-              '₹$discountAmount OFF',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF16A34A),
+// ─────────────────────────────────────────────────────────────────────────────
+// Overlapping Live Product Thumbnails for Footer CTA
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LiveProductAvatarStack extends StatelessWidget {
+  final List<Product> products;
+  final Color accentColor;
+
+  const _LiveProductAvatarStack({
+    required this.products,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = products.take(3).toList();
+    if (preview.isEmpty) return const SizedBox.shrink();
+
+    final stackWidth = 22.0 + ((preview.length - 1) * 13.0);
+    return SizedBox(
+      width: stackWidth,
+      height: 22,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (int i = 0; i < preview.length; i++)
+            Positioned(
+              left: i * 13.0,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: Colors.white, width: 1.4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.10),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: (preview[i].imageUrl != null &&
+                          preview[i].imageUrl!.startsWith('http'))
+                      ? Image.network(
+                          preview[i].imageUrl!,
+                          width: 22,
+                          height: 22,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.eco_rounded,
+                            size: 12,
+                            color: accentColor,
+                          ),
+                        )
+                      : Icon(
+                          Icons.eco_rounded,
+                          size: 12,
+                          color: accentColor,
+                        ),
+                ),
               ),
             ),
-          const SizedBox(height: 3),
-
-          // 4. Title (2-Lines max)
-          SizedBox(
-            height: 28,
-            child: Text(
-              item.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1E293B),
-                height: 1.15,
-              ),
-            ),
-          ),
-          const SizedBox(height: 2),
-
-          // 5. Weight / Unit
-          Text(
-            item.weight.isNotEmpty ? item.weight : '1 pc',
-            style: GoogleFonts.inter(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
-            ),
-          ),
         ],
       ),
     );

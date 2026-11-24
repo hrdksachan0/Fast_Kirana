@@ -149,6 +149,19 @@ class CampaignBentoNotifier extends StateNotifier<CampaignBentoConfig> {
               }
             }
           }
+          final rawHeaderImage =
+              (fm['headerImage'] as String?) ?? (fm['heroImage'] as String?);
+          final resolvedHeaderImage = (rawHeaderImage != null &&
+                  rawHeaderImage.trim().isNotEmpty)
+              ? _normalizeImage(rawHeaderImage, card.heroImage ?? 'bloom-panoramic-header.svg')
+              : card.heroImage;
+          final rawPill =
+              (fm['pillLabel'] as String?) ?? (fm['specialRibbon'] as String?);
+          final rawCta =
+              (fm['ctaLabel'] as String?) ?? (fm['comboButtonLabel'] as String?);
+          final rawDest = (fm['destinationCategorySlug'] as String?) ??
+              (fm['destinationRoute'] as String?);
+
           return card.copyWith(
             enabled: fm['enabled'] as bool? ?? card.enabled,
             sortOrder: (fm['sortOrder'] as num?)?.toInt() ?? card.sortOrder,
@@ -157,6 +170,10 @@ class CampaignBentoNotifier extends StateNotifier<CampaignBentoConfig> {
             borderColor: CampaignBentoCardConfig.parseColor(fm['borderColor'], card.borderColor),
             accentColor: CampaignBentoCardConfig.parseColor(fm['accentColor'], card.accentColor),
             textColor: CampaignBentoCardConfig.parseColor(fm['textColor'], card.textColor),
+            heroImage: resolvedHeaderImage,
+            specialRibbon: (rawPill != null && rawPill.trim().isNotEmpty) ? rawPill.trim() : card.specialRibbon,
+            comboButtonLabel: (rawCta != null && rawCta.trim().isNotEmpty) ? rawCta.trim() : card.comboButtonLabel,
+            destinationRoute: (rawDest != null && rawDest.trim().isNotEmpty) ? rawDest.trim() : card.destinationRoute,
             minInStockItems: (fm['minInStockItems'] as num?)?.toInt() ?? card.minInStockItems,
             scheduleEnabled: fm['scheduleEnabled'] as bool? ?? card.scheduleEnabled,
             startDate: fm['startDate'] as String? ?? card.startDate,

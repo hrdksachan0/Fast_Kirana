@@ -231,12 +231,21 @@ async def post_restaurant_review(
         db.add(new_user)
         user_id = new_uid
 
+    raw_comment = (comment or "").strip()
+    if raw_comment.lower() in {
+        "delicious food and fast delivery!",
+        "delicious food and fast delivery",
+        "delicious food & prompt service!",
+        "great service and quality!",
+    }:
+        raw_comment = ""
+
     new_review = RestaurantReview(
         id=str(uuid.uuid4()),
         userId=user_id,
         restaurantId=restaurant.id,
         rating=rating,
-        comment=comment if comment else "Delicious food & prompt service!",
+        comment=raw_comment,
         createdAt=datetime.utcnow()
     )
     db.add(new_review)

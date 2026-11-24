@@ -80,7 +80,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
 
       final payload = <String, dynamic>{
         'rating': _rating,
-        'comment': comment.isNotEmpty ? comment : 'Great service and quality!',
+        'comment': comment,
         'userName': reviewerName,
         'userId': user.id,
       };

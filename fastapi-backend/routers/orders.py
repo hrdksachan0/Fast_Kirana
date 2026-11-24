@@ -3391,19 +3391,15 @@ async def list_orders(
         if not user_ids and not resolved_phone:
             return []
 
-        # Query matching orders
+        # Query matching orders strictly by owner userId (never by shopPhone, which is the store/restaurant contact)
         orders_stmt = select(Order).options(
             selectinload(Order.items),
             selectinload(Order.address)
         )
-        conds = []
-        if user_ids:
-            conds.append(Order.userId.in_(user_ids))
-        if resolved_phone and len(resolved_phone) >= 10:
-            conds.append(Order.shopPhone.ilike(f"%{resolved_phone}%"))
+        if not user_ids:
+            return []
 
-        if conds:
-            orders_stmt = orders_stmt.where(or_(*conds))
+        orders_stmt = orders_stmt.where(Order.userId.in_(user_ids))
         orders_stmt = orders_stmt.order_by(Order.createdAt.desc())
         
         orders_res = await db.execute(orders_stmt)

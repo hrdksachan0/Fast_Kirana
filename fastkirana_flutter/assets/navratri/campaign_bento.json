@@ -14,7 +14,7 @@
       "borderColor": "#C0E2FD",
       "accentColor": "#0284C7",
       "textColor": "#1E3A8A",
-      "enabled": true,
+      "enabled": false,
       "tabs": [
         { "id": "body-lotion", "label": "Body\nLotions", "icon": "body.png" },
         { "id": "face-moisturizer", "label": "Face\nMoisturizers", "icon": "face.png" },
@@ -31,12 +31,15 @@
       "sortOrder": 2,
       "title": "bloom",
       "subtitle": "Farm-fresh essentials, ready to add",
-      "backgroundColor": "#E2EFFF",
-      "borderColor": "#CFE4FD",
+      "backgroundColor": "#E6F9EE",
+      "borderColor": "#BBEFD2",
       "accentColor": "#15803D",
-      "textColor": "#0F172A",
+      "textColor": "#064E3B",
       "heroImage": "bloom-panoramic-header.svg",
-      "enabled": true,
+      "specialRibbon": "FARM FRESH",
+      "comboButtonLabel": "See all fresh picks",
+      "destinationRoute": "fruits-vegetables",
+      "enabled": false,
       "tabs": [
         { "id": "sabzi", "label": "Sabzi", "icon": "🍅" },
         { "id": "fruits", "label": "Fruits", "icon": "🥭" },
@@ -88,7 +91,7 @@
       "textColor": "#78350F",
       "heroImage": "pack-value-hero.webp",
       "specialRibbon": "Better value",
-      "enabled": true,
+      "enabled": false,
       "tabs": [],
       "items": [
         {
