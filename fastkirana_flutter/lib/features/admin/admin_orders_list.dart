@@ -26,6 +26,7 @@ import '../../core/models/order_event.dart';
 import '../../core/services/order_event_bus.dart';
 import '../../core/services/alert_engine.dart';
 import '../../core/utils/app_toast.dart';
+import '../../core/utils/safe_json.dart';
 import '../delivery/widgets/connectivity_banner.dart';
 import '../common/order_edit_modal.dart';
 import 'widgets/admin_order_card.dart';
@@ -240,8 +241,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
       final raw = prefs.getString(_diskAdminOrdersKey);
       if (raw != null && raw.isNotEmpty && mounted) {
-        final List<dynamic> decoded = jsonDecode(raw);
-        final list = decoded.map((j) => Order.fromJson(j as Map<String, dynamic>)).toList();
+        final decoded = SafeJson.tryDecodeList(raw);
+        final list = decoded
+            .whereType<Map<String, dynamic>>()
+            .map((j) => Order.fromJson(j))
+            .toList();
         if (list.isNotEmpty) {
           _cachedOrders = list;
           if (_allOrders.isEmpty) {
@@ -692,13 +696,21 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     }
   }
 
+  bool _isAudioBusy = false;
+
   Future<void> _playChime() async {
+    if (_isAudioBusy || !mounted) return;
+    _isAudioBusy = true;
     try {
       HapticFeedback.heavyImpact();
-      await _audioPlayer.stop();
+      if (_audioPlayer.state == PlayerState.playing) {
+        await _audioPlayer.stop();
+      }
       await _audioPlayer.play(AssetSource('sounds/order_chime.mp3'), volume: 1.0);
     } catch (_) {
       try { await SystemSound.play(SystemSoundType.alert); } catch (_) {}
+    } finally {
+      _isAudioBusy = false;
     }
   }
 
@@ -802,34 +814,39 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 
   Future<void> _fetchAdminOrders() async {
-    if (_isFetchingAdmin) return;
+    if (_isFetchingAdmin || !mounted) return;
     _isFetchingAdmin = true;
 
-    // Guarantee auth credentials are ready on first boot
-    if (!SecureStorage.isCacheLoaded || SecureStorage.cachedUserId == null) {
-      await SecureStorage.loadCache();
-    }
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
     try {
+      // Guarantee auth credentials are ready on first boot
+      if (!SecureStorage.isCacheLoaded || SecureStorage.cachedUserId == null) {
+        await SecureStorage.loadCache();
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
       final dio = ref.read(dioProvider);
       final Map<String, Order> orderMap = {};
 
       void addOrUpdate(Order o) {
         final now = DateTime.now();
         _recentlyDeliveredOrderIds.removeWhere((_, time) => now.difference(time).inMinutes >= 3);
-        if (_recentlyDeliveredOrderIds.containsKey(o.id) || (o.combinedId != null && _recentlyDeliveredOrderIds.containsKey(o.combinedId!))) {
+        final oCombinedId = o.combinedId;
+        final oReadableId = o.readableId;
+
+        if (_recentlyDeliveredOrderIds.containsKey(o.id) || (oCombinedId != null && _recentlyDeliveredOrderIds.containsKey(oCombinedId))) {
           o = o.copyWith(status: OrderStatus.delivered, paymentStatus: 'PAID');
         }
 
         // Respect active optimistic status locks from user actions
         final lockedStatus = _getLockedStatus(o.id) ??
-            (o.combinedId != null ? _getLockedStatus(o.combinedId!) : null) ??
-            (o.readableId != null ? _getLockedStatus(o.readableId!) : null);
+            (oCombinedId != null ? _getLockedStatus(oCombinedId) : null) ??
+            (oReadableId != null ? _getLockedStatus(oReadableId) : null);
         if (lockedStatus != null) {
           o = o.copyWith(
             status: lockedStatus,
@@ -839,8 +856,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
         // Respect active optimistic rider locks from admin actions
         final lockedRider = _getLockedRider(o.id) ??
-            (o.combinedId != null ? _getLockedRider(o.combinedId!) : null) ??
-            (o.readableId != null ? _getLockedRider(o.readableId!) : null);
+            (oCombinedId != null ? _getLockedRider(oCombinedId) : null) ??
+            (oReadableId != null ? _getLockedRider(oReadableId) : null);
+        final oRiderName = o.deliveryBoyName;
+        final oRiderId = o.deliveryUserId;
         if (lockedRider != null) {
           if (lockedRider.isUnassigned) {
             o = o.copyWith(clearDeliveryUser: true);
@@ -851,37 +870,40 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
               deliveryBoyPhone: lockedRider.riderPhone,
             );
           }
-        } else if ((o.deliveryBoyName == null || o.deliveryBoyName!.isEmpty) &&
-                   o.deliveryUserId != null && o.deliveryUserId!.isNotEmpty) {
+        } else if ((oRiderName == null || oRiderName.isEmpty) &&
+                   oRiderId != null && oRiderId.isNotEmpty) {
           // Resolve rider from _availableRiders list if Supabase returned deliveryUserId without joins
-          final matchedRider = _availableRiders.firstWhereOrNull((r) => r['id'] == o.deliveryUserId);
+          final matchedRider = _availableRiders.firstWhereOrNull((r) => r['id'] == oRiderId);
           if (matchedRider != null) {
             o = o.copyWith(
-              deliveryBoyName: matchedRider['name'],
-              deliveryBoyPhone: matchedRider['phone'],
+              deliveryBoyName: matchedRider['name']?.toString(),
+              deliveryBoyPhone: matchedRider['phone']?.toString(),
             );
           }
         }
 
         // If rider is still empty, check existing order in memory to preserve assigned rider
         final existing = orderMap[o.id] ?? _allOrders.firstWhereOrNull((curr) => curr.id == o.id);
-        if ((o.deliveryBoyName == null || o.deliveryBoyName!.isEmpty) &&
-            existing != null && existing.deliveryBoyName != null && existing.deliveryBoyName!.isNotEmpty) {
+        final currentRiderName = o.deliveryBoyName;
+        final existingRiderName = existing?.deliveryBoyName;
+        if ((currentRiderName == null || currentRiderName.isEmpty) &&
+            existing != null && existingRiderName != null && existingRiderName.isNotEmpty) {
           if (lockedRider == null || !lockedRider.isUnassigned) {
             o = o.copyWith(
               deliveryUserId: existing.deliveryUserId,
-              deliveryBoyName: existing.deliveryBoyName,
+              deliveryBoyName: existingRiderName,
               deliveryBoyPhone: existing.deliveryBoyPhone,
             );
           }
         }
 
-        if (orderMap[o.id] == null) {
+        final existingInMap = orderMap[o.id];
+        if (existingInMap == null) {
           orderMap[o.id] = o;
         } else {
-          final existingInMap = orderMap[o.id]!;
           // If admin explicitly locked/reversed status, allow it!
-          final existingLocked = _getLockedStatus(existingInMap.id) ?? (existingInMap.combinedId != null ? _getLockedStatus(existingInMap.combinedId!) : null);
+          final existingCombinedId = existingInMap.combinedId;
+          final existingLocked = _getLockedStatus(existingInMap.id) ?? (existingCombinedId != null ? _getLockedStatus(existingCombinedId) : null);
           if (existingLocked != null) {
             if (o.status == existingLocked) {
               orderMap[o.id] = o;

@@ -149,7 +149,7 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
     final int shelfItemCount = displayProducts.length + (showSeeAllCard ? 1 : 0);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 0, 4),
+      padding: const EdgeInsets.fromLTRB(16, 10, 0, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -394,7 +394,7 @@ class _HomeProductSectionsState extends ConsumerState<HomeProductSections> {
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.only(right: Responsive.horizontalPadding(context)),
                   itemCount: shelfItemCount,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  separatorBuilder: (_, __) => const SizedBox(width: 4),
                   itemBuilder: (context, index) {
                     if (index < displayProducts.length) {
                       final product = displayProducts[index];

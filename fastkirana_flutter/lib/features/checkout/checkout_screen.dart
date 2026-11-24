@@ -57,6 +57,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _isCheckingConnection = false;
   double? _userDistanceFromAddressMeters;
   bool _hasCalculatedProximity = false;
+  String? _confirmedFarAddressId;
 
   void _calculateProximity(Address? address) async {
     if (address == null || !mounted) return;
@@ -447,7 +448,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Text(
                 'Checkout',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 15.5),
+                  fontSize: Responsive.scaledFontSize(context, 16.5),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                   letterSpacing: -0.3,
@@ -457,7 +458,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Text(
                 outletTitle,
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontSize: Responsive.scaledFontSize(context, 12.0),
                   fontWeight: FontWeight.w600,
                   color: slateMuted,
                 ),
@@ -849,8 +850,52 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         return;
                       }
 
-                      // Proximity reminder is permanently highlighted at the top via Zepto Speech Bubble.
-                      // Proceed to Pay proceeds directly to payment without any blocking popup sheets!
+                      // 2. Far-From-Address Confirmation Guard (> 500m away from a verified saved pin)
+                      final isVerifiedPin = selectedAddress != null &&
+                          !SelectedAddressNotifier.isDarkstoreFallbackPin(
+                            selectedAddress.latitude,
+                            selectedAddress.longitude,
+                          );
+                      if (isVerifiedPin &&
+                          _userDistanceFromAddressMeters != null &&
+                          _userDistanceFromAddressMeters! > 500 &&
+                          _confirmedFarAddressId != selectedAddress.id) {
+                        HapticFeedback.lightImpact();
+                        final action = await ProximityDeliveryGuardSheet.show(
+                          context: context,
+                          address: selectedAddress,
+                          distanceMeters: _userDistanceFromAddressMeters!,
+                        );
+                        if (!context.mounted) return;
+                        if (action == ProximityGuardAction.continueWithAddress) {
+                          setState(() => _confirmedFarAddressId = selectedAddress.id);
+                        } else if (action == ProximityGuardAction.switchToCurrentLocation) {
+                          await AddressSelectorSheet.show(
+                            context,
+                            activeAddress: selectedAddress,
+                            onAddressSelected: (addr) {
+                              ref.read(selectedAddressProvider.notifier).selectAddress(addr);
+                              _calculateProximity(addr);
+                            },
+                          );
+                          return;
+                        } else if (action == ProximityGuardAction.orderForSomeoneElse) {
+                          CheckoutReceiverCard.showEditReceiverModal(
+                            context: context,
+                            isOrderingForSomeone: checkoutState.customReceiverName != null ||
+                                checkoutState.customReceiverPhone != null,
+                            customerName: customerName,
+                            customerPhone: customerPhone,
+                            onReceiverDetailsSaved: (name, phone) {
+                              controller.setReceiverDetails(name, phone);
+                            },
+                          );
+                          return;
+                        } else {
+                          return;
+                        }
+                      }
+
                       openPaymentSheet();
                     }
 

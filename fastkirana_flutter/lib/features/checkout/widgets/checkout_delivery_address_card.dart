@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../core/services/location_service.dart';
 import '../../../data/models/address.dart';
+import '../../../providers/address_provider.dart';
 import '../../../widgets/address_selector_sheet.dart';
 
 class CheckoutDeliveryAddressCard extends StatefulWidget {
@@ -52,17 +53,18 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
     final selectedAddress = widget.selectedAddress;
     final tier = widget.tier;
 
-    // Show Zepto-style speech bubble callout ONLY if user is truly far away (> 2.0 km)
-    // 533 meters is same neighborhood/walking distance in Ghatampur, so it never triggers!
-    final showFarAwayBubble = widget.userDistanceMeters != null &&
-        widget.userDistanceMeters! > 2000 &&
-        !_isProximityDismissed &&
-        selectedAddress != null;
+    // Show Zepto-style speech bubble callout if user is > 500m away from a verified saved pin
+    final isVerifiedPin = selectedAddress != null &&
+        !SelectedAddressNotifier.isDarkstoreFallbackPin(selectedAddress.latitude, selectedAddress.longitude);
+    final showFarAwayBubble = isVerifiedPin &&
+        widget.userDistanceMeters != null &&
+        widget.userDistanceMeters! > 500 &&
+        !_isProximityDismissed;
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -86,7 +88,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(6.5),
+                padding: const EdgeInsets.all(7.0),
                 decoration: BoxDecoration(
                   color: selectedAddress == null ? AppDesignSystem.rose50 : AppDesignSystem.orange50,
                   borderRadius: BorderRadius.circular(8.5),
@@ -102,7 +104,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                           : (selectedAddress.label.toLowerCase().contains('current')
                               ? Icons.my_location_rounded
                               : Icons.home_rounded)),
-                  size: 15.5,
+                  size: 16.5,
                   color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.orange600,
                 ),
               ),
@@ -131,7 +133,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                             return clean.isNotEmpty ? clean : 'Delivery Address';
                           }(),
                           style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 13.5),
+                            fontSize: Responsive.scaledFontSize(context, 14.0),
                             fontWeight: FontWeight.w800,
                             color: selectedAddress == null ? AppDesignSystem.rose700 : slateDark,
                             height: 1.2,
@@ -160,7 +162,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 4.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 9.5, vertical: 5.5),
                   decoration: BoxDecoration(
                     color: selectedAddress == null ? AppDesignSystem.rose50 : AppDesignSystem.slate100,
                     borderRadius: BorderRadius.circular(8),
@@ -172,7 +174,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                   child: Text(
                     selectedAddress == null ? 'SELECT' : 'CHANGE',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10.5),
+                      fontSize: Responsive.scaledFontSize(context, 11.5),
                       fontWeight: FontWeight.w800,
                       color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.slate700,
                       letterSpacing: 0.2,
@@ -183,7 +185,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
             ],
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 7),
 
           // Row 2: Full Address Clean Text Line
           Text(
@@ -194,7 +196,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                     .trim()
                 : 'Please select a delivery address to place your order.',
             style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 11.5),
+              fontSize: Responsive.scaledFontSize(context, 12.5),
               fontWeight: FontWeight.w500,
               color: selectedAddress == null ? AppDesignSystem.rose600 : AppDesignSystem.slate600,
               height: 1.3,
@@ -319,7 +321,7 @@ class _CheckoutDeliveryAddressCardState extends State<CheckoutDeliveryAddressCar
                             : 'Map Location Needed • Tap CHANGE to set location')
                         : '${tier.tierName} (${tier.distanceKm.toStringAsFixed(1)} km) • ${tier.freeDeliveryLabel}',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 10),
+                      fontSize: Responsive.scaledFontSize(context, 11.5),
                       fontWeight: FontWeight.w800,
                       color: !tier.isServiceable ? AppDesignSystem.red600 : const Color(0xFF15803D),
                     ),

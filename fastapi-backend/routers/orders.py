@@ -4308,6 +4308,68 @@ async def update_order(
         order.deliveryLng = float(delivery_lng) if delivery_lng is not None else None
         order.deliveredAt = datetime.utcnow()
 
+        # 🛡️ 7-Guard Rider Doorstep GPS Auto-Learn (fixes old/fallback customer pins once, never overwrites real pins)
+        if order.deliveryLat is not None and order.deliveryLng is not None and order.addressId and (is_delivery or payment_collected_by == "RIDER"):
+            try:
+                d_lat = float(order.deliveryLat)
+                d_lng = float(order.deliveryLng)
+                raw_acc = payload.get("deliveryGpsAccuracy")
+                gps_acc = float(raw_acc) if raw_acc is not None else None
+                notes_lower = (order.notes or "").lower()
+                is_pickup_or_gift = (
+                    (order.deliveryMethod or "").upper() == "PICKUP"
+                    or "order for:" in notes_lower
+                    or order.addressId == "addr_default_ghatampur"
+                )
+                # Guard 3 & 5: Accuracy <= 65m (if provided) and not pickup/gift
+                if not is_pickup_or_gift and (gps_acc is None or gps_acc <= 65.0):
+                    hub_lat, hub_lng = 26.1534185, 80.1714024
+                    if order.storeId:
+                        hub_res = await db.execute(select(DarkStore).where(DarkStore.id == order.storeId))
+                        hub_row = hub_res.scalars().first()
+                        if hub_row and hub_row.lat and hub_row.lng:
+                            hub_lat, hub_lng = float(hub_row.lat), float(hub_row.lng)
+
+                    rider_dist_from_hub_m = get_distance_km(hub_lat, hub_lng, d_lat, d_lng) * 1000.0
+                    # Guard 2 & 6: Rider must be 80m..12km away from Darkstore Hub
+                    if 80.0 < rider_dist_from_hub_m <= 12000.0:
+                        addr_res = await db.execute(select(Address).where(Address.id == order.addressId))
+                        addr_row = addr_res.scalars().first()
+                        if addr_row and (addr_row.label or "").upper() != "STORE_PICKUP":
+                            # Guard 1: ONLY auto-learn if saved pin is missing/0 or Darkstore fallback (<= 50m)
+                            addr_is_fallback = (
+                                addr_row.lat is None
+                                or addr_row.lng is None
+                                or (addr_row.lat == 0.0 and addr_row.lng == 0.0)
+                                or (get_distance_km(hub_lat, hub_lng, float(addr_row.lat), float(addr_row.lng)) * 1000.0 <= 50.0)
+                            )
+                            if addr_is_fallback:
+                                # Guard 4: Batch-slide protection — ensure same rider did not deliver a different address within 90s & 35m
+                                cutoff = datetime.utcnow() - timedelta(seconds=90)
+                                recent_res = await db.execute(
+                                    select(Order).where(
+                                        and_(
+                                            Order.deliveryUserId == order.deliveryUserId,
+                                            Order.status == OrderStatus.DELIVERED,
+                                            Order.id != order.id,
+                                            Order.addressId != order.addressId,
+                                            Order.deliveredAt >= cutoff,
+                                            Order.deliveryLat.isnot(None),
+                                            Order.deliveryLng.isnot(None),
+                                        )
+                                    )
+                                )
+                                is_batch_slide = any(
+                                    get_distance_km(d_lat, d_lng, float(r.deliveryLat), float(r.deliveryLng)) * 1000.0 < 35.0
+                                    for r in recent_res.scalars().all()
+                                )
+                                if not is_batch_slide:
+                                    addr_row.lat = d_lat
+                                    addr_row.lng = d_lng
+                                    logger.info(f"[AutoLearn] Upgraded fallback pin for address {addr_row.id} -> ({d_lat:.6f}, {d_lng:.6f})")
+            except Exception as al_err:
+                logger.warning(f"[AutoLearn] Non-fatal skip for order {order.id}: {al_err}")
+
         # Trigger Refer & Earn reward for referrer on successful first order delivery
         try:
             async with db.begin_nested():

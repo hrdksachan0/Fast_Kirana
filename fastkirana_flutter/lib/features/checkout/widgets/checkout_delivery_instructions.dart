@@ -108,7 +108,7 @@ class CheckoutDeliveryInstructions extends StatelessWidget {
                     Text(
                       'Delivery Instructions',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 13.5),
+                        fontSize: Responsive.scaledFontSize(context, 14.0),
                         fontWeight: FontWeight.w900,
                         color: slateDark,
                       ),
@@ -116,7 +116,7 @@ class CheckoutDeliveryInstructions extends StatelessWidget {
                     Text(
                       'Rider will strictly follow these delivery preferences',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 10.5),
+                        fontSize: Responsive.scaledFontSize(context, 11.5),
                         fontWeight: FontWeight.w500,
                         color: slateMuted,
                       ),
@@ -158,7 +158,7 @@ class CheckoutDeliveryInstructions extends StatelessWidget {
                       Text(
                         preset.title,
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11.5),
+                          fontSize: Responsive.scaledFontSize(context, 12.5),
                           fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                           color: isSelected ? const Color(0xFF1D4ED8) : AppDesignSystem.slate700,
                         ),
@@ -197,14 +197,14 @@ class CheckoutDeliveryInstructions extends StatelessWidget {
                     maxLines: 1,
                     maxLength: 80,
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 11.5),
+                      fontSize: Responsive.scaledFontSize(context, 12.5),
                       fontWeight: FontWeight.w600,
                       color: slateDark,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Add note for rider (e.g. 2nd floor, red gate)',
                       hintStyle: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontSize: Responsive.scaledFontSize(context, 12.0),
                         color: AppDesignSystem.slate400,
                       ),
                       counterText: '',

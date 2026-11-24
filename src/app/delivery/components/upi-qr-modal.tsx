@@ -85,12 +85,12 @@ export default function UpiQrModal({
 
     loadQrData()
 
-    // 2-Second Live Polling for Automatic Razorpay Payment Detection
+    // 1.2-Second Live Polling for Fast Razorpay Payment Detection
     const pollInterval = setInterval(() => {
       if (document.visibilityState === 'visible' && !livePaid) {
         loadQrData()
       }
-    }, 2000)
+    }, 1200)
 
     return () => {
       isCancelled = true

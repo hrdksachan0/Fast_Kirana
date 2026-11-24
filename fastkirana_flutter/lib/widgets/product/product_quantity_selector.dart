@@ -93,53 +93,63 @@ class AddToCartButton extends ConsumerWidget {
 
 
   @override
-
   Widget build(BuildContext context, WidgetRef ref) {
-
     Widget btn;
-
+    String stateKey;
     if (isOutOfStock) {
-
       btn = _soldOut();
-
+      stateKey = 'sold_out';
     } else if (!isStoreOpen) {
-
       btn = _storeClosed();
-
+      stateKey = 'closed';
     } else if (inCartQty > 0) {
-
       btn = _stepper(context, ref);
-
+      stateKey = 'stepper';
     } else if (isZeptoStyle) {
-
       btn = _zeptoAddButton(context, ref);
-
+      stateKey = 'zepto_add';
     } else {
-
       btn = _addButton(context, ref);
-
+      stateKey = 'add';
     }
 
-
-
     return FittedBox(
-
       fit: BoxFit.scaleDown,
-
       alignment: Alignment.centerRight,
-
-      child: GestureDetector(
-
-        behavior: HitTestBehavior.opaque,
-
-        onTap: () {}, // Intercepts touches to prevent parent card from opening ProductDetailScreen
-
-        child: btn,
-
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.centerRight,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 190),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            );
+          },
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.88, end: 1.0).animate(animation),
+                alignment: Alignment.centerRight,
+                child: child,
+              ),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey(stateKey),
+            child: btn,
+          ),
+        ),
       ),
-
     );
-
   }
 
 
@@ -317,364 +327,317 @@ class AddToCartButton extends ConsumerWidget {
 
 
   Widget _stepper(BuildContext context, WidgetRef ref) {
-
     final cart = ref.watch(cartProvider).value;
-
     final matchingItems = cart?.items.where((i) => i.productId == product.id || i.productId.startsWith('${product.id}_')).toList() ?? [];
+    final stepperColor = isFood ? primaryColor : const Color(0xFF318616);
 
+    final int effectiveMaxStock = hasVariants
+        ? (matchingItems.length == 1
+            ? product.getStockForVariant(matchingItems.first.selectedVariant)
+            : 0)
+        : product.stock;
+    final bool isMaxStockReached = effectiveMaxStock > 0 && inCartQty >= effectiveMaxStock;
+    final Color plusColor = isMaxStockReached
+        ? Colors.white.withValues(alpha: 0.35)
+        : Colors.white;
 
+    final double stepperHeight = isFood ? s(36) : s(44);
+    final double stepperWidth = isFood ? s(68) : s(76);
+    final double stepperRadius = isFood ? s(8.5) : s(10.5);
 
     return Container(
-
-      height: s(33),
-
+      height: stepperHeight,
+      width: stepperWidth,
       decoration: BoxDecoration(
-
-        gradient: LinearGradient(
-
-          colors: gradientColors,
-
-          begin: Alignment.topLeft,
-
-          end: Alignment.bottomRight,
-
-        ),
-
-        borderRadius: BorderRadius.circular(s(9)),
-
+        color: stepperColor,
+        borderRadius: BorderRadius.circular(stepperRadius),
         boxShadow: [
-
           BoxShadow(
-
-            color: primaryColor.withValues(alpha: 0.35),
-
-            blurRadius: s(9),
-
-            offset: Offset(0, s(2.5)),
-
-            spreadRadius: 0,
-
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: s(3.5),
+            offset: Offset(0, s(1.2)),
           ),
-
         ],
-
       ),
-
       child: Row(
-
-        mainAxisSize: MainAxisSize.min,
-
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-
-          // Decrement Button
-
-          Semantics(
-
-            button: true,
-
-            label: 'Decrease quantity',
-
-            child: Bounceable(
-              scaleFactor: 0.82,
-
-              onTap: () {
-
-                AppHaptics.smoothTick();
-
-                if (hasVariants) {
-
-                  // If only 1 variant item is in the cart, decrement it directly
-
-                  if (matchingItems.length == 1) {
-
-                    ref.read(cartProvider.notifier).decrement(matchingItems.first.productId);
-
+          // Decrement Button — full left-third edge-to-edge touch target (zero dead edge)
+          Expanded(
+            flex: 10,
+            child: Semantics(
+              button: true,
+              label: 'Decrease quantity',
+              child: Bounceable(
+                scaleFactor: 0.82,
+                onTap: () {
+                  AppHaptics.smoothTick();
+                  if (hasVariants) {
+                    if (matchingItems.length == 1) {
+                      ref.read(cartProvider.notifier).decrement(matchingItems.first.productId);
+                    } else {
+                      VariantSelectorSheet.show(context, product);
+                    }
                   } else {
-
-                    VariantSelectorSheet.show(context, product);
-
+                    ref.read(cartProvider.notifier).decrement(product.id);
                   }
-
-                } else {
-
-                  ref.read(cartProvider.notifier).decrement(product.id);
-
-                }
-
-              },
-
-              child: SizedBox(
-
-                width: s(32),
-
-                height: s(33),
-
-                child: Center(
-
-                  child: Icon(Icons.remove_rounded, size: s(18), color: Colors.white),
-
+                },
+                child: ColoredBox(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: Container(
+                      width: s(11.5),
+                      height: s(2.1),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(s(1.2)),
+                      ),
+                    ),
+                  ),
                 ),
-
               ),
-
             ),
-
           ),
 
-
-
-          // Count - tapping opens variant sheet if product has variants
-
-          GestureDetector(
-
-            behavior: HitTestBehavior.opaque,
-
-            onTap: hasVariants ? () {
-
-              AppHaptics.smoothTick();
-
-              VariantSelectorSheet.show(context, product);
-
-            } : null,
-
-            child: Container(
-
-              constraints: BoxConstraints(minWidth: s(20)),
-
-              alignment: Alignment.center,
-
-              child: Text(
-
-                '$inCartQty',
-
-                style: GoogleFonts.plusJakartaSans(
-
-                  color: Colors.white,
-
-                  fontWeight: FontWeight.w900,
-
-                  fontSize: s(13.0),
-
-                  letterSpacing: -0.2,
-
-                ),
-
-              ),
-
-            ),
-
-          ),
-
-
-
-          // Increment Button
-
-          Semantics(
-
-            button: true,
-
-            label: 'Increase quantity',
-
-            child: Bounceable(
-              scaleFactor: 0.82,
-
+          // Count — ALWAYS absorbs taps so tapping the number never leaks to ProductCard!
+          Expanded(
+            flex: 8,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () {
-
                 if (hasVariants) {
+                  AppHaptics.smoothTick();
+                  VariantSelectorSheet.show(context, product);
+                }
+              },
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 120),
+                  transitionBuilder: (child, animation) => ScaleTransition(
+                    scale: Tween<double>(begin: 0.78, end: 1.0).animate(animation),
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: Text(
+                    '$inCartQty',
+                    key: ValueKey(inCartQty),
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: s(16.5),
+                      height: 1.0,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
-                  // If only 1 variant item is in the cart, increment it directly
-
-                  if (matchingItems.length == 1) {
-
-                    final singleItem = matchingItems.first;
-
-                    final effectiveItemStock = product.getStockForVariant(singleItem.selectedVariant);
-
-                    if (effectiveItemStock > 0 && inCartQty >= effectiveItemStock) {
-
+          // Increment Button — full right-third edge-to-edge touch target (zero dead edge)
+          Expanded(
+            flex: 10,
+            child: Semantics(
+              button: true,
+              label: 'Increase quantity',
+              child: Bounceable(
+                scaleFactor: 0.82,
+                onTap: () {
+                  if (hasVariants) {
+                    if (matchingItems.length == 1) {
+                      final singleItem = matchingItems.first;
+                      final effectiveItemStock = product.getStockForVariant(singleItem.selectedVariant);
+                      if (effectiveItemStock > 0 && inCartQty >= effectiveItemStock) {
+                        AppHaptics.alertPulse();
+                        _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
+                        return;
+                      }
+                      AppHaptics.smoothTick();
+                      final success = ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
+                      if (!success) {
+                        _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
+                      }
+                    } else {
+                      VariantSelectorSheet.show(context, product);
+                    }
+                  } else {
+                    if (product.stock > 0 && inCartQty >= product.stock) {
                       AppHaptics.alertPulse();
-
-                      _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
-
+                      _showStockLimitSnackbar(ref);
                       return;
-
                     }
-
-                    AppHaptics.smoothTick();
-
-                    final success = ref.read(cartProvider.notifier).addProduct(singleItem.product, 1, singleItem.selectedVariant);
-
-                    if (!success) {
-
-                      _showStockLimitSnackbar(ref, customStock: effectiveItemStock);
-
+                    final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
+                    if (conflict != null) {
+                      _showConflictDialog(context, ref);
+                    } else {
+                      AppHaptics.smoothTick();
+                      ref.read(cartProvider.notifier).increment(product);
                     }
-
-                  } else {
-
-                    VariantSelectorSheet.show(context, product);
-
                   }
-
-                } else {
-
-                  if (product.stock > 0 && inCartQty >= product.stock) {
-
-                    AppHaptics.alertPulse();
-
-                    _showStockLimitSnackbar(ref);
-
-                    return;
-
-                  }
-
-                  final conflict = ref.read(cartProvider.notifier).checkRestaurantConflict(product);
-
-                  if (conflict != null) {
-
-                    _showConflictDialog(context, ref);
-
-                  } else {
-
-                    AppHaptics.smoothTick();
-
-                    ref.read(cartProvider.notifier).increment(product);
-
-                  }
-
-                }
-
-              },
-
-              child: SizedBox(
-
-                width: s(32),
-
-                height: s(33),
-
-                child: Center(
-
-                  child: Icon(Icons.add_rounded, size: s(18), color: Colors.white),
-
+                },
+                child: ColoredBox(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: SizedBox(
+                      width: s(11.5),
+                      height: s(11.5),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: s(11.5),
+                            height: s(2.1),
+                            decoration: BoxDecoration(
+                              color: plusColor,
+                              borderRadius: BorderRadius.circular(s(1.2)),
+                            ),
+                          ),
+                          Container(
+                            width: s(2.1),
+                            height: s(11.5),
+                            decoration: BoxDecoration(
+                              color: plusColor,
+                              borderRadius: BorderRadius.circular(s(1.2)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-
               ),
-
             ),
-
           ),
-
         ],
-
       ),
-
     );
-
   }
-
-
 
   Widget _addButton(BuildContext context, WidgetRef ref) {
+    if (!isFood && hasVariants) {
+      final variants = product.parsedVariants;
+      final optCount = variants.isNotEmpty ? variants.length : 2;
+
+      return Bounceable(
+        scaleFactor: 0.94,
+        onTap: () {
+          AppHaptics.smoothAdd();
+          VariantSelectorSheet.show(context, product);
+        },
+        child: Container(
+          width: s(64),
+          height: s(45),
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(s(10.5)),
+            border: Border.all(
+              color: const Color(0xFF318616),
+              width: s(1.4),
+            ),
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(s(10.5)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: s(3.5),
+                offset: Offset(0, s(1.2)),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              Expanded(
+                flex: 11,
+                child: Center(
+                  child: Text(
+                    'ADD',
+                    style: GoogleFonts.inter(
+                      fontSize: s(13.5),
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF318616),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 9,
+                child: Container(
+                  width: double.infinity,
+                  color: const Color(0xFFEAF6E8),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: s(0.8),
+                        color: const Color(0xFF318616).withValues(alpha: 0.22),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            '$optCount options',
+                            style: GoogleFonts.inter(
+                              fontSize: s(8.6),
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF318616),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final btnColor = isFood ? primaryColor : const Color(0xFF318616);
 
     return Bounceable(
-
       scaleFactor: 0.94,
-
       onTap: () {
-
         AppHaptics.smoothAdd();
-
         if (hasVariants) {
-
           VariantSelectorSheet.show(context, product);
-
         } else {
-
           _handleAdd(context, ref);
-
         }
-
       },
-
       child: Container(
-
-        height: s(33),
-
-        padding: EdgeInsets.symmetric(horizontal: s(12)),
-
+        width: isFood ? s(56) : s(60),
+        height: isFood ? s(36) : s(43),
         decoration: BoxDecoration(
-
-          color: isFood ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
-
-          borderRadius: BorderRadius.circular(s(9)),
-
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isFood ? s(8.5) : s(10.5)),
           border: Border.all(
-
-            color: isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
-
+            color: btnColor,
             width: s(1.4),
-
           ),
-
           boxShadow: [
-
             BoxShadow(
-
-              color: primaryColor.withValues(alpha: 0.20),
-
-              blurRadius: s(8),
-
-              offset: Offset(0, s(2)),
-
-              spreadRadius: 0,
-
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: s(3.5),
+              offset: Offset(0, s(1.2)),
             ),
-
           ],
-
         ),
-
-        child: Row(
-
-          mainAxisSize: MainAxisSize.min,
-
-          mainAxisAlignment: MainAxisAlignment.center,
-
-          children: [
-
-            Text(
-
-              'ADD',
-
-              style: GoogleFonts.plusJakartaSans(
-
-                fontSize: s(12.0),
-
-                fontWeight: FontWeight.w900,
-
-                color: primaryColor,
-
-                letterSpacing: 0.5,
-
-              ),
-
+        child: Center(
+          child: Text(
+            'ADD',
+            style: GoogleFonts.inter(
+              fontSize: isFood ? s(13.0) : s(14.0),
+              fontWeight: FontWeight.w800,
+              color: btnColor,
+              letterSpacing: 0.2,
             ),
-
-            SizedBox(width: s(2.5)),
-
-            Icon(Icons.add_rounded, size: s(17), color: primaryColor),
-
-          ],
-
+          ),
         ),
-
       ),
-
     );
-
   }
-
-
 
   Widget _zeptoAddButton(BuildContext context, WidgetRef ref) {
 
@@ -833,164 +796,100 @@ class AddToCartButton extends ConsumerWidget {
 
 
 class VariantPill extends StatelessWidget {
-
-  final Product product;
-
+  final dynamic product;
   final List variants;
-
   final bool hasVariants;
-
   final bool isOutOfStock;
-
   final bool isFood;
-
   final double uiScale;
 
-
-
   const VariantPill({
-
     super.key,
-
     required this.product,
-
     required this.variants,
-
     required this.hasVariants,
-
     required this.isOutOfStock,
-
     required this.isFood,
-
     required this.uiScale,
-
   });
-
-
 
   double s(double v) => v * uiScale;
 
-
-
-  @override
-
-  Widget build(BuildContext context) {
-
-    if (hasVariants) {
-
-      final label = variants.isNotEmpty ? '${variants.length} Options' : 'Customise';
-
-      return GestureDetector(
-
-        onTap: () {
-
-          if (!isOutOfStock) VariantSelectorSheet.show(context, product);
-
-        },
-
-        child: Container(
-
-          margin: EdgeInsets.only(bottom: s(2)),
-
-          padding: EdgeInsets.symmetric(horizontal: s(6), vertical: s(2.2)),
-
-          decoration: BoxDecoration(
-
-            color: const Color(0xFFF8FAFC),
-
-            borderRadius: BorderRadius.circular(s(6)),
-
-            border: Border.all(color: const Color(0xFFE2E8F0), width: s(0.85)),
-
-          ),
-
-          child: Row(
-
-            mainAxisSize: MainAxisSize.min,
-
-            children: [
-
-              Text(
-
-                label,
-
-                style: GoogleFonts.plusJakartaSans(
-
-                  fontSize: s(9.2),
-
-                  fontWeight: FontWeight.w700,
-
-                  color: const Color(0xFF475569),
-
-                ),
-
-              ),
-
-              SizedBox(width: s(2)),
-
-              Icon(Icons.keyboard_arrow_down_rounded, size: s(12), color: const Color(0xFF64748B)),
-
-            ],
-
-          ),
-
-        ),
-
-      );
-
+  String _resolveUnitString() {
+    try {
+      final dynamic p = product;
+      dynamic raw;
+      try {
+        raw = p.unit;
+      } catch (_) {}
+      if (raw == null) {
+        try {
+          raw = p.name;
+        } catch (_) {}
+      }
+      if (raw == null) {
+        try {
+          raw = p.title;
+        } catch (_) {}
+      }
+      if (raw == null) return isFood ? 'Serves 1' : '1 pc';
+      final u = raw.toString().trim();
+      if (u.isEmpty || u == '1 unit') return isFood ? 'Serves 1' : '1 pc';
+      if (u.toLowerCase() == 'serving') return '1 Serving';
+      return u;
+    } catch (_) {
+      return isFood ? 'Serves 1' : '1 pc';
     }
-
-    return Container(
-
-      margin: EdgeInsets.only(bottom: s(2)),
-
-      padding: EdgeInsets.symmetric(horizontal: s(5.5), vertical: s(2)),
-
-      decoration: BoxDecoration(
-
-        color: const Color(0xFFF8FAFC),
-
-        borderRadius: BorderRadius.circular(s(5)),
-
-        border: Border.all(color: const Color(0xFFF1F5F9), width: s(0.85)),
-
-      ),
-
-      child: Text(
-
-        () {
-
-          final u = product.unit.trim();
-
-          if (u.isEmpty || u == '1 unit') return isFood ? 'Serves 1' : '1 pc';
-
-          if (u.toLowerCase() == 'serving') return '1 Serving';
-
-          return u;
-
-        }(),
-
-        style: GoogleFonts.plusJakartaSans(
-
-          fontSize: s(9.2),
-
-          fontWeight: FontWeight.w700,
-
-          color: const Color(0xFF64748B),
-
-          letterSpacing: 0.1,
-
-        ),
-
-        maxLines: 1,
-
-        overflow: TextOverflow.ellipsis,
-
-      ),
-
-    );
-
   }
 
+  @override
+  Widget build(BuildContext context) {
+    try {
+      if (hasVariants) {
+        final firstVarName = variants.isNotEmpty ? (variants.first.name ?? '').toString().trim() : '';
+        final displayUnit = firstVarName.isNotEmpty ? firstVarName : _resolveUnitString();
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            if (!isOutOfStock) VariantSelectorSheet.show(context, product);
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  displayUnit,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: s(10.2),
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1E293B),
+                    letterSpacing: -0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: s(1)),
+              Icon(Icons.keyboard_arrow_down_rounded, size: s(12.5), color: const Color(0xFF64748B)),
+            ],
+          ),
+        );
+      }
+
+      return Text(
+        _resolveUnitString(),
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: s(11.5),
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF1E293B),
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
+  }
 }
 

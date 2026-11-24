@@ -399,6 +399,9 @@ class ProductVariant {
     this.costPrice = 0.0,
   });
 
+  /// Safe alias so dynamic variant accesses (.unit) never throw NoSuchMethodError
+  String get unit => name;
+
   factory ProductVariant.fromJson(Map<String, dynamic> json) => ProductVariant(
         name: json['name']?.toString() ?? '',
         price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,

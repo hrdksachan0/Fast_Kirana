@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/safe_json.dart';
 import 'logger_service.dart';
 
 class OfflineSyncService {
@@ -20,7 +21,7 @@ class OfflineSyncService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(queueName);
-      final List<dynamic> list = raw != null && raw.isNotEmpty ? jsonDecode(raw) : [];
+      final List<dynamic> list = List<dynamic>.from(SafeJson.tryDecodeList(raw));
 
       final item = {
         'id': 'action_${DateTime.now().millisecondsSinceEpoch}_${list.length}',
@@ -43,7 +44,7 @@ class OfflineSyncService {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(queueName);
       if (raw == null || raw.isEmpty) return 0;
-      final List list = jsonDecode(raw);
+      final List list = SafeJson.tryDecodeList(raw);
       return list.length;
     } catch (e) { LoggerService.error('OfflineSyncService: error', e);
       return 0;
@@ -71,7 +72,7 @@ class OfflineSyncService {
       final raw = prefs.getString(queueName);
       if (raw == null || raw.isEmpty) return 0;
 
-      final List<dynamic> list = jsonDecode(raw);
+      final List<dynamic> list = SafeJson.tryDecodeList(raw);
       if (list.isEmpty) return 0;
 
       LoggerService.info('[OfflineSync] Flushing actions from $queueName...');

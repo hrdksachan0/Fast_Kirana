@@ -96,64 +96,66 @@ class Responsive {
     return 0.78;
   }
 
-  /// Dynamic Product Card Aspect Ratio (Universal Auto-Fit for Any Screen Size)
+  /// Dynamic Product Card Aspect Ratio (Universal Auto-Fit for Any Screen Size — Moto 360dp to Tablet)
   static double productCardAspectRatio(BuildContext context, {bool isCompact = false}) {
     final width = MediaQuery.of(context).size.width;
     if (isCompact) {
-      // Used in screens with side category rail (narrower column ~135-155px)
-      // Calibrated aspect ratio with larger hero image visibility (~215-225px height on mobile)
-      if (width < 360) return 0.63;
-      if (width < 400) return 0.65;
-      if (width < mobileBreakpoint) return 0.67;
-      if (width < tabletBreakpoint) return 0.71;
-      return 0.75;
+      // Used in screens with side category rail (narrower column ~125-150px)
+      // Calibrated to cardWidth * 1.12 photo + ~124px vertical content (supports 3-line titles cleanly)
+      if (width < 360) return 0.47;
+      if (width < 400) return 0.49;
+      if (width < mobileBreakpoint) return 0.51;
+      if (width < tabletBreakpoint) return 0.56;
+      return 0.60;
     }
-    // Full width 2-column grid (Sleek, comfortable proportions with larger hero product image)
-    if (width < 360) return 0.64;
-    if (width < 400) return 0.66;
-    if (width < mobileBreakpoint) return 0.68;
-    if (width < tabletBreakpoint) return 0.72;
-    return 0.76;
+    // Full width 2-column grid (Search, Wishlist, Subcategory — zero overflow on narrow Moto & wide Android)
+    if (width < 360) return 0.52;
+    if (width < 400) return 0.54;
+    if (width < mobileBreakpoint) return 0.56;
+    if (width < tabletBreakpoint) return 0.60;
+    return 0.64;
   }
 
   /// Unified Responsive Product Card Width for horizontal shelves
-  /// Engineered for Blinkit/Zepto 3-card visible horizontal viewport
+  /// Blinkit 2.65-card horizontal shelf layout (2 full bold cards + ~65% of 3rd card visible, big hero images)
   static double productCardShelfWidth(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width >= tabletBreakpoint) return 142.0;
-    if (width >= mobileBreakpoint) return 132.0;
+    if (width >= tabletBreakpoint) return 148.0;
+    if (width >= mobileBreakpoint) return 138.0;
 
-    // Exact dynamic 3-card viewport calculation across all phone screen sizes:
-    // (screenWidth - leftPadding 16 - rightPadding 16 - 2 separators of 8) / 3
-    final avail = width - 48.0;
-    return (avail / 3.0).clamp(108.0, 130.0);
+    // ~120px on narrow Moto (360dp) to ~130px on OnePlus (392dp) — 2 full cards + generous 3rd card
+    final pad = horizontalPadding(context) * 2;
+    return ((width - pad - 16.0) / 2.65).clamp(118.0, 134.0);
   }
 
   /// Unified Responsive Product Shelf Height for horizontal tracks (Compact & proportionate)
-  /// Calibrated dynamically to card width to prevent bottom price/name clipping on all Android devices
+  /// Calibrated dynamically to taller 1.12x photo card + 3-line title to prevent bottom clipping on all Android devices
   static double productShelfHeight(BuildContext context, {bool isFood = false}) {
     final width = MediaQuery.of(context).size.width;
     final cardW = productCardShelfWidth(context);
 
     if (isFood) {
-      if (width < 360) return 218.0;
-      if (width < 400) return 224.0;
-      if (width < mobileBreakpoint) return 232.0;
-      if (width < tabletBreakpoint) return 240.0;
-      return 248.0;
+      if (width < 360) return 212.0;
+      if (width < 400) return 218.0;
+      if (width < mobileBreakpoint) return 226.0;
+      if (width < tabletBreakpoint) return 236.0;
+      return 244.0;
     }
 
-    // Grocery cards: card width / 0.92 + 84px for pill, 2-line title, and price/stepper row.
-    // Calibrated so larger hero images render spacious and with zero overflow on all devices.
-    final dynamicHeight = (cardW / 0.92) + 84.0;
-    return dynamicHeight.clamp(206.0, 228.0);
+    // Grocery card: Taller 1.12x Photo + Grey Box Weight Bar (29) + Overhang (15) + Spacing (4) + Price (18) + 3-line Title (up to 48)
+    final dynamicHeight = (cardW * 1.12) + 109.0;
+    return dynamicHeight.clamp(235.0, 264.0);
   }
 
   /// Responsive scaled font size with safety clamping
   static double scaledFontSize(BuildContext context, double baseSize) {
     final width = MediaQuery.of(context).size.width;
-    if (width < 360) return (baseSize * 0.92).clamp(baseSize - 2.0, baseSize);
     if (width > tabletBreakpoint) return baseSize * 1.1;
+    // On small/narrow phones (e.g. Moto ~360dp), never degrade small labels below readable thresholds
+    if (width < 360) {
+      if (baseSize <= 13.0) return baseSize.clamp(11.0, baseSize);
+      return (baseSize * 0.96).clamp(baseSize - 1.0, baseSize);
+    }
     return baseSize;
   }
 

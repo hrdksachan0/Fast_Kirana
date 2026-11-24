@@ -105,7 +105,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                     Text(
                       'Select Payment Method',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 16.5),
+                        fontSize: Responsive.scaledFontSize(context, 17.5),
                         fontWeight: FontWeight.w900,
                         color: slateDark,
                         letterSpacing: -0.3,
@@ -115,7 +115,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                     Text(
                       'Safe & Encrypted 256-bit Checkout',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w600,
                         color: slateMuted,
                       ),
@@ -199,7 +199,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                               Text(
                                 'FastMinute Wallet',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontSize: Responsive.scaledFontSize(context, 14.5),
                                   fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
@@ -213,7 +213,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                                 child: Text(
                                   canPayWithWallet ? '⚡ 1-TAP' : 'LOW BALANCE',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w800,
                                     color: canPayWithWallet ? const Color(0xFF15803D) : const Color(0xFFB45309),
                                     letterSpacing: 0.2,
@@ -228,7 +228,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                                 ? 'Available: ₹${wallet.totalUsable.toStringAsFixed(0)} (Instant checkout)'
                                 : 'Balance: ₹${wallet.totalUsable.toStringAsFixed(0)} • Tap to Top-up',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontSize: Responsive.scaledFontSize(context, 12),
                               color: canPayWithWallet ? slateMuted : const Color(0xFFD97706),
                               fontWeight: FontWeight.w600,
                             ),
@@ -270,7 +270,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                             Text(
                               'Add',
                               style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
+                                fontSize: Responsive.scaledFontSize(context, 12),
                                 fontWeight: FontWeight.w800,
                                 color: AppDesignSystem.emerald700,
                               ),
@@ -334,7 +334,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                               Text(
                                 'Cash on Delivery',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontSize: Responsive.scaledFontSize(context, 14.5),
                                   fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
@@ -348,7 +348,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                                 child: Text(
                                   'Default',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w800,
                                     color: AppDesignSystem.green700,
                                     letterSpacing: 0.2,
@@ -361,7 +361,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                           Text(
                             'Cash or UPI QR on delivery',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontSize: Responsive.scaledFontSize(context, 12),
                               color: slateMuted,
                               fontWeight: FontWeight.w500,
                               height: 1.25,
@@ -443,7 +443,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                               Text(
                                 'Pay Online',
                                 style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 13.5),
+                                  fontSize: Responsive.scaledFontSize(context, 14.5),
                                   fontWeight: FontWeight.w800,
                                   color: slateDark,
                                 ),
@@ -458,7 +458,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                                 child: Text(
                                   '⚡ INSTANT',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 8.5),
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
                                     fontWeight: FontWeight.w800,
                                     color: AppDesignSystem.statusDeliveredText,
                                     letterSpacing: 0.2,
@@ -471,7 +471,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                           Text(
                             'Google Pay, PhonePe, Paytm, Cards & UPI',
                             style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 11),
+                              fontSize: Responsive.scaledFontSize(context, 12),
                               color: slateMuted,
                               fontWeight: FontWeight.w500,
                               height: 1.25,
@@ -520,7 +520,7 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                     child: Text(
                       '100% Safe & Encrypted • Instant Refunds',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontSize: Responsive.scaledFontSize(context, 12),
                         fontWeight: FontWeight.w700,
                         color: AppDesignSystem.slate600,
                       ),
@@ -554,8 +554,8 @@ class _CheckoutPaymentSelectorSheetState extends ConsumerState<CheckoutPaymentSe
                                 ? 'Pay ₹${widget.grandTotal.toInt()} Online'
                                 : 'Place Order • Pay ₹${widget.grandTotal.toInt()} on Delivery'),
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 13.5),
-                          fontWeight: FontWeight.w800,
+                          fontSize: Responsive.scaledFontSize(context, 15.0),
+                          fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: 0.2,
                         ),

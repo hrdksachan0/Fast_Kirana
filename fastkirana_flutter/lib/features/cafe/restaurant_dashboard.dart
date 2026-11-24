@@ -23,6 +23,7 @@ import '../../core/utils/restaurant_utils.dart';
 import '../common/widgets/battery_optimization_dialog.dart';
 import '../../widgets/app_confirmation_dialog.dart';
 import '../../core/utils/app_toast.dart';
+import '../../core/utils/safe_json.dart';
 import '../../data/models/order.dart';
 import '../../data/models/product.dart';
 import '../../data/repositories/order_repository.dart';
@@ -300,8 +301,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       final String? rawOrders = prefs.getString(cacheKey);
 
       if (rawOrders != null && rawOrders.isNotEmpty && mounted) {
-        final List list = jsonDecode(rawOrders);
-        var loadedOrders = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        final list = SafeJson.tryDecodeList(rawOrders);
+        var loadedOrders = list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
         if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty) {
           loadedOrders = loadedOrders.where((o) {
             final rId = o['restaurantId'] ?? o['restaurant']?['id'];
@@ -319,9 +320,9 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       final menuCacheKey = 'local_restaurant_menu_${_assignedRestaurantId ?? "default"}';
       final rawMenu = prefs.getString(menuCacheKey);
       if (rawMenu != null && rawMenu.isNotEmpty && mounted) {
-        final List menuList = jsonDecode(rawMenu);
+        final menuList = SafeJson.tryDecodeList(rawMenu);
         setState(() {
-          _menuItems = menuList.map((e) => Map<String, dynamic>.from(e)).toList();
+          _menuItems = menuList.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
         });
       }
 

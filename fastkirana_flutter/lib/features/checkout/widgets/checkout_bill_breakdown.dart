@@ -58,12 +58,12 @@ class CheckoutBillBreakdown extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+              Text('🧾', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14.5))),
               const SizedBox(width: 5),
               Text(
                 'Bill Summary',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 13),
+                  fontSize: Responsive.scaledFontSize(context, 14.5),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                 ),
@@ -109,7 +109,7 @@ class CheckoutBillBreakdown extends StatelessWidget {
               Text(
                 'To Pay',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 15),
+                  fontSize: Responsive.scaledFontSize(context, 16),
                   fontWeight: FontWeight.w900,
                   color: slateDark,
                 ),
@@ -117,7 +117,7 @@ class CheckoutBillBreakdown extends StatelessWidget {
               Text(
                 '₹${grandTotal.toInt()}',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 18),
+                  fontSize: Responsive.scaledFontSize(context, 20),
                   fontWeight: FontWeight.w900,
                   color: primaryRed,
                 ),
@@ -139,7 +139,7 @@ class CheckoutBillBreakdown extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: Responsive.scaledFontSize(context, 12.5),
+            fontSize: Responsive.scaledFontSize(context, 13.5),
             fontWeight: FontWeight.w500,
             color: AppDesignSystem.slate600,
           ),
@@ -147,7 +147,7 @@ class CheckoutBillBreakdown extends StatelessWidget {
         Text(
           value,
           style: GoogleFonts.inter(
-            fontSize: Responsive.scaledFontSize(context, 12.5),
+            fontSize: Responsive.scaledFontSize(context, 13.5),
             fontWeight: (isFree || isDiscount) ? FontWeight.w900 : FontWeight.w700,
             color: isFree
                 ? AppDesignSystem.green600

@@ -18,6 +18,7 @@ class OrderAlarmService {
   Timer? _alarmLoopTimer;
   Timer? _autoSilenceTimer;
   bool _isPlaying = false;
+  bool _isChimeBusy = false;
   bool _isMuted = false;
   String? _activeOrderId;
   bool _isModalShowing = false;
@@ -141,7 +142,9 @@ class OrderAlarmService {
     _autoSilenceTimer?.cancel();
     _autoSilenceTimer = null;
     try {
-      await _audioPlayer.stop();
+      if (_audioPlayer.state == PlayerState.playing) {
+        await _audioPlayer.stop();
+      }
     } catch (e, _) {
       LoggerService.error('OrderAlarmService: stop audio error', e);
     }
@@ -167,8 +170,12 @@ class OrderAlarmService {
         HapticFeedback.heavyImpact();
       });
 
+      if (_isChimeBusy) return;
+      _isChimeBusy = true;
       try {
-        await _audioPlayer.stop();
+        if (_audioPlayer.state == PlayerState.playing) {
+          await _audioPlayer.stop();
+        }
         await _audioPlayer.play(
           AssetSource('sounds/order_chime.mp3'),
           volume: 1.0,
@@ -177,6 +184,8 @@ class OrderAlarmService {
       } catch (e) {
         // Fallback to native system alert sound if asset playback is unavailable
         await SystemSound.play(SystemSoundType.alert);
+      } finally {
+        _isChimeBusy = false;
       }
     } catch (e, _) {
       LoggerService.error('OrderAlarmService: audio chime error', e);

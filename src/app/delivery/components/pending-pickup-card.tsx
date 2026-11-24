@@ -142,8 +142,8 @@ export default function PendingPickupCard({
               {(recipient.recipientName || 'C').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs font-black text-text-primary truncate block">
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                <span className="text-xs font-black text-text-primary break-words block">
                   {recipient.recipientName}
                 </span>
                 {recipient.isOrderForSomeone && (

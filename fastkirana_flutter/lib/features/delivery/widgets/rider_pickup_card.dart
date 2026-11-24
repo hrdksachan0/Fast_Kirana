@@ -464,6 +464,8 @@ class RiderPickupCard extends StatelessWidget {
                                   fontWeight: FontWeight.w900,
                                   color: slateDark,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                             ],

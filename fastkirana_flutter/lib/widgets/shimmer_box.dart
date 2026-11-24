@@ -89,71 +89,79 @@ class ProductCardSkeleton extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image skeleton
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-            child: Stack(
-              children: [
-                const ShimmerBox(
-                  width: double.infinity,
-                  height: 120,
-                  borderRadius: BorderRadius.zero,
-                ),
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: ShimmerBox(
-                    width: 44,
-                    height: 16,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Delivery time / tag
-                ShimmerBox(width: 50, height: 10, borderRadius: BorderRadius.circular(4)),
-                const SizedBox(height: 6),
-                // Title line 1
-                ShimmerBox(width: double.infinity, height: 12, borderRadius: BorderRadius.circular(4)),
-                const SizedBox(height: 4),
-                // Title line 2
-                ShimmerBox(width: 80, height: 12, borderRadius: BorderRadius.circular(4)),
-                const SizedBox(height: 8),
-                // Weight / Unit
-                ShimmerBox(width: 45, height: 10, borderRadius: BorderRadius.circular(4)),
-                const SizedBox(height: 10),
-                // Price & Add Button Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          width: width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Image skeleton
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                child: Stack(
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ShimmerBox(width: 42, height: 14, borderRadius: BorderRadius.circular(4)),
-                        const SizedBox(height: 3),
-                        ShimmerBox(width: 30, height: 9, borderRadius: BorderRadius.circular(3)),
-                      ],
+                    const ShimmerBox(
+                      width: double.infinity,
+                      height: 104,
+                      borderRadius: BorderRadius.zero,
                     ),
-                    ShimmerBox(
-                      width: 54,
-                      height: 28,
-                      borderRadius: BorderRadius.circular(8),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: ShimmerBox(
+                        width: 44,
+                        height: 16,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Delivery time / tag
+                    ShimmerBox(width: 50, height: 10, borderRadius: BorderRadius.circular(4)),
+                    const SizedBox(height: 5),
+                    // Title line 1
+                    ShimmerBox(width: double.infinity, height: 11, borderRadius: BorderRadius.circular(4)),
+                    const SizedBox(height: 4),
+                    // Title line 2
+                    ShimmerBox(width: 80, height: 11, borderRadius: BorderRadius.circular(4)),
+                    const SizedBox(height: 6),
+                    // Weight / Unit
+                    ShimmerBox(width: 45, height: 9, borderRadius: BorderRadius.circular(4)),
+                    const SizedBox(height: 8),
+                    // Price & Add Button Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ShimmerBox(width: 42, height: 13, borderRadius: BorderRadius.circular(4)),
+                            const SizedBox(height: 3),
+                            ShimmerBox(width: 30, height: 9, borderRadius: BorderRadius.circular(3)),
+                          ],
+                        ),
+                        ShimmerBox(
+                          width: 54,
+                          height: 26,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -255,13 +263,16 @@ class RestaurantCardSkeleton extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    ShimmerBox(width: 140, height: 16, borderRadius: BorderRadius.circular(5)),
+                    Expanded(
+                      child: ShimmerBox(width: double.infinity, height: 16, borderRadius: BorderRadius.circular(5)),
+                    ),
+                    const SizedBox(width: 8),
                     ShimmerBox(width: 48, height: 20, borderRadius: BorderRadius.circular(6)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 // Cuisine tags
-                ShimmerBox(width: 200, height: 11, borderRadius: BorderRadius.circular(4)),
+                ShimmerBox(width: 160, height: 11, borderRadius: BorderRadius.circular(4)),
                 const SizedBox(height: 12),
                 // Divider
                 Container(height: 1, color: AppDesignSystem.slate100),
@@ -270,14 +281,17 @@ class RestaurantCardSkeleton extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        ShimmerBox(width: 70, height: 12, borderRadius: BorderRadius.circular(4)),
-                        const SizedBox(width: 12),
-                        ShimmerBox(width: 60, height: 12, borderRadius: BorderRadius.circular(4)),
-                      ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(child: ShimmerBox(width: 60, height: 12, borderRadius: BorderRadius.circular(4))),
+                          const SizedBox(width: 8),
+                          Flexible(child: ShimmerBox(width: 50, height: 12, borderRadius: BorderRadius.circular(4))),
+                        ],
+                      ),
                     ),
-                    ShimmerBox(width: 80, height: 28, borderRadius: BorderRadius.circular(8)),
+                    const SizedBox(width: 8),
+                    ShimmerBox(width: 72, height: 28, borderRadius: BorderRadius.circular(8)),
                   ],
                 ),
               ],
@@ -300,14 +314,17 @@ class SectionHeaderSkeleton extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ShimmerBox(width: 130, height: 16, borderRadius: BorderRadius.circular(5)),
-              const SizedBox(height: 4),
-              ShimmerBox(width: 180, height: 11, borderRadius: BorderRadius.circular(4)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerBox(width: 130, height: 16, borderRadius: BorderRadius.circular(5)),
+                const SizedBox(height: 4),
+                ShimmerBox(width: 180, height: 11, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           ShimmerBox(width: 65, height: 24, borderRadius: BorderRadius.circular(12)),
         ],
       ),

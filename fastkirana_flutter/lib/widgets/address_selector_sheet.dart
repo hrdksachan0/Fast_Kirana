@@ -11,7 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:flutter_bounceable/flutter_bounceable.dart';
-
+import 'package:geolocator/geolocator.dart';
 import '../core/services/location_service.dart';
 
 import '../data/models/address.dart';
@@ -94,8 +94,41 @@ class AddressSelectorSheet extends ConsumerStatefulWidget {
 
 
 class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
-
   bool _isLocatingGps = false;
+  double? _userLat;
+  double? _userLng;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSilentUserGps();
+  }
+
+  Future<void> _loadSilentUserGps() async {
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm != LocationPermission.whileInUse && perm != LocationPermission.always) return;
+      final pos = await Geolocator.getLastKnownPosition();
+      if (pos != null && mounted) {
+        setState(() {
+          _userLat = pos.latitude;
+          _userLng = pos.longitude;
+        });
+      }
+    } catch (_) {}
+  }
+
+  double? _userDistanceMetersTo(Address addr) {
+    if (_userLat == null || _userLng == null) return null;
+    if (SelectedAddressNotifier.isDarkstoreFallbackPin(addr.latitude, addr.longitude)) return null;
+    return LocationService.getDistanceKm(
+          addr.latitude!,
+          addr.longitude!,
+          originLat: _userLat!,
+          originLng: _userLng!,
+        ) *
+        1000.0;
+  }
 
 
 
@@ -774,21 +807,25 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
 
 
 
+                final sortedAddresses = List<Address>.from(addresses);
+                if (_userLat != null && _userLng != null) {
+                  sortedAddresses.sort((a, b) {
+                    final da = _userDistanceMetersTo(a) ?? double.infinity;
+                    final db = _userDistanceMetersTo(b) ?? double.infinity;
+                    return da.compareTo(db);
+                  });
+                }
+
                 return ListView.separated(
-
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-
                   shrinkWrap: true,
-
                   physics: const BouncingScrollPhysics(),
-
-                  itemCount: addresses.length,
-
+                  itemCount: sortedAddresses.length,
                   separatorBuilder: (_, __) => const Divider(height: 1, color: AppDesignSystem.slate100),
-
                   itemBuilder: (context, idx) {
-
-                    final addr = addresses[idx];
+                    final addr = sortedAddresses[idx];
+                    final userDistM = _userDistanceMetersTo(addr);
+                    final isApproxPin = SelectedAddressNotifier.isDarkstoreFallbackPin(addr.latitude, addr.longitude);
 
                     final isSelected = widget.activeAddress != null &&
 
@@ -958,6 +995,50 @@ class _AddressSelectorSheetState extends ConsumerState<AddressSelectorSheet> {
                                           ),
 
                                         ),
+
+                                      if (userDistM != null) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: userDistM <= 500
+                                                ? const Color(0xFFDCFCE7)
+                                                : AppDesignSystem.slate100,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            userDistM <= 500
+                                                ? '${userDistM.round()}m • NEARBY'
+                                                : (userDistM >= 1000
+                                                    ? '${(userDistM / 1000).toStringAsFixed(1)} km away'
+                                                    : '${userDistM.round()}m away'),
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 9),
+                                              fontWeight: FontWeight.w800,
+                                              color: userDistM <= 500
+                                                  ? const Color(0xFF15803D)
+                                                  : AppDesignSystem.slate600,
+                                            ),
+                                          ),
+                                        ),
+                                      ] else if (isApproxPin) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEF3C7),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            'Approx Pin',
+                                            style: GoogleFonts.inter(
+                                              fontSize: Responsive.scaledFontSize(context, 9),
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFFB45309),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
 
                                       if (!isServiceable) ...[
 

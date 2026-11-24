@@ -166,19 +166,19 @@ class CheckoutBottomBar extends StatelessWidget {
                       Text(
                         'TOTAL BILL',
                         style: GoogleFonts.inter(
-                          fontSize: 10,
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w800,
                           color: slateMuted,
-                          letterSpacing: 0,
+                          letterSpacing: 0.2,
                         ),
                       ),
                       Text(
                         '₹${grandTotal.toInt()}',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 19),
+                          fontSize: Responsive.scaledFontSize(context, 20),
                           fontWeight: FontWeight.w900,
                           color: slateDark,
-                          letterSpacing: 0,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ],
@@ -190,7 +190,7 @@ class CheckoutBottomBar extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       clipBehavior: Clip.antiAlias,
                       child: Ink(
-                        height: 48,
+                        height: 50,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: isOffline
@@ -228,7 +228,7 @@ class CheckoutBottomBar extends StatelessWidget {
                                 },
                           borderRadius: BorderRadius.circular(12),
                           child: SizedBox(
-                            height: 48,
+                            height: 50,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 8),
@@ -253,10 +253,10 @@ class CheckoutBottomBar extends StatelessWidget {
                                                       : 'Proceed to Pay'),
                                               style: GoogleFonts.inter(
                                                 fontSize: Responsive.scaledFontSize(
-                                                    context, isOffline ? 11.5 : 13.5),
+                                                    context, isOffline ? 12.0 : 15.0),
                                                 fontWeight: FontWeight.w900,
                                                 color: Colors.white,
-                                                letterSpacing: 0,
+                                                letterSpacing: 0.1,
                                               ),
                                             ),
                                           ),

@@ -607,7 +607,7 @@ class _SeasonalSwitchUpCardState extends ConsumerState<SeasonalSwitchUpCard> {
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         itemCount: productsToShow.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        separatorBuilder: (_, __) => const SizedBox(width: 4),
                         itemBuilder: (context, index) {
                           final product = productsToShow[index];
                           return SizedBox(

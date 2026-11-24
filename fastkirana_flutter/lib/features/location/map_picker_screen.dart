@@ -9,9 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import '../../core/services/map_tile_cache_service.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../core/routes/page_transitions.dart';
@@ -27,11 +25,13 @@ import '../../core/utils/address_formatter.dart';
 class MapPickerScreen extends ConsumerStatefulWidget {
   final double? initialLat;
   final double? initialLng;
+  final bool returnLatLngOnly;
 
   const MapPickerScreen({
     super.key,
     this.initialLat,
     this.initialLng,
+    this.returnLatLngOnly = false,
   });
 
   @override
@@ -40,7 +40,9 @@ class MapPickerScreen extends ConsumerStatefulWidget {
 
 class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
     with SingleTickerProviderStateMixin {
-  late final MapController _mapController;
+  GoogleMapController? _googleMapController;
+  MapType _mapType = MapType.hybrid;
+  bool _isDraggingMap = false;
   late double _currentLat;
   late double _currentLng;
 
@@ -60,7 +62,6 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
   @override
   void initState() {
     super.initState();
-    _mapController = MapController();
     final currentHub = ref.read(currentStoreHubProvider);
     final selectedAddr = ref.read(selectedAddressProvider);
     final initLat = widget.initialLat ?? selectedAddr?.latitude ?? currentHub.latitude;
@@ -90,9 +91,19 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
 
   @override
   void dispose() {
-    _mapController.dispose();
+    _googleMapController?.dispose();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  void _animateTo(double lat, double lng, {double zoom = 17.5}) {
+    _currentLat = lat;
+    _currentLng = lng;
+    _googleMapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: LatLng(lat, lng), zoom: zoom),
+      ),
+    );
   }
 
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -197,8 +208,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
           timeLimit: const Duration(seconds: 8),
         );
 
-        final target = LatLng(pos.latitude, pos.longitude);
-        _mapController.move(target, 16.5);
+        _animateTo(pos.latitude, pos.longitude, zoom: 17.8);
         await _updateLocationDetails(pos.latitude, pos.longitude);
       }
     } catch (e, _) { LoggerService.error('MapPickerScreen: silent catch', e); }
@@ -218,8 +228,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
         currentArea: _areaName,
         activeHubs: _activeHubs,
         onLocationSelected: (lat, lng, name, address) {
-          final target = LatLng(lat, lng);
-          _mapController.move(target, 16.8);
+          _animateTo(lat, lng, zoom: 17.8);
           _updateLocationDetails(lat, lng);
         },
       ),
@@ -232,162 +241,185 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
       backgroundColor: AppDesignSystem.slate100,
       body: Stack(
         children: [
-          // 1. 100% REAL INTERACTIVE OPENSTREETMAP / CARTO TILES VIEWPORT
+          // 1. GOOGLE MAPS HYBRID (HD Satellite Rooftops + Road/Shop Labels)
           Positioned.fill(
-            child: FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: LatLng(_currentLat, _currentLng),
-                initialZoom: 16.0,
-                minZoom: 11.0,
-                maxZoom: 18.5,
-                onPositionChanged: (camera, hasGesture) {
-                  if (hasGesture) {
-                    _updateLocationDetails(camera.center.latitude, camera.center.longitude);
-                  }
-                },
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: LatLng(_currentLat, _currentLng),
+                zoom: 17.5,
               ),
-              children: [
-                // Clean high-resolution CartoDB / OSM tiles with offline disk caching
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.fastkirana.app',
-                  tileProvider: CachedMapTileProvider(),
-                ),
-
-                // Dynamic Multi-Hub Service Zone Circular Boundaries
-                CircleLayer(
-                  circles: (_activeHubs.isNotEmpty ? _activeHubs : StoreHub.defaultHubs).map((hub) {
-                    final isThisMatched = _matchedHub?.id == hub.id;
-                    final isInsideThis = _isServiceable && isThisMatched;
-                    return CircleMarker(
-                      point: LatLng(hub.latitude, hub.longitude),
-                      radius: (hub.deliveryRadiusKm * 1000).toDouble(),
-                      useRadiusInMeter: true,
-                      color: isInsideThis
-                          ? AppDesignSystem.green600.withValues(alpha: 0.12)
-                          : (isThisMatched
-                              ? AppDesignSystem.orange600.withValues(alpha: 0.09)
-                              : const Color(0xFF6366F1).withValues(alpha: 0.05)),
-                      borderColor: isInsideThis
-                          ? AppDesignSystem.green600.withValues(alpha: 0.75)
-                          : (isThisMatched
-                              ? AppDesignSystem.orange600.withValues(alpha: 0.5)
-                              : const Color(0xFF6366F1).withValues(alpha: 0.35)),
-                      borderStrokeWidth: isThisMatched ? 2.5 : 1.5,
-                    );
-                  }).toList(),
-                ),
-              ],
+              mapType: _mapType,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              compassEnabled: false,
+              mapToolbarEnabled: false,
+              buildingsEnabled: true,
+              tiltGesturesEnabled: false,
+              padding: const EdgeInsets.only(bottom: 220, top: 96),
+              onMapCreated: (controller) {
+                _googleMapController = controller;
+              },
+              onCameraMoveStarted: () {
+                if (!_isDraggingMap && mounted) {
+                  setState(() => _isDraggingMap = true);
+                }
+              },
+              onCameraMove: (position) {
+                _currentLat = position.target.latitude;
+                _currentLng = position.target.longitude;
+              },
+              onCameraIdle: () {
+                if (_isDraggingMap && mounted) {
+                  setState(() => _isDraggingMap = false);
+                  HapticFeedback.selectionClick();
+                }
+                _updateLocationDetails(_currentLat, _currentLng);
+              },
+              circles: (_activeHubs.isNotEmpty ? _activeHubs : StoreHub.defaultHubs).map((hub) {
+                final isThisMatched = _matchedHub?.id == hub.id;
+                final isInsideThis = _isServiceable && isThisMatched;
+                return Circle(
+                  circleId: CircleId('hub_zone_${hub.id}'),
+                  center: LatLng(hub.latitude, hub.longitude),
+                  radius: (hub.deliveryRadiusKm * 1000).toDouble(),
+                  fillColor: isInsideThis
+                      ? AppDesignSystem.green600.withValues(alpha: 0.10)
+                      : (isThisMatched
+                          ? AppDesignSystem.orange600.withValues(alpha: 0.08)
+                          : const Color(0xFF6366F1).withValues(alpha: 0.04)),
+                  strokeColor: isInsideThis
+                      ? AppDesignSystem.green600.withValues(alpha: 0.75)
+                      : (isThisMatched
+                          ? AppDesignSystem.orange600.withValues(alpha: 0.5)
+                          : const Color(0xFF6366F1).withValues(alpha: 0.35)),
+                  strokeWidth: isThisMatched ? 2 : 1,
+                );
+              }).toSet(),
             ),
           ),
 
-          // 2. CENTER PIN MARKER WITH BOUNCING SHADOW (Swiggy Style)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 44),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Floating Tooltip Badge (Modern Glassmorphic Pill)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: _isServiceable ? const Color(0xFF0F172A) : const Color(0xFF991B1B),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: _isServiceable
-                            ? Colors.white.withValues(alpha: 0.18)
-                            : const Color(0xFFF87171).withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 14,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isServiceable ? Icons.electric_bolt_rounded : Icons.location_off_rounded,
-                          size: 14,
-                          color: _isServiceable ? const Color(0xFFFBBF24) : Colors.white,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _isServiceable
-                              ? (_distanceKm > 0.0 && _distanceKm.isFinite
-                                  ? 'Delivering here • ${_distanceKm.toStringAsFixed(1)} km from hub'
-                                  : 'Delivering to this point')
-                              : 'Location outside delivery area',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 11.5),
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: 0.1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Pin Icon with Layered Radiant Glow
-                  AnimatedBuilder(
-                    animation: _pulseAnim,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _pulseAnim.value,
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      width: 52,
-                      height: 52,
+          // 2. CENTER PIN MARKER WITH SMOOTH BLINKIT-STYLE LIFT ON DRAG
+          IgnorePointer(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 264),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Floating Tooltip Badge (Modern Glassmorphic Pill)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      transform: Matrix4.translationValues(0, _isDraggingMap ? -10 : 0, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: _isServiceable
-                              ? [const Color(0xFFFF8A00), const Color(0xFFE20A22)]
-                              : [const Color(0xFFEF4444), const Color(0xFF991B1B)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        color: _isServiceable ? const Color(0xFF0F172A) : const Color(0xFF991B1B),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: _isServiceable
+                              ? Colors.white.withValues(alpha: 0.22)
+                              : const Color(0xFFF87171).withValues(alpha: 0.45),
+                          width: 1,
                         ),
-                        border: Border.all(color: Colors.white, width: 3.5),
                         boxShadow: [
                           BoxShadow(
-                            color: (_isServiceable ? const Color(0xFFE20A22) : const Color(0xFFDC2626))
-                                .withValues(alpha: 0.45),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
+                            color: Colors.black.withValues(alpha: 0.32),
+                            blurRadius: 14,
+                            offset: const Offset(0, 5),
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.location_on_rounded,
-                          size: 28,
-                          color: Colors.white,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isDraggingMap
+                                ? Icons.pan_tool_alt_rounded
+                                : (_isServiceable ? Icons.electric_bolt_rounded : Icons.location_off_rounded),
+                            size: 14,
+                            color: _isServiceable ? const Color(0xFFFBBF24) : Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isDraggingMap
+                                ? 'Move pin onto your house gate'
+                                : (_isServiceable
+                                    ? (_distanceKm > 0.0 && _distanceKm.isFinite
+                                        ? 'Delivering here • ${_distanceKm.toStringAsFixed(1)} km from hub'
+                                        : 'Delivering to this point')
+                                    : 'Location outside delivery area'),
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 11.5),
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Pin Icon with Layered Radiant Glow + Smooth Drag Lift
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      transform: Matrix4.translationValues(0, _isDraggingMap ? -12 : 0, 0),
+                      child: AnimatedBuilder(
+                        animation: _pulseAnim,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _isDraggingMap ? 1.08 : _pulseAnim.value,
+                            child: child,
+                          );
+                        },
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: _isServiceable
+                                  ? [const Color(0xFFFF8A00), const Color(0xFFE20A22)]
+                                  : [const Color(0xFFEF4444), const Color(0xFF991B1B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            border: Border.all(color: Colors.white, width: 3.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (_isServiceable ? const Color(0xFFE20A22) : const Color(0xFFDC2626))
+                                    .withValues(alpha: 0.5),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.location_on_rounded,
+                              size: 27,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
+                    const SizedBox(height: 5),
 
-                  // Pin Drop Shadow Dot
-                  Container(
-                    width: 14,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(10),
+                    // Pin Drop Shadow Dot (shrinks when pin lifts)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: _isDraggingMap ? 8 : 14,
+                      height: _isDraggingMap ? 4 : 5,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: _isDraggingMap ? 0.5 : 0.35),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -493,7 +525,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                         return Bounceable(
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            _mapController.move(LatLng(hub.latitude, hub.longitude), 16.0);
+                            _animateTo(hub.latitude, hub.longitude, zoom: 16.5);
                             _updateLocationDetails(hub.latitude, hub.longitude);
                           },
                           child: Container(
@@ -542,36 +574,99 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
             ),
           ),
 
-          // 4. FLOATING "CURRENT LOCATION" BUTTON (Sleek circular Swiggy/Zepto style)
+          // 4. FLOATING MAP TYPE TOGGLE (Satellite / Map) + "USE CURRENT LOCATION" PILL
           Positioned(
             right: 16,
-            bottom: 230,
-            child: Bounceable(
-              onTap: _fetchCurrentGpsLocation,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.14),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
+            bottom: 242,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Satellite / Normal Map Toggle Pill
+                Bounceable(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _mapType = _mapType == MapType.hybrid ? MapType.normal : MapType.hybrid;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _mapType == MapType.hybrid ? Icons.map_rounded : Icons.satellite_alt_rounded,
+                          size: 16,
+                          color: const Color(0xFF4ADE80),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _mapType == MapType.hybrid ? 'Map View' : 'Satellite',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 11.5),
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Center(
-                  child: _isLocating
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2.2, color: AppDesignSystem.orange600),
-                        )
-                      : const Icon(Icons.my_location_rounded, size: 22, color: AppDesignSystem.orange600),
+                const SizedBox(height: 10),
+                // Blinkit-style "Use Current Location" Pill Button
+                Bounceable(
+                  onTap: _fetchCurrentGpsLocation,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppDesignSystem.orange200, width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.16),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _isLocating
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2.2, color: AppDesignSystem.orange600),
+                              )
+                            : const Icon(Icons.my_location_rounded, size: 18, color: AppDesignSystem.orange600),
+                        const SizedBox(width: 7),
+                        Text(
+                          _isLocating ? 'Locating...' : 'Use Current Location',
+                          style: GoogleFonts.inter(
+                            fontSize: Responsive.scaledFontSize(context, 12),
+                            fontWeight: FontWeight.w800,
+                            color: AppDesignSystem.orange600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
 
@@ -788,6 +883,16 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
                         }
 
                         HapticFeedback.mediumImpact();
+                        if (widget.returnLatLngOnly) {
+                          nav.pop<Map<String, dynamic>>({
+                            'lat': _currentLat,
+                            'lng': _currentLng,
+                            'areaName': _areaName,
+                            'fullAddress': _fullAddress,
+                            'distanceKm': _distanceKm,
+                          });
+                          return;
+                        }
                         final savedAddress = await nav.push<Address>(
                           FadeSlideRoute(
                             page: DoorstepDetailsScreen(

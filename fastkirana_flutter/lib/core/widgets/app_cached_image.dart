@@ -52,8 +52,8 @@ class AppCachedImage extends StatelessWidget {
     this.errorWidget,
     this.memCacheWidth = 400,
     this.memCacheHeight,
-    this.maxWidthDiskCache = 800,
-    this.maxHeightDiskCache = 800,
+    this.maxWidthDiskCache,
+    this.maxHeightDiskCache,
   });
 
   /// Normalize raw image URL to a fully-qualified CDN or API https URL
@@ -79,8 +79,6 @@ class AppCachedImage extends StatelessWidget {
     return CachedNetworkImageProvider(
       normalized,
       cacheManager: FastKiranaImageCacheManager.instance,
-      maxWidth: maxWidth ?? 600,
-      maxHeight: maxHeight ?? 600,
     );
   }
 
@@ -127,8 +125,6 @@ class AppCachedImage extends StatelessWidget {
         CachedNetworkImageProvider(
           normalized,
           cacheManager: FastKiranaImageCacheManager.instance,
-          maxWidth: memCacheWidth,
-          maxHeight: memCacheHeight,
         ),
         context,
       );
@@ -153,8 +149,6 @@ class AppCachedImage extends StatelessWidget {
         fit: fit,
         memCacheWidth: memCacheWidth,
         memCacheHeight: memCacheHeight,
-        maxWidthDiskCache: maxWidthDiskCache,
-        maxHeightDiskCache: maxHeightDiskCache,
         fadeInDuration: Duration.zero,
         fadeOutDuration: Duration.zero,
         useOldImageOnUrlChange: true,

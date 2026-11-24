@@ -47,12 +47,12 @@ class CheckoutItemsReviewCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 13))),
+                  Text('🛍️', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 14))),
                   const SizedBox(width: 5),
                   Text(
                     'Order Items Review',
                     style: GoogleFonts.inter(
-                      fontSize: Responsive.scaledFontSize(context, 12.5),
+                      fontSize: Responsive.scaledFontSize(context, 13.5),
                       fontWeight: FontWeight.w900,
                       color: AppDesignSystem.slate900,
                     ),
@@ -60,7 +60,7 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7.5, vertical: 2.5),
                 decoration: BoxDecoration(
                   color: AppDesignSystem.slate100,
                   borderRadius: BorderRadius.circular(6),
@@ -68,7 +68,7 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                 child: Text(
                   '${items.length} ${items.length == 1 ? 'item' : 'items'}',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 10),
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w700,
                     color: AppDesignSystem.slate500,
                   ),
@@ -92,12 +92,12 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
+                      Text('📦', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 4),
                       Text(
                         'Grocery & Daily Essentials',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w800,
                           color: AppDesignSystem.primary,
                         ),
@@ -106,7 +106,7 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                       Text(
                         'Darkstore',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9),
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w600,
                           color: AppDesignSystem.slate500,
                         ),
@@ -138,12 +138,12 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 11))),
+                      Text('🥘', style: TextStyle(fontSize: Responsive.scaledFontSize(context, 12))),
                       const SizedBox(width: 4),
                       Text(
                         outletName,
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontSize: Responsive.scaledFontSize(context, 12),
                           fontWeight: FontWeight.w800,
                           color: AppDesignSystem.orange600,
                         ),
@@ -152,7 +152,7 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                       Text(
                         'Fresh Kitchen',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 9),
+                          fontSize: Responsive.scaledFontSize(context, 10.5),
                           fontWeight: FontWeight.w600,
                           color: AppDesignSystem.orange600,
                         ),
@@ -179,12 +179,12 @@ class CheckoutItemsReviewCard extends StatelessWidget {
           if (item.product.imageUrl != null && item.product.imageUrl!.isNotEmpty)
             AppCachedImage(
               imageUrl: item.product.imageUrl,
-              width: 28,
-              height: 28,
+              width: 32,
+              height: 32,
               fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(6),
-              memCacheWidth: 56,
-              memCacheHeight: 56,
+              memCacheWidth: 64,
+              memCacheHeight: 64,
             ),
           const SizedBox(width: 8),
           Expanded(
@@ -194,7 +194,7 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                 Text(
                   item.product.name,
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 11),
+                    fontSize: Responsive.scaledFontSize(context, 12.5),
                     fontWeight: FontWeight.w700,
                     color: AppDesignSystem.slate900,
                     height: 1.25,
@@ -203,11 +203,11 @@ class CheckoutItemsReviewCard extends StatelessWidget {
                   softWrap: true,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 1.5),
                 Text(
                   '${item.product.unit.isNotEmpty ? item.product.unit : "1 unit"} × ${item.quantity}',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 9.5),
+                    fontSize: Responsive.scaledFontSize(context, 11),
                     fontWeight: FontWeight.w500,
                     color: AppDesignSystem.slate500,
                   ),
@@ -219,7 +219,7 @@ class CheckoutItemsReviewCard extends StatelessWidget {
           Text(
             '₹${(item.product.price * item.quantity).toInt()}',
             style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 11.5),
+              fontSize: Responsive.scaledFontSize(context, 13),
               fontWeight: FontWeight.w800,
               color: AppDesignSystem.slate900,
             ),

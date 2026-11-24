@@ -438,6 +438,7 @@ class _SwiggySlideToCancelState extends State<SwiggySlideToCancel>
     _springAnimation = Tween<double>(begin: 0, end: 0).animate(
       CurvedAnimation(parent: _springController, curve: Curves.easeOutBack),
     )..addListener(() {
+        if (!mounted) return;
         setState(() {
           _dragPosition = _springAnimation.value;
         });

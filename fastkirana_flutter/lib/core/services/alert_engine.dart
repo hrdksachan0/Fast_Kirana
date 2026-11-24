@@ -11,11 +11,16 @@ import 'order_alarm_service.dart';
 
 class AlertEngine {
   static final AudioPlayer _audioPlayer = AudioPlayer();
+  static bool _isAudioBusy = false;
 
   /// Play one-shot low latency asset sound
   static Future<void> playAssetSound(String assetPath) async {
+    if (_isAudioBusy) return;
+    _isAudioBusy = true;
     try {
-      await _audioPlayer.stop();
+      if (_audioPlayer.state == PlayerState.playing) {
+        await _audioPlayer.stop();
+      }
       await _audioPlayer.play(
         AssetSource(assetPath),
         volume: 0.9,
@@ -25,6 +30,8 @@ class AlertEngine {
       try {
         await SystemSound.play(SystemSoundType.alert);
       } catch (_) {}
+    } finally {
+      _isAudioBusy = false;
     }
   }
 

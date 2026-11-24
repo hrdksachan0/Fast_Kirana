@@ -30,7 +30,7 @@ class CheckoutSavingsBanner extends StatelessWidget {
           Text(
             '₹${totalSavings.toStringAsFixed(0)} saved! On this order',
             style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 11.5),
+              fontSize: Responsive.scaledFontSize(context, 12.5),
               fontWeight: FontWeight.w800,
               color: AppDesignSystem.statusDeliveredText,
             ),

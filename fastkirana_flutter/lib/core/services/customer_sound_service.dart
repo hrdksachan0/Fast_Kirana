@@ -11,6 +11,7 @@ class CustomerSoundService {
 
   AudioPlayer? _player;
   bool _isInitialized = false;
+  bool _isAudioBusy = false;
 
   Future<void> _initPlayer() async {
     if (_isInitialized && _player != null) return;
@@ -62,16 +63,25 @@ class CustomerSoundService {
       }
 
       // 2. Audio Chime Playback: Swiggy/Zomato Eb-Major signature sparkle chime (calm, subtle, non-intrusive)
-      await _initPlayer();
-      if (_player != null) {
-        await _player!.stop();
-        await _player!.play(
-          AssetSource('sounds/order_placed_celebrate.wav'),
-          volume: isOnline ? 0.60 : 0.55,
-          mode: PlayerMode.lowLatency,
-        );
-      } else {
-        await SystemSound.play(SystemSoundType.alert);
+      if (_isAudioBusy) return;
+      _isAudioBusy = true;
+      try {
+        await _initPlayer();
+        final player = _player;
+        if (player != null) {
+          if (player.state == PlayerState.playing) {
+            await player.stop();
+          }
+          await player.play(
+            AssetSource('sounds/order_placed_celebrate.wav'),
+            volume: isOnline ? 0.60 : 0.55,
+            mode: PlayerMode.lowLatency,
+          );
+        } else {
+          await SystemSound.play(SystemSoundType.alert);
+        }
+      } finally {
+        _isAudioBusy = false;
       }
     } catch (e, st) {
       LoggerService.error('CustomerSoundService: audio playback error', e, st);

@@ -16,40 +16,42 @@ class PriceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           priceText,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: s * 14.0,
-            fontWeight: FontWeight.w900,
-            color: const Color(0xFF0F172A),
-            letterSpacing: 0,
+          style: GoogleFonts.inter(
+            fontSize: s * 16.5,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1F2937),
+            letterSpacing: -0.35,
             height: 1.1,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        if (mrpText != null)
-          Padding(
-            padding: EdgeInsets.only(top: s * 1.0),
+        if (mrpText != null) ...[
+          SizedBox(width: s * 4.5),
+          Flexible(
             child: Text(
               mrpText!,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: s * 10.0,
-                fontWeight: FontWeight.w600,
+              style: GoogleFonts.inter(
+                fontSize: s * 12.0,
+                fontWeight: FontWeight.w500,
                 decoration: TextDecoration.lineThrough,
-                decorationColor: const Color(0xFF64748B),
-                color: const Color(0xFF64748B),
-                letterSpacing: 0,
+                decorationColor: const Color(0xFF6B7280),
+                decorationThickness: 1.3,
+                color: const Color(0xFF6B7280),
+                letterSpacing: -0.1,
                 height: 1.1,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
+        ],
       ],
     );
   }

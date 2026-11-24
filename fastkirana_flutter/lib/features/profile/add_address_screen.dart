@@ -8,6 +8,7 @@ import '../../core/services/location_service.dart';
 import '../../core/theme/design_system.dart';
 import '../../data/models/address.dart';
 import '../../providers/address_provider.dart';
+import '../location/map_picker_screen.dart';
 
 class AddAddressScreen extends ConsumerStatefulWidget {
   final Address? initialAddress;
@@ -562,6 +563,69 @@ class _AddAddressScreenState extends ConsumerState<AddAddressScreen>
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          // Bottom Left: Pick Exact Pin on Google Maps Hybrid
+          Positioned(
+            bottom: 12,
+            left: 16,
+            child: GestureDetector(
+              onTap: () async {
+                HapticFeedback.lightImpact();
+                final picked = await Navigator.push<Map<String, dynamic>>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MapPickerScreen(
+                      initialLat: _latitude,
+                      initialLng: _longitude,
+                      returnLatLngOnly: true,
+                    ),
+                  ),
+                );
+                if (picked != null && mounted) {
+                  setState(() {
+                    _latitude = (picked['lat'] as num?)?.toDouble() ?? _latitude;
+                    _longitude = (picked['lng'] as num?)?.toDouble() ?? _longitude;
+                    _distanceKm = (picked['distanceKm'] as num?)?.toDouble() ?? _distanceKm;
+                    final full = picked['fullAddress']?.toString() ?? '';
+                    if (full.isNotEmpty) _detectedFormattedAddress = full;
+                    final area = picked['areaName']?.toString() ?? '';
+                    if (area.isNotEmpty && _areaController.text.trim().isEmpty) {
+                      _areaController.text = area;
+                    }
+                  });
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF008744),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.satellite_alt_rounded, size: 14, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Adjust on Map',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

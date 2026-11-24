@@ -138,23 +138,26 @@ class HomeInfiniteFeed {
         ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: Responsive.isTablet(context) ? 4 : 3,
-              childAspectRatio: Responsive.isTablet(context)
-                  ? 0.74
-                  : (MediaQuery.of(context).size.width < 360 ? 0.58 : 0.605),
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 10,
-            ),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final columns = Responsive.isTablet(context) ? 4 : 3;
-                final cardWidth = (MediaQuery.of(context).size.width - 24 - (columns - 1) * 8) / columns;
-                return ProductCardSkeleton(isCompact: true, width: cardWidth);
-              },
-              childCount: 6,
-            ),
+          sliver: Builder(
+            builder: (context) {
+              final columns = Responsive.isTablet(context) ? 4 : 3;
+              const hSpacing = 5.0;
+              final cardWidth = (MediaQuery.of(context).size.width - 24 - (columns - 1) * hSpacing) / columns;
+              return SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  mainAxisExtent: (cardWidth * 1.12) + 118.0,
+                  crossAxisSpacing: hSpacing,
+                  mainAxisSpacing: 6,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return ProductCardSkeleton(isCompact: true, width: cardWidth);
+                  },
+                  childCount: 6,
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -219,32 +222,35 @@ class HomeInfiniteFeed {
               ),
             )
           else ...[
-            // 3-Column Virtualized SliverGrid (Blinkit / Zepto quick-commerce density)
+            // 3-Column Virtualized SliverGrid (exact mainAxisExtent = 0px overflow on Moto, OnePlus & Tablet!)
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              sliver: SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: Responsive.isTablet(context) ? 4 : 3,
-                  childAspectRatio: Responsive.isTablet(context)
-                      ? 0.72
-                      : (MediaQuery.of(context).size.width < 360 ? 0.55 : 0.575),
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 10,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final product = visibleProducts[index];
-                    final columns = Responsive.isTablet(context) ? 4 : 3;
-                    final cardWidth = (MediaQuery.of(context).size.width - 24 - (columns - 1) * 8) / columns;
-                    return ProductCard(
-                      key: ValueKey('infinite_grid_${product.id}'),
-                      product: product,
-                      isCompact: true,
-                      width: cardWidth,
-                    );
-                  },
-                  childCount: visibleProducts.length,
-                ),
+              sliver: Builder(
+                builder: (context) {
+                  final columns = Responsive.isTablet(context) ? 4 : 3;
+                  const hSpacing = 5.0;
+                  final cardWidth = (MediaQuery.of(context).size.width - 24 - (columns - 1) * hSpacing) / columns;
+                  return SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisExtent: (cardWidth * 1.12) + 118.0,
+                      crossAxisSpacing: hSpacing,
+                      mainAxisSpacing: 6,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final product = visibleProducts[index];
+                        return ProductCard(
+                          key: ValueKey('infinite_grid_${product.id}'),
+                          product: product,
+                          isCompact: true,
+                          width: cardWidth,
+                        );
+                      },
+                      childCount: visibleProducts.length,
+                    ),
+                  );
+                },
               ),
             ),
 

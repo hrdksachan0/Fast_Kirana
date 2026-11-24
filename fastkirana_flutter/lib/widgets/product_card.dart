@@ -23,6 +23,7 @@ export 'product/product_dish_timing_badge.dart';
 import 'product/product_image_with_badge.dart';
 import 'product/product_price_tag.dart';
 import 'product/product_quantity_selector.dart';
+import 'product/blinkit_battery_meter.dart';
 
 // ─── Main ProductCard ─────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final imgUrl = widget.product.imageUrl;
     if (imgUrl != null && imgUrl.isNotEmpty && !imgUrl.startsWith('data:')) {
       final resolved = imgUrl.startsWith('/') ? 'https://www.fastkirana.in$imgUrl' : imgUrl;
-      precacheImage(CachedNetworkImageProvider(resolved, maxWidth: 400, maxHeight: 400), context).catchError((_) {});
+      precacheImage(CachedNetworkImageProvider(resolved), context).catchError((_) {});
     }
   }
 
@@ -149,11 +150,15 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final primaryColor = isFood ? const Color(0xFFEA580C) : const Color(0xFF16A34A);
     final gradientColors = isFood ? const [Color(0xFFEA580C), Color(0xFFF97316)] : const [Color(0xFF15803D), Color(0xFF16A34A)];
 
-    final imageHeight = widget.isCompact
-        ? (isFood ? s(98) : s(92))
-        : Responsive.isSmallMobile(context)
-            ? (isFood ? s(96) : s(90))
-            : (isFood ? 114 : 106) * _uiScale;
+    final imageHeight = isFood
+        ? (widget.isCompact
+            ? (cardWidth * 0.82).clamp(s(90.0), s(115.0))
+            : (cardWidth * 0.80).clamp(128.0, 155.0))
+        : widget.isCompact
+            ? s(92)
+            : Responsive.isSmallMobile(context)
+                ? s(90)
+                : 106 * _uiScale;
 
     String? bogoBadgeText;
     final restOffer = product.restaurant?.discountOffer;
@@ -207,8 +212,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
         textScaler: MediaQuery.of(context).textScaler.clamp(
-          minScaleFactor: 0.85,
-          maxScaleFactor: 1.05,
+          minScaleFactor: 1.0,
+          maxScaleFactor: 1.15,
         ),
       ),
       child: RepaintBoundary(
@@ -225,27 +230,25 @@ class _ProductCardState extends ConsumerState<ProductCard> {
             duration: const Duration(milliseconds: 140),
             child: Container(
               width: cardWidth,
-              padding: EdgeInsets.fromLTRB(
-                cardWidth < 125 ? s(4.0) : s(6.0),
-                cardWidth < 125 ? s(4.0) : s(6.0),
-                cardWidth < 125 ? s(4.0) : s(6.0),
-                cardWidth < 125 ? s(5.0) : s(6.5),
-              ),
+              padding: isFood
+                  ? EdgeInsets.fromLTRB(s(2.5), s(2.5), s(2.5), s(7.0))
+                  : EdgeInsets.zero,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isFood ? Colors.white : Colors.transparent,
                 borderRadius: BorderRadius.circular(s(14)),
-                border: Border.all(
-                  color: isFood ? const Color(0xFFFFEDD5) : const Color(0xFFF1F5F9),
-                  width: s(1.0),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                    blurRadius: s(10),
-                    offset: Offset(0, s(2.5)),
-                    spreadRadius: 0,
-                  ),
-                ],
+                border: isFood
+                    ? Border.all(color: const Color(0xFFFFEDD5), width: s(1.0))
+                    : null,
+                boxShadow: isFood
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                          blurRadius: s(10),
+                          offset: Offset(0, s(2.5)),
+                          spreadRadius: 0,
+                        ),
+                      ]
+                    : null,
               ),
               child: isFood
                   ? Column(
@@ -270,11 +273,11 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                           heroTag: widget.heroTag,
                           imageBuilder: widget.imageBuilder,
                         ),
-                        SizedBox(height: s(5)),
+                        SizedBox(height: s(4)),
 
                         // 2. VEG/NON-VEG + TITLE
                         ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: s(38)),
+                          constraints: BoxConstraints(minHeight: s(28), maxHeight: s(42)),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -283,24 +286,24 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                                 child: Text(
                                   product.name,
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: s(12.0),
+                                    fontSize: s(12.5),
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFF0F172A),
                                     height: 1.22,
                                     letterSpacing: 0,
                                   ),
-                                  maxLines: 3,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        SizedBox(height: s(3)),
+                        SizedBox(height: s(2)),
 
                         // 3. VARIANT PILL / UNIT
                         VariantPill(product: product, variants: variants, hasVariants: hasOptions, isOutOfStock: isOutOfStock, isFood: isFood, uiScale: _uiScale),
-                        SizedBox(height: s(4)),
+                        SizedBox(height: s(3)),
 
                         // 4. PRICE + ADD BUTTON
                         Row(
@@ -308,16 +311,18 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
-                              child: PriceRow(
-                                priceText: '₹${startingPrice.toInt()}',
-                                mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
-                                s: _uiScale,
+                              child: Padding(
+                                padding: EdgeInsets.only(left: s(5.0), bottom: s(5.0)),
+                                child: PriceRow(
+                                  priceText: '₹${startingPrice.toInt()}',
+                                  mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
+                                  s: _uiScale,
+                                ),
                               ),
                             ),
                             SizedBox(width: s(4)),
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () {}, // Blocks touches from leaking through to parent card
+                            Padding(
+                              padding: EdgeInsets.only(right: s(6.0), bottom: s(5.0)),
                               child: AddToCartButton(
                                 scaffoldContext: context,
                                 product: product,
@@ -341,36 +346,91 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // 1. HERO PRODUCT IMAGE (Proportionate aspect for compact, non-bulky cards)
-                        AspectRatio(
-                          aspectRatio: cardWidth < 125 ? 0.94 : 0.91,
+                        // 1. UPPER ENCLOSED GREY BOX WITH FLOATING BUTTON
+                        // Taller portrait photo area (cardWidth * 1.12) so product images look BIG & bold even in 3-card rows!
+                        SizedBox(
+                          height: (cardWidth * 1.12) + s(29) + s(15),
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              Positioned.fill(
+                              // The Grey Container Box (bottom: s(15) + right: s(3.5) keeps the protruding button 100% inside Stack hit-test bounds!)
+                              Positioned(
+                                top: 0,
+                                left: 0,
+                                right: s(3.5),
+                                bottom: s(15),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(s(9)),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Hero(
-                                    tag: widget.heroTag ?? 'product_image_${product.id}',
-                                    flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
-                                      final target = flightDirection == HeroFlightDirection.push
-                                          ? toHeroContext.widget
-                                          : fromHeroContext.widget;
-                                      return Material(
-                                        color: Colors.transparent,
-                                        child: target,
-                                      );
-                                    },
-                                    child: AppCachedImage(
-                                      imageUrl: product.imageUrl ?? '',
-                                      fit: BoxFit.contain,
-                                      width: double.infinity,
-                                      height: double.infinity,
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(s(13)),
+                                    border: Border.all(
+                                      color: const Color(0xFFE2E8F0),
+                                      width: s(1.0),
                                     ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Product Photo Box (full uncropped product on crisp white rounded frame)
+                                      Expanded(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(s(2)),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(s(11)),
+                                            child: Container(
+                                              color: Colors.white,
+                                              padding: EdgeInsets.all(s(3)),
+                                              child: (widget.heroTag != null && widget.heroTag!.isNotEmpty)
+                                                  ? Hero(
+                                                      tag: widget.heroTag!,
+                                                      flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                                                        final target = flightDirection == HeroFlightDirection.push
+                                                            ? toHeroContext.widget
+                                                            : fromHeroContext.widget;
+                                                        return Material(
+                                                          color: Colors.transparent,
+                                                          child: target,
+                                                        );
+                                                      },
+                                                      child: AppCachedImage(
+                                                        imageUrl: product.imageUrl ?? '',
+                                                        fit: BoxFit.contain,
+                                                        width: double.infinity,
+                                                        height: double.infinity,
+                                                      ),
+                                                    )
+                                                  : AppCachedImage(
+                                                      imageUrl: product.imageUrl ?? '',
+                                                      fit: BoxFit.contain,
+                                                      width: double.infinity,
+                                                      height: double.infinity,
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      // Thin Seam Divider Line
+                                      Container(
+                                        height: s(0.9),
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
+
+                                      // Weight / Unit Row (inside the grey box — generous room so '500 ml ˅' never truncates on 3-card shelf or Moto)
+                                      Container(
+                                        height: s(28),
+                                        padding: EdgeInsets.only(left: s(5), right: s(54)),
+                                        alignment: Alignment.centerLeft,
+                                        child: VariantPill(
+                                          product: product,
+                                          variants: variants,
+                                          hasVariants: hasOptions,
+                                          isOutOfStock: isOutOfStock,
+                                          isFood: isFood,
+                                          uiScale: _uiScale,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -378,12 +438,12 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               // Top-Left Badges (Discount % OFF / Bestseller)
                               if (resolvedDiscount > 0)
                                 Positioned(
-                                  top: s(3.5),
-                                  left: s(3.5),
+                                  top: s(4),
+                                  left: s(4),
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: s(4.5), vertical: s(1.8)),
+                                    padding: EdgeInsets.symmetric(horizontal: s(4.5), vertical: s(2)),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF16A34A),
+                                      color: const Color(0xFF0C831F),
                                       borderRadius: BorderRadius.circular(s(3.5)),
                                     ),
                                     child: Text(
@@ -399,10 +459,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                                 )
                               else if (product.isBestsellerProduct)
                                 Positioned(
-                                  top: s(3.5),
-                                  left: s(3.5),
+                                  top: s(4),
+                                  left: s(4),
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: s(4.5), vertical: s(1.8)),
+                                    padding: EdgeInsets.symmetric(horizontal: s(4.5), vertical: s(2)),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF2563EB),
                                       borderRadius: BorderRadius.circular(s(3.5)),
@@ -421,75 +481,80 @@ class _ProductCardState extends ConsumerState<ProductCard> {
 
                               // Wishlist Button on Top-Right
                               Positioned(
-                                top: s(3.5),
-                                right: s(3.5),
+                                top: s(3),
+                                right: s(6.5),
                                 child: WishlistButton(product: product, s: _uiScale),
                               ),
 
-                              // Bottom-Right Floating Green '+' / Stepper Button (Zepto Style) with Touch Isolation Shield
+                              // Blinkit Battery Meter Badge (Bottom-Left of photo)
                               Positioned(
-                                bottom: s(2),
-                                right: s(2),
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () {}, // Defense in depth: shield against opening product details
-                                  child: Padding(
-                                    padding: EdgeInsets.all(s(2)),
-                                    child: AddToCartButton(
-                                      scaffoldContext: context,
-                                      product: product,
-                                      inCartQty: inCartQty,
-                                      hasVariants: hasOptions,
-                                      isOutOfStock: isOutOfStock,
-                                      isTimingClosed: !timingStatus.isAvailableNow,
-                                      nextSlot: timingStatus.nextAvailableTimeStr,
-                                      isStoreOpen: isStoreOpen,
-                                      isFood: isFood,
-                                      gradientColors: gradientColors,
-                                      primaryColor: primaryColor,
-                                      uiScale: _uiScale,
-                                      isZeptoStyle: true,
-                                    ),
-                                  ),
+                                bottom: s(15 + 32),
+                                left: s(5),
+                                child: BlinkitBatteryMeter(
+                                  stock: totalStock,
+                                  uiScale: _uiScale,
+                                ),
+                              ),
+
+                              // Floating Overlapping ADD / Stepper Button (Anchored bottom-right of Stack)
+                              // Visually peeks 3.5px past the grey box while staying 100% inside Stack hit-test bounds
+                              Positioned(
+                                bottom: s(12),
+                                right: 0,
+                                child: AddToCartButton(
+                                  scaffoldContext: context,
+                                  product: product,
+                                  inCartQty: inCartQty,
+                                  hasVariants: hasOptions,
+                                  isOutOfStock: isOutOfStock,
+                                  isTimingClosed: !timingStatus.isAvailableNow,
+                                  nextSlot: timingStatus.nextAvailableTimeStr,
+                                  isStoreOpen: isStoreOpen,
+                                  isFood: isFood,
+                                  gradientColors: gradientColors,
+                                  primaryColor: primaryColor,
+                                  uiScale: _uiScale,
+                                  isZeptoStyle: false,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        SizedBox(height: s(3.5)),
 
-                        // 2. UNIT / VARIANT PILL
-                        VariantPill(
-                          product: product,
-                          variants: variants,
-                          hasVariants: hasOptions,
-                          isOutOfStock: isOutOfStock,
-                          isFood: isFood,
-                          uiScale: _uiScale,
-                        ),
+                        // Spacing between button and price
                         SizedBox(height: s(2)),
 
-                        // 3. PRICE ROW (₹Price, strikethrough ₹MRP)
-                        PriceRow(
-                          priceText: '₹${startingPrice.toInt()}',
-                          mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
-                          s: _uiScale,
-                        ),
-                        SizedBox(height: s(1.5)),
+                        // 2. UNBOXED BOTTOM AREA (Price Row + Title on clean white bg)
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: s(2)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Price Row (₹Price + strikethrough ₹MRP side-by-side)
+                              PriceRow(
+                                priceText: '₹${startingPrice.toInt()}',
+                                mrpText: startingMrp > startingPrice ? '₹${startingMrp.toInt()}' : null,
+                                s: _uiScale,
+                              ),
+                              SizedBox(height: s(2)),
 
-                        // 4. CLEAN TITLE (2 lines max, uniform height for perfect row alignment)
-                        ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: s(28), maxHeight: s(36)),
-                          child: Text(
-                            product.name,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: s(10.8),
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF0F172A),
-                              height: 1.2,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                              // Clean Title (Up to 3 lines — Blinkit editorial look, natural height)
+                              ConstrainedBox(
+                                constraints: BoxConstraints(minHeight: s(16), maxHeight: s(48)),
+                                child: Text(
+                                  product.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: s(12.5),
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF1F2937),
+                                    letterSpacing: -0.15,
+                                    height: 1.22,
+                                  ),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -527,33 +592,40 @@ class ProductCardSkeleton extends StatelessWidget {
           borderRadius: BorderRadius.circular(s(14)),
           border: Border.all(color: const Color(0xFFF1F5F9), width: s(1.0)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: isCompact ? s(92) : s(106),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(s(12)),
-              ),
-            ),
-            SizedBox(height: s(6)),
-            Container(width: s(70), height: s(9), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-            SizedBox(height: s(5)),
-            Container(width: double.infinity, height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-            SizedBox(height: s(5)),
-            Container(width: s(40), height: s(10), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-            SizedBox(height: s(6)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: cardWidth - s(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(width: s(36), height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
-                Container(width: s(52), height: s(26), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(6)))),
+                Container(
+                  height: isCompact ? s(92) : s(106),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(s(12)),
+                  ),
+                ),
+                SizedBox(height: s(6)),
+                Container(width: s(70), height: s(9), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+                SizedBox(height: s(5)),
+                Container(width: double.infinity, height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+                SizedBox(height: s(5)),
+                Container(width: s(40), height: s(10), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+                SizedBox(height: s(6)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(width: s(36), height: s(12), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(4)))),
+                    Container(width: s(52), height: s(26), decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(s(6)))),
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

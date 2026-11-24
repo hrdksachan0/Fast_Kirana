@@ -13,6 +13,7 @@ import 'package:confetti/confetti.dart';
 import 'package:dio/dio.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/rider_location_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
@@ -1423,6 +1424,35 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
         },
         if (isFirstSub && extra != null) ...extra,
       };
+    }
+
+    // Capture fresh doorstep GPS for 7-Guard Auto-Learn when marking DELIVERED
+    if (newStatus == 'DELIVERED') {
+      try {
+        final perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
+          Position? doorstepPos;
+          try {
+            doorstepPos = await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.high,
+              timeLimit: const Duration(milliseconds: 2200),
+            );
+          } catch (_) {
+            final last = await Geolocator.getLastKnownPosition();
+            if (last != null &&
+                DateTime.now().difference(last.timestamp).inSeconds.abs() <= 90) {
+              doorstepPos = last;
+            }
+          }
+          if (doorstepPos != null && doorstepPos.latitude != 0.0 && doorstepPos.longitude != 0.0) {
+            for (final payload in orderPayloads.values) {
+              payload['deliveryLat'] ??= doorstepPos.latitude;
+              payload['deliveryLng'] ??= doorstepPos.longitude;
+              payload['deliveryGpsAccuracy'] ??= doorstepPos.accuracy;
+            }
+          }
+        }
+      } catch (_) {}
     }
 
     // 1. Instant offline handling (0ms lag in elevator/basement)

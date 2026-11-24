@@ -146,8 +146,8 @@ export default function ActiveDeliveryCard({
                 <User className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <div className="text-xs font-black text-text-primary truncate">
+                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                  <div className="text-xs font-black text-text-primary break-words">
                     {recipient.recipientName}
                   </div>
                   {recipient.isOrderForSomeone && (

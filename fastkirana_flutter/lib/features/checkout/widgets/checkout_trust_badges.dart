@@ -53,7 +53,7 @@ class CheckoutTrustBadges extends StatelessWidget {
                     Text(
                       '100% Secure Checkout',
                       style: TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 14.0,
                         fontWeight: FontWeight.w800,
                         color: isDark ? AppDesignSystem.darkTextPrimary : AppDesignSystem.slate900,
                         letterSpacing: -0.2,
@@ -71,7 +71,7 @@ class CheckoutTrustBadges extends StatelessWidget {
                 Text(
                   'End-to-end encrypted 256-bit secure payments via UPI, Cards & NetBanking',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: isDark ? AppDesignSystem.darkTextSecondary : AppDesignSystem.slate500,
                   ),

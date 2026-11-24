@@ -68,7 +68,7 @@ class CheckoutReceiverCard extends StatelessWidget {
               Text(
                 isOrderingForSomeone ? 'Ordering for someone else' : 'Contact Details for Order',
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 11),
+                  fontSize: Responsive.scaledFontSize(context, 12),
                   fontWeight: FontWeight.w700,
                   color: AppDesignSystem.slate500,
                 ),
@@ -77,7 +77,7 @@ class CheckoutReceiverCard extends StatelessWidget {
               Bounceable(
                 onTap: () => _showEditReceiverModal(context),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.5, vertical: 3.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 9.5, vertical: 4.5),
                   decoration: BoxDecoration(
                     color: AppDesignSystem.orange50,
                     borderRadius: BorderRadius.circular(7),
@@ -86,12 +86,12 @@ class CheckoutReceiverCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.edit_outlined, size: 11, color: AppDesignSystem.orange600),
+                      const Icon(Icons.edit_outlined, size: 12, color: AppDesignSystem.orange600),
                       const SizedBox(width: 3),
                       Text(
                         isOrderingForSomeone ? 'Edit' : '+ Change',
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w800,
                           color: AppDesignSystem.orange600,
                         ),
@@ -113,7 +113,7 @@ class CheckoutReceiverCard extends StatelessWidget {
               Text(
                 customerName,
                 style: GoogleFonts.inter(
-                  fontSize: Responsive.scaledFontSize(context, 12.5),
+                  fontSize: Responsive.scaledFontSize(context, 13.5),
                   fontWeight: FontWeight.w900,
                   color: AppDesignSystem.slate900,
                 ),
@@ -125,22 +125,22 @@ class CheckoutReceiverCard extends StatelessWidget {
                 Text(
                   '•   $customerPhone',
                   style: GoogleFonts.inter(
-                    fontSize: Responsive.scaledFontSize(context, 12),
+                    fontSize: Responsive.scaledFontSize(context, 13),
                     fontWeight: FontWeight.w700,
                     color: AppDesignSystem.slate600,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 1.5),
+          const SizedBox(height: 2),
           Text(
             isOrderingForSomeone
                 ? 'Delivery rider will call this receiver number at doorstep'
                 : 'Order tracking and delivery updates will be sent here',
             style: GoogleFonts.inter(
-              fontSize: Responsive.scaledFontSize(context, 10),
+              fontSize: Responsive.scaledFontSize(context, 11.5),
               fontWeight: FontWeight.w500,
-              color: isOrderingForSomeone ? AppDesignSystem.orange600 : AppDesignSystem.slate400,
+              color: isOrderingForSomeone ? AppDesignSystem.orange600 : AppDesignSystem.slate500,
             ),
           ),
         ],

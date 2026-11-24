@@ -496,13 +496,16 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
         ? allOrders.length
         : allOrders.where((o) => DeliveryRoutes.detect(o).key == _selectedRoute).length;
 
+    final showFiltersBar = allOrders.length >= 3 || !isAllOutlet || _selectedRoute != DeliveryRouteKey.all;
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.fromLTRB(16, 12, 16, 32 + safeBottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Single-Row Dropdown Filters Bar: Outlet Dropdown & Route Dropdown
+          // 1. Single-Row Dropdown Filters Bar (Auto-hidden when < 3 orders for clutter-free 1-screen focus)
+          if (showFiltersBar) ...[
           SizedBox(
             height: 42,
             child: Row(
@@ -636,6 +639,7 @@ class _DeliveryOrdersTabState extends State<DeliveryOrdersTab> {
             ),
           ),
           const SizedBox(height: 12),
+          ],
 
           // 2. Page-Wise Sub-Tab Switcher: On The Way vs Assigned Orders
           Container(

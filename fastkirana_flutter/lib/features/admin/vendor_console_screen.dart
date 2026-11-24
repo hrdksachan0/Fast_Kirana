@@ -89,7 +89,9 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
+      if (mounted) {
+        setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
+      }
     });
     String? resolvedVendorId = widget.initialVendorId;
     if (resolvedVendorId == null || resolvedVendorId.isEmpty) {

@@ -5,6 +5,7 @@ import '../models/cart.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/guest_device_service.dart';
+import '../../core/utils/safe_json.dart';
 import 'dart:async' show unawaited;
 
 class CartRepository {
@@ -167,8 +168,8 @@ class CartRepository {
       final cacheKey = await _getCartCacheKey();
       final existingData = prefs.getString(cacheKey);
       if (existingData != null && existingData.trim().isNotEmpty) {
-        final decoded = jsonDecode(existingData);
-        if (decoded is Map<String, dynamic>) {
+        final decoded = SafeJson.tryDecodeMap(existingData);
+        if (decoded != null) {
           final deltas = (decoded['appliedOrderDeltas'] as List?)?.map((e) => e.toString()).toList() ?? [];
           if (!deltas.contains(orderId)) {
             deltas.add(orderId);
@@ -219,8 +220,8 @@ class CartRepository {
         data = prefs.getString(legacyKey);
       }
       if (data != null) {
-        final decoded = jsonDecode(data);
-        if (decoded is Map && decoded['appliedOrderDeltas'] is List) {
+        final decoded = SafeJson.tryDecodeMap(data);
+        if (decoded != null && decoded['appliedOrderDeltas'] is List) {
           results.addAll((decoded['appliedOrderDeltas'] as List).map((e) => e.toString()));
         }
       }

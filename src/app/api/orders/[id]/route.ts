@@ -1089,6 +1089,95 @@ export async function PATCH(
         `
       }
 
+      // 🛡️ 7-Guard Rider Doorstep GPS Auto-Learn (fixes old/fallback customer pins once, never overwrites real pins)
+      const learnedLat = deliveryLat !== undefined && deliveryLat !== null ? parseFloat(String(deliveryLat)) : NaN
+      const learnedLng = deliveryLng !== undefined && deliveryLng !== null ? parseFloat(String(deliveryLng)) : NaN
+      const rawAcc = body?.deliveryGpsAccuracy
+      const gpsAcc = rawAcc !== undefined && rawAcc !== null ? parseFloat(String(rawAcc)) : null
+      const isDeliveryCaller = userRole === 'DELIVERY' || paymentCollectedBy === 'RIDER'
+
+      if (
+        isDeliveryCaller &&
+        !isNaN(learnedLat) &&
+        !isNaN(learnedLng) &&
+        existingOrder.addressId &&
+        existingOrder.addressId !== 'addr_default_ghatampur' &&
+        (existingOrder.deliveryMethod || '').toUpperCase() !== 'PICKUP' &&
+        !(existingOrder.notes || '').toLowerCase().includes('order for:') &&
+        (gpsAcc === null || isNaN(gpsAcc) || gpsAcc <= 65)
+      ) {
+        try {
+          const haversineMeters = (la1: number, ln1: number, la2: number, ln2: number) => {
+            const R = 6371000
+            const dLa = ((la2 - la1) * Math.PI) / 180
+            const dLn = ((ln2 - ln1) * Math.PI) / 180
+            const a =
+              Math.sin(dLa / 2) ** 2 +
+              Math.cos((la1 * Math.PI) / 180) * Math.cos((la2 * Math.PI) / 180) * Math.sin(dLn / 2) ** 2
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+          }
+
+          let hubLat = 26.1534185
+          let hubLng = 80.1714024
+          if (existingOrder.storeId) {
+            const hub = await prisma.darkStore.findUnique({
+              where: { id: existingOrder.storeId },
+              select: { lat: true, lng: true },
+            })
+            if (hub?.lat && hub?.lng) {
+              hubLat = hub.lat
+              hubLng = hub.lng
+            }
+          }
+
+          const riderDistFromHubM = haversineMeters(hubLat, hubLng, learnedLat, learnedLng)
+          if (riderDistFromHubM > 80 && riderDistFromHubM <= 12000) {
+            const addr = await prisma.address.findUnique({ where: { id: existingOrder.addressId } })
+            if (addr && (addr.label || '').toUpperCase() !== 'STORE_PICKUP') {
+              const isFallbackPin =
+                addr.lat == null ||
+                addr.lng == null ||
+                (addr.lat === 0 && addr.lng === 0) ||
+                haversineMeters(hubLat, hubLng, addr.lat, addr.lng) <= 50
+
+              if (isFallbackPin) {
+                const ninetySecAgo = new Date(Date.now() - 90 * 1000)
+                const recentOther = finalDelivUserId
+                  ? await prisma.order.findMany({
+                      where: {
+                        deliveryUserId: finalDelivUserId,
+                        status: 'DELIVERED',
+                        id: { not: existingOrder.id },
+                        addressId: { not: existingOrder.addressId },
+                        deliveredAt: { gte: ninetySecAgo },
+                        deliveryLat: { not: null },
+                        deliveryLng: { not: null },
+                      },
+                      select: { deliveryLat: true, deliveryLng: true },
+                    })
+                  : []
+
+                const isBatchSlide = recentOther.some(
+                  (r) =>
+                    r.deliveryLat != null &&
+                    r.deliveryLng != null &&
+                    haversineMeters(learnedLat, learnedLng, r.deliveryLat, r.deliveryLng) < 35
+                )
+
+                if (!isBatchSlide) {
+                  await prisma.address.update({
+                    where: { id: addr.id },
+                    data: { lat: learnedLat, lng: learnedLng },
+                  })
+                }
+              }
+            }
+          }
+        } catch (alErr) {
+          console.warn('[API orders] Auto-learn non-fatal skip:', alErr)
+        }
+      }
+
       // If order assigned to a delivery rider, update RiderWallet ONLY if physical cash was collected by rider
       const isCashOrder = (existingOrder.paymentMethod === 'COD' || newPaymentMethod === 'COD') && !isDoorstepQrOrOnline
       const isDeliveredByRider = userRole === 'DELIVERY' || paymentCollectedBy === 'RIDER'

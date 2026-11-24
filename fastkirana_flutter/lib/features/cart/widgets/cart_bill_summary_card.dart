@@ -108,7 +108,7 @@ class CartBillSummaryCard extends StatelessWidget {
                 '₹${grandTotal.toInt()}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w900,
-                  fontSize: 18,
+                  fontSize: 20,
                   color: AppDesignSystem.primary,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
@@ -131,7 +131,7 @@ class CartBillSummaryCard extends StatelessWidget {
                 style: const TextStyle(
                   color: Color(0xFF065F46),
                   fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                  fontSize: 12.5,
                 ),
               ),
             ),
@@ -149,7 +149,7 @@ class CartBillSummaryCard extends StatelessWidget {
           title,
           style: const TextStyle(
             color: AppDesignSystem.slate600,
-            fontSize: 13,
+            fontSize: 13.5,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -157,7 +157,7 @@ class CartBillSummaryCard extends StatelessWidget {
           value,
           style: TextStyle(
             color: valueColor ?? AppDesignSystem.slate900,
-            fontSize: 13,
+            fontSize: 13.5,
             fontWeight: FontWeight.w700,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),

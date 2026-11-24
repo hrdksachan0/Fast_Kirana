@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_provider.dart';
 import '../core/services/location_service.dart';
@@ -68,9 +70,59 @@ final addressesProvider = StateNotifierProvider.autoDispose<AddressesNotifier, A
 class SelectedAddressNotifier extends StateNotifier<Address?> {
   final Ref _ref;
   String? _persistedAddressId;
+  bool _manualSelectionInSession = false;
 
   SelectedAddressNotifier(this._ref) : super(LocationService.cachedAddress) {
     _init();
+  }
+
+  static double _haversineMeters(double lat1, double lng1, double lat2, double lng2) {
+    const double r = 6371000.0;
+    final dLat = (lat2 - lat1) * math.pi / 180.0;
+    final dLng = (lng2 - lng1) * math.pi / 180.0;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180.0) *
+            math.cos(lat2 * math.pi / 180.0) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  static bool isDarkstoreFallbackPin(double? lat, double? lng) {
+    if (lat == null || lng == null || (lat == 0.0 && lng == 0.0)) return true;
+    // Ghatampur Central Hub default fallback coordinates
+    return _haversineMeters(lat, lng, 26.1534185, 80.1714024) <= 50.0;
+  }
+
+  Future<void> _tryAutoSelectNearest(List<Address> addresses) async {
+    if (_manualSelectionInSession || addresses.length < 2) return;
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm != LocationPermission.whileInUse && perm != LocationPermission.always) return;
+      Position? pos = await Geolocator.getLastKnownPosition();
+      pos ??= await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 3),
+      );
+
+      Address? nearest;
+      double bestMeters = 500.0; // Strictly within 500m radius
+      for (final addr in addresses) {
+        if (isDarkstoreFallbackPin(addr.latitude, addr.longitude)) continue;
+        final d = _haversineMeters(pos.latitude, pos.longitude, addr.latitude!, addr.longitude!);
+        if (d < bestMeters) {
+          bestMeters = d;
+          nearest = addr;
+        }
+      }
+
+      if (nearest != null && mounted && !_manualSelectionInSession && state?.id != nearest.id) {
+        super.state = nearest;
+        await LocationService.saveCachedAddress(nearest);
+      }
+    } catch (_) {
+      // Silent fallback if GPS unavailable
+    }
   }
 
   Future<void> _init() async {
@@ -106,12 +158,14 @@ class SelectedAddressNotifier extends StateNotifier<Address?> {
           if (matched != null) {
             super.state = matched;
             LocationService.saveCachedAddress(matched);
+            unawaited(_tryAutoSelectNearest(addresses));
             return;
           }
         }
 
         // 2. If an address is already actively selected in state, DO NOT clobber it
         if (state != null) {
+          unawaited(_tryAutoSelectNearest(addresses));
           return;
         }
 
@@ -122,6 +176,7 @@ class SelectedAddressNotifier extends StateNotifier<Address?> {
         );
         super.state = def;
         LocationService.saveCachedAddress(def);
+        unawaited(_tryAutoSelectNearest(addresses));
       });
     });
   }
@@ -130,6 +185,7 @@ class SelectedAddressNotifier extends StateNotifier<Address?> {
   set state(Address? value) {
     super.state = value;
     if (value != null) {
+      _manualSelectionInSession = true;
       _persistAndSync(value);
     } else {
       _persistedAddressId = null;
@@ -138,6 +194,7 @@ class SelectedAddressNotifier extends StateNotifier<Address?> {
   }
 
   Future<void> selectAddress(Address addr) async {
+    _manualSelectionInSession = true;
     super.state = addr;
     await _persistAndSync(addr);
   }

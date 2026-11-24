@@ -862,12 +862,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                             children: [
                               const Icon(Icons.trending_up_rounded, size: 13, color: AppDesignSystem.orange600),
                               const SizedBox(width: 5),
-                              Text(
-                                prod.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: Responsive.scaledFontSize(context, 11.5),
-                                  fontWeight: FontWeight.w700,
-                                  color: AppDesignSystem.textPrimary,
+                              Flexible(
+                                child: Text(
+                                  prod.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11.5),
+                                    fontWeight: FontWeight.w700,
+                                    color: AppDesignSystem.textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -1647,10 +1651,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                 Builder(
                   builder: (context) {
                     final screenWidth = MediaQuery.of(context).size.width;
-                    const hPad = 12.0;
-                    const spacing = 8.0;
+                    const hPad = 16.0;
+                    const spacing = 6.0;
                     final cardWidth = (screenWidth - (hPad * 2) - (spacing * 2)) / 3.0;
-                    final aspect = cardWidth < 125 ? 0.52 : 0.57;
+                    final double neededHeight = (cardWidth * 1.12) + 118.0;
 
                     return GridView.builder(
                       shrinkWrap: true,
@@ -1658,9 +1662,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                       padding: EdgeInsets.zero,
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
-                        childAspectRatio: aspect,
+                        mainAxisExtent: neededHeight,
                         crossAxisSpacing: spacing,
-                        mainAxisSpacing: spacing + 4,
+                        mainAxisSpacing: spacing + 6,
                       ),
                       itemCount: fallbackAlternatives.length,
                       itemBuilder: (context, idx) {
@@ -1712,9 +1716,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
 
         final screenWidth = MediaQuery.of(context).size.width;
         const hPad = 12.0;
-        const spacing = 8.0;
+        const spacing = 6.0;
         final cardWidth = (screenWidth - (hPad * 2) - (spacing * 2)) / 3.0;
-        final aspect = cardWidth < 125 ? 0.52 : 0.57;
+        // Pixel-perfect height: generous room for 1.12x photo + 3-line title — 0px overflow!
+        final double groceryCardHeight = (cardWidth * 1.12) + 118.0;
+        final double foodCardHeight = (cardWidth * 0.88) + 128.0;
 
         final suggestions = _generateSuggestions(_query, products);
         final totalCount = groceryProducts.length + foodProducts.length + matchedRestaurants.length;
@@ -1746,46 +1752,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                 padding: const EdgeInsets.only(top: 4, bottom: 10),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFDCFCE7), width: 1),
-                      ),
+                    Expanded(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🛒', style: TextStyle(fontSize: 12)),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFDCFCE7), width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🛒', style: TextStyle(fontSize: 12)),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      'Groceries & Essentials',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 12.0),
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF166534),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                           const SizedBox(width: 5),
-                          Text(
-                            'Groceries & Essentials',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 13),
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF166534),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${groceryProducts.length}',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF475569),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${groceryProducts.length}',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF475569),
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
+                    const SizedBox(width: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -1804,7 +1823,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                   ],
                 ),
               ),
-              _buildProductGrid(groceryProducts, cardWidth, aspect, spacing),
+              _buildProductGrid(groceryProducts, cardWidth, groceryCardHeight, spacing),
               const SizedBox(height: 20),
             ],
           );
@@ -1838,46 +1857,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                 padding: const EdgeInsets.only(top: 4, bottom: 10),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFFFEDD5), width: 1),
-                      ),
+                    Expanded(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('🍽️', style: TextStyle(fontSize: 12)),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFFEDD5), width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🍽️', style: TextStyle(fontSize: 12)),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      'Restaurant Food & Outlets',
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 12.0),
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFFC2410C),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                           const SizedBox(width: 5),
-                          Text(
-                            'Restaurant Food & Outlets',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 13),
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFFC2410C),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF7ED),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${foodProducts.length + (matchedRestaurants.isNotEmpty ? matchedRestaurants.length : 0)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFEA580C),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${foodProducts.length + (matchedRestaurants.isNotEmpty ? matchedRestaurants.length : 0)}',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFFEA580C),
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
+                    const SizedBox(width: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -2007,7 +2039,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
                         ),
                       ),
                       const SizedBox(height: 8),
-                      _buildProductGrid(dishes, cardWidth, aspect, spacing),
+                      _buildProductGrid(dishes, cardWidth, foodCardHeight, spacing),
                     ],
                   ),
                 );
@@ -2214,7 +2246,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildProductGrid(List<Product> items, double cardWidth, double aspect, double spacing) {
+  Widget _buildProductGrid(List<Product> items, double cardWidth, double itemHeight, double spacing) {
     if (items.isEmpty) return const SizedBox.shrink();
     return GridView.builder(
       shrinkWrap: true,
@@ -2222,9 +2254,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> with SingleTickerPr
       padding: EdgeInsets.zero,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        childAspectRatio: aspect,
+        mainAxisExtent: itemHeight,
         crossAxisSpacing: spacing,
-        mainAxisSpacing: spacing + 4,
+        mainAxisSpacing: spacing + 6,
       ),
       itemCount: items.length,
       itemBuilder: (context, productIndex) {

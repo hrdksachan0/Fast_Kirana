@@ -46,7 +46,10 @@ void main() async {
           exc.contains('Failed to load font') ||
           exc.contains('PlatformException') ||
           exc.contains('No Activity found') ||
-          exc.contains('Cannot use "ref" after the widget was disposed');
+          exc.contains('Cannot use "ref" after the widget was disposed') ||
+          exc.contains('RenderFlex overflowed') ||
+          exc.contains('deactivated widget') ||
+          exc.contains('multiple heroes that share the same tag');
 
       if (isNonFatal) {
         FirebaseCrashlytics.instance.recordFlutterError(details);
@@ -66,7 +69,10 @@ void main() async {
           errStr.contains('network is unreachable') ||
           errStr.contains('failed to load font') ||
           errStr.contains('no activity found') ||
-          errStr.contains('cannot use "ref" after the widget was disposed');
+          errStr.contains('cannot use "ref" after the widget was disposed') ||
+          errStr.contains('overflowed') ||
+          errStr.contains('renderflex') ||
+          errStr.contains('deactivated widget');
 
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: !isNonFatal);
       return true;
@@ -299,8 +305,8 @@ class FastKiranaApp extends ConsumerWidget {
         final mediaQuery = MediaQuery.of(context);
         // Calibrated mobile text scaling (prevents catastrophic system font blowup / zoom-in)
         final clampedTextScaler = mediaQuery.textScaler.clamp(
-          minScaleFactor: 0.85,
-          maxScaleFactor: 1.05,
+          minScaleFactor: 1.0,
+          maxScaleFactor: 1.15,
         );
         return MediaQuery(
           data: mediaQuery.copyWith(textScaler: clampedTextScaler),

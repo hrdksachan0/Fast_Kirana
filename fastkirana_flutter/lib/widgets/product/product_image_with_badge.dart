@@ -357,19 +357,15 @@ class ProductImage extends StatelessWidget {
           final base64String = imgUrl.contains(',') ? imgUrl.split(',')[1] : imgUrl;
           final bytes = base64Decode(base64String);
           return ClipRRect(
-            borderRadius: BorderRadius.circular(s * 16),
+            borderRadius: BorderRadius.circular(s * 12),
             child: Container(
               color: isFood ? const Color(0xFFFFF7ED) : Colors.transparent,
-              padding: isFood ? EdgeInsets.all(s * 6) : EdgeInsets.zero,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(s * 14),
-                child: Image.memory(
-                  bytes,
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                  height: double.infinity,
-                  errorBuilder: (_, __, ___) => Center(child: Text(_emoji(product.name), style: TextStyle(fontSize: s * 36))),
-                ),
+              child: Image.memory(
+                bytes,
+                fit: isFood ? BoxFit.cover : BoxFit.contain,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => Center(child: Text(_emoji(product.name), style: TextStyle(fontSize: s * 36))),
               ),
             ),
           );
@@ -377,29 +373,23 @@ class ProductImage extends StatelessWidget {
       }
       final resolved = imgUrl.startsWith('/') ? 'https://www.fastkirana.in$imgUrl' : imgUrl;
       return ClipRRect(
-        borderRadius: BorderRadius.circular(s * 16),
+        borderRadius: BorderRadius.circular(s * 12),
         child: Container(
           color: isFood ? const Color(0xFFFFF7ED) : Colors.transparent,
-          padding: EdgeInsets.all(s * 4),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(s * 14),
-            child: CachedNetworkImage(
-              imageUrl: resolved,
-              cacheManager: FastKiranaImageCacheManager.instance,
-              fit: BoxFit.contain,
-              width: double.infinity,
-              height: double.infinity,
-              memCacheWidth: 400,
-              memCacheHeight: 400,
-              maxWidthDiskCache: 600,
-              maxHeightDiskCache: 600,
-              fadeInDuration: const Duration(milliseconds: 160),
-              errorWidget: (context, url, error) => Center(child: Text(_emoji(product.name), style: TextStyle(fontSize: s * 36))),
-              placeholder: (context, url) => Shimmer.fromColors(
-                baseColor: const Color(0xFFF1F5F9),
-                highlightColor: const Color(0xFFFAFAFA),
-                child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(s * 14))),
-              ),
+          child: CachedNetworkImage(
+            imageUrl: resolved,
+            cacheManager: FastKiranaImageCacheManager.instance,
+            fit: isFood ? BoxFit.cover : BoxFit.contain,
+            width: double.infinity,
+            height: double.infinity,
+            memCacheWidth: 400,
+            memCacheHeight: 400,
+            fadeInDuration: const Duration(milliseconds: 160),
+            errorWidget: (context, url, error) => Center(child: Text(_emoji(product.name), style: TextStyle(fontSize: s * 36))),
+            placeholder: (context, url) => Shimmer.fromColors(
+              baseColor: const Color(0xFFF1F5F9),
+              highlightColor: const Color(0xFFFAFAFA),
+              child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(s * 12))),
             ),
           ),
         ),

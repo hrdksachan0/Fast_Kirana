@@ -723,7 +723,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                               ? null
                               : () => _addFoodItemToCart(selectedVariant, isStoreOpen),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE20A22),
+                            backgroundColor: const Color(0xFF0C831F),
                             disabledBackgroundColor: const Color(0xFFE5E7EB),
                             foregroundColor: Colors.white,
                             elevation: 0,
@@ -808,10 +808,10 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
           vertical: isCompact ? 7 : 10,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF9FA) : Colors.white,
+          color: isSelected ? const Color(0xFFF0FDF4) : Colors.white,
           borderRadius: BorderRadius.circular(isCompact ? 14 : 16),
           border: Border.all(
-            color: isSelected ? const Color(0xFFE20A22) : const Color(0xFFE2E8F0),
+            color: isSelected ? const Color(0xFF0C831F) : const Color(0xFFE2E8F0),
             width: isSelected ? 1.8 : 1.0,
           ),
           boxShadow: [
@@ -1087,78 +1087,20 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                 ),
               ),
 
-              // Adaptive Cards Layout:
-              // - 1 or 2 variants: 2 wide columns fitting the screen width
-              // - 3 variants: Exactly 3 cards fit comfortably side-by-side on screen
-              // - 4+ variants: 3 full cards visible + 4th card peeking horizontally
+              // Unified Sleek Horizontal Slide Rail:
+              // Every variant card gets a generous, consistent width (~142px) and taller photo
+              // (2 full cards + 3rd peeking smoothly on 3+ options — never cramped!).
               Flexible(
                 child: LayoutBuilder(
                   builder: (ctx, constraints) {
-                    if (variants.length <= 2) {
-                      const spacing = 12.0;
-                      final availableWidth = constraints.maxWidth - 32;
-                      final cardWidth = variants.length == 1
-                          ? availableWidth * 0.52
-                          : (availableWidth - (variants.length - 1) * spacing) / variants.length;
-
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            for (int i = 0; i < variants.length; i++) ...[
-                              if (i > 0) const SizedBox(width: spacing),
-                              SizedBox(
-                                width: cardWidth,
-                                child: _buildZeptoVariantCard(context, variants[i], isStoreOpen, cardWidth: cardWidth),
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    }
-
-                    if (variants.length == 3) {
-                      // Exactly 3 variants: Display all 3 side-by-side without horizontal scrolling
-                      const spacing = 8.0;
-                      final availableWidth = constraints.maxWidth - 24; // 12px padding on each side
-                      final cardWidth = (availableWidth - 2 * spacing) / 3;
-
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-                        child: IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              for (int i = 0; i < variants.length; i++) ...[
-                                if (i > 0) const SizedBox(width: spacing),
-                                SizedBox(
-                                  width: cardWidth,
-                                  child: _buildZeptoVariantCard(
-                                    context,
-                                    variants[i],
-                                    isStoreOpen,
-                                    cardWidth: cardWidth,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    // 4+ variants: Show 3 full cards + 4th card peeking
-                    const double spacing = 8.0;
-                    final availableWidth = constraints.maxWidth - 24;
-                    final double cardWidth = ((availableWidth - 2 * spacing) / 3.15).clamp(100.0, 125.0);
+                    const double spacing = 10.0;
+                    final availableWidth = constraints.maxWidth - 32;
+                    final double cardWidth = (availableWidth * 0.41).clamp(134.0, 148.0);
 
                     return SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       child: IntrinsicHeight(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1257,10 +1199,10 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
         vertical: isCompact ? 7 : 10,
       ),
       decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFFFFF9FA) : Colors.white,
+        color: isSelected ? const Color(0xFFF3FAF1) : Colors.white,
         borderRadius: BorderRadius.circular(isCompact ? 14 : 16),
         border: Border.all(
-          color: isSelected ? const Color(0xFFE20A22) : const Color(0xFFE2E8F0),
+          color: isSelected ? const Color(0xFF318616) : const Color(0xFFE2E8F0),
           width: isSelected ? 1.5 : 1.0,
         ),
         boxShadow: const [
@@ -1279,7 +1221,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
             clipBehavior: Clip.none,
             children: [
               Container(
-                height: isCompact ? 80 : 106,
+                height: isCompact ? 104 : 124,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
@@ -1346,124 +1288,209 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
                               ),
                             ),
                           )
-                        : (inCartQty == 0)
-                            ? InkWell(
-                                onTap: () {
-                                  final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(variantProduct);
-                                  if (conflictRestaurant != null) {
-                                    final groceryCount = ref.read(cartProvider.notifier).groceryItemsCount;
-                                    CartConflictDialog.show(
-                                      context,
-                                      product: variantProduct,
-                                      existingOutletName: conflictRestaurant,
-                                      groceryItemsCount: groceryCount,
-                                      onConfirm: () {
-                                        ref.read(cartProvider.notifier).replaceRestaurantItemsWith(variantProduct, 1);
-                                      },
-                                    );
-                                    return;
-                                  }
-                                  HapticFeedback.mediumImpact();
-                                  ref.read(cartProvider.notifier).addProduct(variantProduct, 1, variant.name);
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  width: isCompact ? 26 : 32,
-                                  height: isCompact ? 26 : 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFE20A22), width: 1.5),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color(0x1AE20A22),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 1.5),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: Icon(Icons.add, size: isCompact ? 15 : 18, color: const Color(0xFFE20A22)),
-                                  ),
-                                ),
-                              )
-                            : Container(
-                                height: isCompact ? 26 : 32,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFE20A22), width: 1.5),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x1AE20A22),
-                                      blurRadius: 4,
-                                      offset: Offset(0, 1.5),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                        : AnimatedSize(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            alignment: Alignment.centerRight,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 190),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              layoutBuilder: (currentChild, previousChildren) {
+                                return Stack(
+                                  alignment: Alignment.centerRight,
                                   children: [
-                                    InkWell(
+                                    ...previousChildren,
+                                    if (currentChild != null) currentChild,
+                                  ],
+                                );
+                              },
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: ScaleTransition(
+                                    scale: Tween<double>(begin: 0.88, end: 1.0).animate(animation),
+                                    alignment: Alignment.centerRight,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: (inCartQty == 0)
+                                  ? InkWell(
+                                      key: const ValueKey('variant_add'),
                                       onTap: () {
-                                        HapticFeedback.lightImpact();
-                                        if (matchingItems.isNotEmpty) {
-                                          ref.read(cartProvider.notifier).decrement(matchingItems.last.productId);
-                                        } else {
-                                          ref.read(cartProvider.notifier).decrement(variantProductId);
-                                        }
-                                      },
-                                      child: SizedBox(
-                                        width: isCompact ? 20 : 26,
-                                        height: isCompact ? 26 : 32,
-                                        child: Center(
-                                          child: Icon(Icons.remove, size: isCompact ? 12 : 15, color: const Color(0xFFE20A22)),
-                                        ),
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: isCompact ? 2 : 3),
-                                      child: Text(
-                                        '$inCartQty',
-                                        style: GoogleFonts.inter(
-                                          color: const Color(0xFFE20A22),
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: isCompact ? 11 : 13,
-                                        ),
-                                      ),
-                                    ),
-                                    InkWell(
-                                      onTap: () {
-                                        if (variant.stock > 0 && inCartQty >= variant.stock) {
-                                          HapticFeedback.heavyImpact();
-                                          StockNoticeHelper.showStockLimit(
-                                            context: context,
-                                            stock: variant.stock,
-                                            hasFloatingCart: true,
+                                        final conflictRestaurant = ref.read(cartProvider.notifier).checkRestaurantConflict(variantProduct);
+                                        if (conflictRestaurant != null) {
+                                          final groceryCount = ref.read(cartProvider.notifier).groceryItemsCount;
+                                          CartConflictDialog.show(
+                                            context,
+                                            product: variantProduct,
+                                            existingOutletName: conflictRestaurant,
+                                            groceryItemsCount: groceryCount,
+                                            onConfirm: () {
+                                              ref.read(cartProvider.notifier).replaceRestaurantItemsWith(variantProduct, 1);
+                                            },
                                           );
                                           return;
                                         }
-                                        HapticFeedback.lightImpact();
-                                        final added = ref.read(cartProvider.notifier).addProduct(variantProduct, 1, variant.name);
-                                        if (!added) {
-                                          StockNoticeHelper.showStockLimit(
-                                            context: context,
-                                            stock: variant.stock,
-                                            hasFloatingCart: true,
-                                          );
-                                        }
+                                        HapticFeedback.mediumImpact();
+                                        ref.read(cartProvider.notifier).addProduct(variantProduct, 1, variant.name);
                                       },
-                                      child: SizedBox(
-                                        width: isCompact ? 20 : 26,
-                                        height: isCompact ? 26 : 32,
+                                      borderRadius: BorderRadius.circular(isCompact ? 8.5 : 10),
+                                      child: Container(
+                                        width: isCompact ? 50 : 58,
+                                        height: isCompact ? 34 : 40,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(isCompact ? 8.5 : 10),
+                                          border: Border.all(color: const Color(0xFF318616), width: 1.4),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.08),
+                                              blurRadius: 3.5,
+                                              offset: const Offset(0, 1.2),
+                                            ),
+                                          ],
+                                        ),
                                         child: Center(
-                                          child: Icon(Icons.add, size: isCompact ? 12 : 15, color: const Color(0xFFE20A22)),
+                                          child: Text(
+                                            'ADD',
+                                            style: GoogleFonts.inter(
+                                              fontSize: isCompact ? 12 : 13.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFF318616),
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
                                         ),
                                       ),
+                                    )
+                                  : Container(
+                                      key: const ValueKey('variant_stepper'),
+                                      width: isCompact ? 62 : 72,
+                                      height: isCompact ? 35 : 41,
+                                      padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF318616),
+                                        borderRadius: BorderRadius.circular(isCompact ? 8.5 : 10),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.10),
+                                            blurRadius: 3.5,
+                                            offset: const Offset(0, 1.2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          InkWell(
+                                            onTap: () {
+                                              HapticFeedback.lightImpact();
+                                              if (matchingItems.isNotEmpty) {
+                                                ref.read(cartProvider.notifier).decrement(matchingItems.last.productId);
+                                              } else {
+                                                ref.read(cartProvider.notifier).decrement(variantProductId);
+                                              }
+                                            },
+                                            child: SizedBox(
+                                              width: isCompact ? 19 : 22,
+                                              height: isCompact ? 35 : 41,
+                                              child: Center(
+                                                child: Container(
+                                                  width: isCompact ? 9.5 : 11,
+                                                  height: 2.0,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    borderRadius: BorderRadius.circular(1.2),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Center(
+                                              child: AnimatedSwitcher(
+                                                duration: const Duration(milliseconds: 120),
+                                                transitionBuilder: (child, animation) => ScaleTransition(
+                                                  scale: Tween<double>(begin: 0.78, end: 1.0).animate(animation),
+                                                  child: FadeTransition(opacity: animation, child: child),
+                                                ),
+                                                child: Text(
+                                                  '$inCartQty',
+                                                  key: ValueKey(inCartQty),
+                                                  style: GoogleFonts.inter(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: isCompact ? 13.5 : 15.5,
+                                                    height: 1.0,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () {
+                                              if (variant.stock > 0 && inCartQty >= variant.stock) {
+                                                HapticFeedback.heavyImpact();
+                                                StockNoticeHelper.showStockLimit(
+                                                  context: context,
+                                                  stock: variant.stock,
+                                                  hasFloatingCart: true,
+                                                );
+                                                return;
+                                              }
+                                              HapticFeedback.lightImpact();
+                                              final added = ref.read(cartProvider.notifier).addProduct(variantProduct, 1, variant.name);
+                                              if (!added) {
+                                                StockNoticeHelper.showStockLimit(
+                                                  context: context,
+                                                  stock: variant.stock,
+                                                  hasFloatingCart: true,
+                                                );
+                                              }
+                                            },
+                                            child: SizedBox(
+                                              width: isCompact ? 19 : 22,
+                                              height: isCompact ? 35 : 41,
+                                              child: Center(
+                                                child: SizedBox(
+                                                  width: isCompact ? 9.5 : 11,
+                                                  height: isCompact ? 9.5 : 11,
+                                                  child: Stack(
+                                                    alignment: Alignment.center,
+                                                    children: [
+                                                      Container(
+                                                        width: isCompact ? 9.5 : 11,
+                                                        height: 2.0,
+                                                        decoration: BoxDecoration(
+                                                          color: (variant.stock > 0 && inCartQty >= variant.stock)
+                                                              ? Colors.white.withValues(alpha: 0.35)
+                                                              : Colors.white,
+                                                          borderRadius: BorderRadius.circular(1.2),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        width: 2.0,
+                                                        height: isCompact ? 9.5 : 11,
+                                                        decoration: BoxDecoration(
+                                                          color: (variant.stock > 0 && inCartQty >= variant.stock)
+                                                              ? Colors.white.withValues(alpha: 0.35)
+                                                              : Colors.white,
+                                                          borderRadius: BorderRadius.circular(1.2),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
-                                ),
-                              ),
+                            ),
+                          ),
               ),
             ],
           ),
@@ -1498,34 +1525,38 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
               style: GoogleFonts.inter(
                 fontSize: isCompact ? 10.5 : 11.5,
                 fontWeight: FontWeight.w800,
-                color: const Color(0xFF16A34A),
+                color: const Color(0xFF318616),
               ),
             ),
 
           const SizedBox(height: 2),
 
-          // 4. Price Row
+          // 4. Price Row (Blinkit bold price + crisp side-by-side strikethrough MRP)
           Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 '₹${variant.price.toInt()}',
                 style: GoogleFonts.inter(
-                  fontSize: isCompact ? 13 : 14.5,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0F172A),
+                  fontSize: isCompact ? 14.5 : 16.5,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1F2937),
+                  letterSpacing: -0.35,
+                  height: 1.1,
                 ),
               ),
               if (variant.mrp > variant.price) ...[
-                const SizedBox(width: 3),
+                const SizedBox(width: 4.5),
                 Text(
                   '₹${variant.mrp.toInt()}',
                   style: GoogleFonts.inter(
-                    fontSize: isCompact ? 9.5 : 11,
-                    fontWeight: FontWeight.w600,
+                    fontSize: isCompact ? 10.5 : 12.0,
+                    fontWeight: FontWeight.w500,
                     decoration: TextDecoration.lineThrough,
-                    color: const Color(0xFF94A3B8),
+                    decorationColor: const Color(0xFF6B7280),
+                    decorationThickness: 1.3,
+                    color: const Color(0xFF6B7280),
+                    height: 1.1,
                   ),
                 ),
               ],
@@ -1595,7 +1626,7 @@ class _VariantSelectorSheetState extends ConsumerState<VariantSelectorSheet> {
             Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFE20A22), // FastMinute Red
+            backgroundColor: const Color(0xFF0C831F), // FastMinute Red
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 0,

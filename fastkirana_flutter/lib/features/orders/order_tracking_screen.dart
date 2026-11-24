@@ -898,8 +898,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           _customerPosition = newCustomerPos;
         }
       }
-    } else if (_customerPosition == null) {
-      _customerPosition = LatLng(AppConfig.darkstoreLat + 0.008, AppConfig.darkstoreLng + 0.006);
+    } else {
+      _customerPosition ??= LatLng(AppConfig.darkstoreLat + 0.008, AppConfig.darkstoreLng + 0.006);
     }
 
     // 2. Dynamic Store / Restaurant Hub Resolution
@@ -1056,7 +1056,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
   }
 
   void _interpolateRiderMarker() {
-    if (!mounted || _prevRiderPosition == null || _targetRiderPosition == null) return;
+    if (!mounted || _isDisposed || _prevRiderPosition == null || _targetRiderPosition == null) return;
     final rawProgress = _riderAnimController.value;
     
     // Constant-velocity road glide curve (Uber/Blinkit standard)
@@ -1083,7 +1083,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         zIndexInt: 10,
       ));
     }
-    if (!mounted) return;
+    if (!mounted || _isDisposed) return;
     setState(() {});
 
     // Dynamic route truncation behind rider (100% on device, 0 API calls)
@@ -1104,7 +1104,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   /// Polyline tween animation tick: modulates soft ambient glow pulse beneath the solid line
   void _onPolyTweenTick() {
-    if (!mounted || _polylines.isEmpty) return;
+    if (!mounted || _isDisposed || _polylines.isEmpty) return;
     if (_order?.status != OrderStatus.shipped && _order?.status != OrderStatus.packed) return;
 
     final t = _polyTweenController.value;
