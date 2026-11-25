@@ -437,6 +437,10 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
 
                     final visibleProducts = list.take(_visibleCount).toList();
                     final hasMore = _visibleCount < list.length;
+                    final hasSubcats = subcats.length > 1;
+                    final railWidth = hasSubcats ? (Responsive.isSmallMobile(context) ? 72.0 : 82.0) : 0.0;
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    final colWidth = (screenWidth - railWidth - 28.0) / 2;
 
                     return RefreshIndicator(
                       color: AppDesignSystem.primary,
@@ -454,7 +458,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                             sliver: SliverGrid(
                               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: true),
+                                childAspectRatio: Responsive.productCardAspectRatio(context, isCompact: hasSubcats),
                                 crossAxisSpacing: 8,
                                 mainAxisSpacing: 8,
                               ),
@@ -464,7 +468,8 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                                   return ProductCard(
                                     key: ValueKey(product.id),
                                     product: product,
-                                    isCompact: true,
+                                    width: colWidth,
+                                    isCompact: hasSubcats,
                                   );
                                 },
                                 childCount: visibleProducts.length,

@@ -554,21 +554,18 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                               ),
                               SizedBox(height: s(2)),
 
-                              // Clean Title (Up to 3 lines — Blinkit editorial look, natural height)
-                              ConstrainedBox(
-                                constraints: BoxConstraints(minHeight: s(16), maxHeight: s(48)),
-                                child: Text(
-                                  product.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: s(12.5),
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF1F2937),
-                                    letterSpacing: -0.15,
-                                    height: 1.22,
-                                  ),
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
+                              // Clean Title (Up to 3 lines — Blinkit editorial look, natural height without vertical clipping)
+                              Text(
+                                product.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: s(12.5),
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1F2937),
+                                  letterSpacing: -0.15,
+                                  height: 1.22,
                                 ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),

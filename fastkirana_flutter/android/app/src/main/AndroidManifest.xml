@@ -21,11 +21,11 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Foreground Service Permissions (Required for Android 9+ & Android 14+ Rider Tracking / Notifications) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+    <!-- Explicitly strip Foreground Service permissions for Play Store Customer release (prevents plugin manifest merge) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" tools:node="remove" />
 
     <!-- Wake-on-Order & Loud Alarm for Store / Kitchen Orders -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
@@ -139,12 +139,10 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Geolocator Foreground Service for Android 14+ Rider Tracking -->
+        <!-- Explicitly remove Geolocator Foreground Service from merged manifest for Play Store Customer release -->
         <service
             android:name="com.baseflow.geolocator.GeolocatorLocationService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="location" />
+            tools:node="remove" />
 
         <!-- Remove hardcoded portrait restrictions from Cashfree SDK for Play Console tablet / large screen compliance -->
         <activity

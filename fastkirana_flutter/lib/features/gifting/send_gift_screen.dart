@@ -471,10 +471,11 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
                                       ),
                                     ),
                                   ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
+                                  const SizedBox(width: 12),
+                                  Flexible(
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                         decoration: BoxDecoration(
                                           color: Colors.black.withValues(alpha: 0.25),
@@ -489,22 +490,24 @@ class _SendGiftScreenState extends ConsumerState<SendGiftScreen> {
                                           children: [
                                             const Text('📍', style: TextStyle(fontSize: 11)),
                                             const SizedBox(width: 4),
-                                            Text(
-                                              selectedAddress != null
-                                                  ? selectedAddress.fullAddress
-                                                  : 'Ghatampur Hub',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: const Color(0xFFFFE082),
+                                            Flexible(
+                                              child: Text(
+                                                selectedAddress != null
+                                                    ? selectedAddress.fullAddress
+                                                    : 'Ghatampur Hub',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: const Color(0xFFFFE082),
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ],
                               ),

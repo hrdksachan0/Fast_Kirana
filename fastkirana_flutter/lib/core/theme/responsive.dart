@@ -100,20 +100,21 @@ class Responsive {
   static double productCardAspectRatio(BuildContext context, {bool isCompact = false}) {
     final width = MediaQuery.of(context).size.width;
     if (isCompact) {
-      // Used in screens with side category rail (narrower column ~125-150px)
-      // Calibrated to cardWidth * 1.12 photo + ~124px vertical content (supports 3-line titles cleanly)
-      if (width < 360) return 0.47;
-      if (width < 400) return 0.49;
-      if (width < mobileBreakpoint) return 0.51;
-      if (width < tabletBreakpoint) return 0.56;
-      return 0.60;
+      // Used in screens with side category rail (narrower column ~125-155px)
+      // Calibrated to cardWidth * 1.12 photo + price + full 3-line title (even at 1.15x font scale) + clean gap
+      if (width < 360) return 0.485;
+      if (width < 400) return 0.495;
+      if (width < mobileBreakpoint) return 0.495;
+      if (width < tabletBreakpoint) return 0.54;
+      return 0.58;
     }
-    // Full width 2-column grid (Search, Wishlist, Subcategory — zero overflow on narrow Moto & wide Android)
+    // Full width 2-column grid (Search, Wishlist, Subcategory, Category without rail)
+    // Calibrated to cardWidth * 1.12 photo + price + full 3-line title (even at 1.15x font scale) + clean gap
     if (width < 360) return 0.52;
-    if (width < 400) return 0.54;
-    if (width < mobileBreakpoint) return 0.56;
-    if (width < tabletBreakpoint) return 0.60;
-    return 0.64;
+    if (width < 400) return 0.525;
+    if (width < mobileBreakpoint) return 0.535;
+    if (width < tabletBreakpoint) return 0.58;
+    return 0.62;
   }
 
   /// Unified Responsive Product Card Width for horizontal shelves
