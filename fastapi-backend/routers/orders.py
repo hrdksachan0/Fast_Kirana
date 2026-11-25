@@ -3266,11 +3266,16 @@ async def list_orders(
     List user orders (normal user gets combined view; staff gets dashboard flat view).
     """
     try:
-        user_id = (current_user.get("id") or current_user.get("sub")) if current_user else userId
-        role = (current_user.get("role") or "").upper() if current_user else None
-        is_staff = role in ["ADMIN", "CHEF", "PICKER", "DELIVERY"]
+        if not current_user:
+            return []
 
-        if not user_id and not is_staff and not phone:
+        auth_uid = current_user.get("id") or current_user.get("sub")
+        role = (current_user.get("role") or "").upper()
+        is_staff = role in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN", "STORE_MANAGER", "CHEF", "PICKER", "DELIVERY"]
+        can_query_any_customer = role in ["ADMIN", "SUPER_ADMIN", "SUPERADMIN", "STORE_MANAGER"]
+
+        user_id = (userId or auth_uid) if can_query_any_customer else auth_uid
+        if not user_id and not is_staff:
             return []
 
         if is_staff and is_all:
@@ -3356,9 +3361,9 @@ async def list_orders(
                 })
             return orders_list
 
-        # Normal user fetches their orders
-        email = (current_user.get("email") or "").lower().strip() if current_user else ""
-        raw_phone = (current_user.get("phone") if current_user else None) or phone
+        # Normal user fetches their own orders (only admins/store managers may query arbitrary phone)
+        email = (current_user.get("email") or "").lower().strip() if (current_user and not (can_query_any_customer and (userId or phone))) else ""
+        raw_phone = (phone or current_user.get("phone")) if can_query_any_customer else current_user.get("phone")
         resolved_phone = get_last_10_digits(raw_phone) if raw_phone else ""
 
         # If user_id is provided but email/phone missing from session, fetch user profile from DB

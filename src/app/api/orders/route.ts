@@ -2137,10 +2137,13 @@ export async function GET(request: NextRequest) {
 
   const callerRole = (caller.role || '').toUpperCase()
   const isStaff = ['ADMIN', 'SUPER_ADMIN', 'STORE_MANAGER', 'CHEF', 'PICKER', 'DELIVERY'].includes(callerRole)
+  const canQueryAnyCustomer = ['ADMIN', 'SUPER_ADMIN', 'STORE_MANAGER'].includes(callerRole)
 
-  // Non-staff customers can strictly view ONLY their own orders
-  const userId = isStaff ? (queryUserId || caller.id) : caller.id
-  const sessionPhone = isStaff ? (queryPhone ? getLast10Digits(queryPhone) : '') : (caller.phone ? getLast10Digits(caller.phone) : '')
+  // Non-admin users (including riders/pickers) can strictly view ONLY their own personal order history
+  const userId = canQueryAnyCustomer ? (queryUserId || caller.id) : caller.id
+  const sessionPhone = canQueryAnyCustomer
+    ? (queryPhone ? getLast10Digits(queryPhone) : (caller.phone ? getLast10Digits(caller.phone) : ''))
+    : (caller.phone ? getLast10Digits(caller.phone) : '')
 
   try {
     const all = searchParams.get('all') === 'true'

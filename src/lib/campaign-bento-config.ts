@@ -205,7 +205,7 @@ export type BentoCardKey =
 
 export const defaultCampaignBentoConfig: CampaignBentoConfig = {
   version: 1,
-  enabled: false,
+  enabled: true,
   seasonalSwitchUp: {
     enabled: false,
     sortOrder: 1,

@@ -151,6 +151,10 @@ const nextConfig: NextConfig = {
       },
       // Core High-Traffic Customer & Store APIs -> Railway FastAPI
       {
+        source: '/api/campaign-bento',
+        destination: `${apiDest}/api/campaign-bento`,
+      },
+      {
         source: '/api/products/:path*',
         destination: `${apiDest}/api/products/:path*`,
       },
