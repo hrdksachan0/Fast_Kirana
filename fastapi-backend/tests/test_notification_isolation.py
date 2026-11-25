@@ -14,8 +14,8 @@ client = TestClient(app)
 
 @pytest.mark.asyncio
 async def test_admin_pending_notifies_admin_only():
-    with patch("routers.orders.send_fcm_topic_notification", new_callable=AsyncMock) as mock_topic, \
-         patch("routers.orders.send_fcm_notification", new_callable=AsyncMock) as mock_direct:
+    with patch("routers.orders_notifications.send_fcm_topic_notification", new_callable=AsyncMock) as mock_topic, \
+         patch("routers.orders_notifications.send_fcm_notification", new_callable=AsyncMock) as mock_direct:
         await dispatch_isolated_order_fcm_notifications(
             order_id="ord_1",
             readable_id="FK-1001",
@@ -39,8 +39,8 @@ async def test_admin_pending_notifies_admin_only():
 
 @pytest.mark.asyncio
 async def test_auto_approved_restaurant_order_notifies_restaurant_and_rider_not_admin():
-    with patch("routers.orders.send_fcm_topic_notification", new_callable=AsyncMock) as mock_topic, \
-         patch("routers.orders.send_fcm_notification", new_callable=AsyncMock):
+    with patch("routers.orders_notifications.send_fcm_topic_notification", new_callable=AsyncMock) as mock_topic, \
+         patch("routers.orders_notifications.send_fcm_notification", new_callable=AsyncMock):
         await dispatch_isolated_order_fcm_notifications(
             order_id="ord_2",
             readable_id="FK-1002",
@@ -59,7 +59,7 @@ async def test_auto_approved_restaurant_order_notifies_restaurant_and_rider_not_
 
 @pytest.mark.asyncio
 async def test_restaurant_status_updates_do_not_chime_except_cancel():
-    with patch("routers.orders.send_fcm_topic_notification", new_callable=AsyncMock) as mock_topic:
+    with patch("routers.orders_notifications.send_fcm_topic_notification", new_callable=AsyncMock) as mock_topic:
         for st in ["CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"]:
             await dispatch_isolated_status_update_notifications(
                 order_id="ord_3",
