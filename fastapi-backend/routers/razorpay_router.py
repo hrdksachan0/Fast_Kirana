@@ -77,6 +77,7 @@ async def create_razorpay_order(
     user_id = payload.get("userId")
     store_id = payload.get("storeId") or "hub-209206"
     wallet_amount_used = float(payload.get("walletAmountUsed") or 0.0)
+    existing_order_id = str(payload.get("orderId") or payload.get("existingOrderId") or "").strip()
 
     receipt = f"rcpt_{int(time.time() * 1000)}"[:40]
 
@@ -93,6 +94,7 @@ async def create_razorpay_order(
                     "phone": customer_phone,
                     "storeId": str(store_id or ""),
                     "walletAmountUsed": str(wallet_amount_used),
+                    "existingOrderId": existing_order_id,
                 }
             })
             rzp_order_id = rzp_order.get("id")
@@ -116,6 +118,7 @@ async def create_razorpay_order(
                     "notes": {
                         "userId": str(user_id or ""),
                         "phone": customer_phone,
+                        "existingOrderId": existing_order_id,
                     }
                 }
             )
@@ -124,6 +127,20 @@ async def create_razorpay_order(
                 raise HTTPException(status_code=502, detail="Failed to create Razorpay order via API.")
             data = resp.json()
             rzp_order_id = data.get("id")
+
+    # Link rzp_order_id onto existing DB order when paying from Order Tracking page
+    if existing_order_id and rzp_order_id:
+        try:
+            clean_eid = existing_order_id.lstrip("#")
+            ex_res = await db.execute(
+                select(Order).where(or_(Order.id == clean_eid, Order.readableId == clean_eid))
+            )
+            ex_ord = ex_res.scalars().first()
+            if ex_ord:
+                ex_ord.cfOrderId = rzp_order_id
+                await db.commit()
+        except Exception as link_err:
+            logger.warning(f"Could not link rzp_order_id {rzp_order_id} to existing order {existing_order_id}: {link_err}")
 
     # 🛡️ EXACT CASHFREE DRAFT LOGIC:
     # Build complete draft payload so that if client drops or crashes, the order
@@ -310,41 +327,54 @@ async def verify_razorpay_payment(
     except Exception:
         pass
 
-    # 4. Check if order already exists in database
+    # 4. Check if order already exists in database (including existingOrderId from tracking screen)
     existing_order = None
+    target_order_id = str(payload.get("existingOrderId") or payload.get("targetOrderId") or "").strip().lstrip("#")
+    lookup_conds = []
     if rzp_order_id:
+        lookup_conds.extend([
+            Order.cfOrderId == rzp_order_id,
+            Order.id == rzp_order_id,
+            Order.readableId == rzp_order_id,
+        ])
+    if target_order_id:
+        lookup_conds.extend([
+            Order.id == target_order_id,
+            Order.readableId == target_order_id,
+        ])
+    if lookup_conds:
         existing_stmt = select(Order).options(
             selectinload(Order.items),
             selectinload(Order.user),
             selectinload(Order.address)
-        ).where(
-            (Order.cfOrderId == rzp_order_id) |
-            (Order.id == rzp_order_id) |
-            (Order.readableId == rzp_order_id)
-        )
+        ).where(or_(*lookup_conds))
         existing_res = await db.execute(existing_stmt)
         existing_order = existing_res.scalars().first()
 
-    # If already exists in DB, ensure paymentStatus is PAID
+    # If already exists in DB, ensure paymentStatus is PAID (and sync combined companion orders)
     if existing_order:
-        if existing_order.paymentStatus != PaymentStatus.PAID:
-            existing_order.paymentStatus = PaymentStatus.PAID
-            # Keep in ADMIN_PENDING so admin reviews before packing/dispatching!
-            if existing_order.status != OrderStatus.CANCELLED:
-                existing_order.status = OrderStatus.ADMIN_PENDING
-            rzp_note = f"Razorpay PG Paid (Ref: {rzp_payment_id})"
-            if not existing_order.notes or "Razorpay PG Paid" not in existing_order.notes:
-                existing_order.notes = f"{existing_order.notes} | {rzp_note}" if existing_order.notes else rzp_note
-            await db.commit()
+        orders_to_mark = [existing_order]
+        if existing_order.combinedId:
+            comb_res = await db.execute(select(Order).where(Order.combinedId == existing_order.combinedId))
+            orders_to_mark = comb_res.scalars().all() or [existing_order]
+
+        rzp_note = f"Razorpay PG Paid (Ref: {rzp_payment_id})"
+        for ord_item in orders_to_mark:
+            ord_item.paymentStatus = PaymentStatus.PAID
+            ord_item.paymentMethod = PaymentMethod.UPI
+            if not ord_item.notes or "Razorpay PG Paid" not in ord_item.notes:
+                ord_item.notes = f"{ord_item.notes} | {rzp_note}" if ord_item.notes else rzp_note
+        await db.commit()
         return {
             "status": "SUCCESS",
             "success": True,
             "isPaid": True,
+            "paymentStatus": "PAID",
             "orderId": existing_order.id,
             "serverOrderId": existing_order.id,
             "readableId": existing_order.readableId,
             "paymentId": rzp_payment_id,
-            "message": "Payment verified and order found in database"
+            "message": "Payment verified and order marked PAID in database"
         }
 
     # 5. 🛡️ AUTO-RECOVERY: If client app dropped, closed, or hasn't called POST /api/orders yet,
