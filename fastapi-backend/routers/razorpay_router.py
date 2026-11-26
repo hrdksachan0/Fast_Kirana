@@ -128,81 +128,100 @@ async def create_razorpay_order(
             data = resp.json()
             rzp_order_id = data.get("id")
 
-    # Link rzp_order_id onto existing DB order when paying from Order Tracking page
+    # Link rzp_order_id onto existing DB order(s) when paying from Order Tracking page
+    linked_existing_order = False
     if existing_order_id and rzp_order_id:
         try:
             clean_eid = existing_order_id.lstrip("#")
             ex_res = await db.execute(
-                select(Order).where(or_(Order.id == clean_eid, Order.readableId == clean_eid))
+                select(Order).where(
+                    or_(
+                        Order.id == clean_eid,
+                        Order.readableId == clean_eid,
+                        Order.combinedId == clean_eid,
+                    )
+                )
             )
-            ex_ord = ex_res.scalars().first()
-            if ex_ord:
-                ex_ord.cfOrderId = rzp_order_id
+            ex_orders = ex_res.scalars().all()
+            if ex_orders:
+                linked_existing_order = True
+                # Also sync companion sub-orders if this is part of a combined order
+                comb_ids = {o.combinedId for o in ex_orders if o.combinedId}
+                if comb_ids:
+                    comp_res = await db.execute(select(Order).where(Order.combinedId.in_(list(comb_ids))))
+                    comp_orders = comp_res.scalars().all()
+                    by_id = {o.id: o for o in ex_orders}
+                    for co in comp_orders:
+                        by_id[co.id] = co
+                    ex_orders = list(by_id.values())
+                for eo in ex_orders:
+                    eo.cfOrderId = rzp_order_id
                 await db.commit()
         except Exception as link_err:
             logger.warning(f"Could not link rzp_order_id {rzp_order_id} to existing order {existing_order_id}: {link_err}")
 
     # 🛡️ EXACT CASHFREE DRAFT LOGIC:
-    # Build complete draft payload so that if client drops or crashes, the order
-    # is 100% reconstructed, committed to DB, and dispatched to kitchen/store!
-    draft_payload = payload.get("orderPayload") or {
-        "orderId": rzp_order_id,
-        "amount": amount,
-        "userId": user_id,
-        "customerPhone": customer_phone,
-        "customerName": customer_name,
-        "customerEmail": customer_email if "@" in customer_email else None,
-        "walletAmountUsed": wallet_amount_used,
-        "addressId": payload.get("addressId"),
-        "customerAddress": payload.get("customerAddress"),
-        "items": payload.get("items") or [],
-        "deliveryMethod": payload.get("deliveryMethod") or "DELIVERY",
-        "storeId": store_id,
-        "couponCode": payload.get("couponCode"),
-        "discount": float(payload.get("discount") or 0.0),
-        "tipAmount": float(payload.get("tipAmount") or 0.0),
-        "deliveryFee": float(payload.get("deliveryFee") or 0.0),
-        "packagingFee": float(payload.get("packagingFee") or 0.0),
-        "packagingOption": payload.get("packagingOption"),
-        "notes": payload.get("notes") or payload.get("note"),
-        "createdAt": datetime.utcnow().isoformat(),
-    }
+    # ONLY persist new-order recovery drafts for fresh checkout payments (NOT when paying an already-existing order
+    # from the Order Tracking page — otherwise webhook/recovery could synthesize a duplicate order).
+    if not existing_order_id and not linked_existing_order:
+        draft_payload = payload.get("orderPayload") or {
+            "orderId": rzp_order_id,
+            "amount": amount,
+            "userId": user_id,
+            "customerPhone": customer_phone,
+            "customerName": customer_name,
+            "customerEmail": customer_email if "@" in customer_email else None,
+            "walletAmountUsed": wallet_amount_used,
+            "addressId": payload.get("addressId"),
+            "customerAddress": payload.get("customerAddress"),
+            "items": payload.get("items") or [],
+            "deliveryMethod": payload.get("deliveryMethod") or "DELIVERY",
+            "storeId": store_id,
+            "couponCode": payload.get("couponCode"),
+            "discount": float(payload.get("discount") or 0.0),
+            "tipAmount": float(payload.get("tipAmount") or 0.0),
+            "deliveryFee": float(payload.get("deliveryFee") or 0.0),
+            "packagingFee": float(payload.get("packagingFee") or 0.0),
+            "packagingOption": payload.get("packagingOption"),
+            "notes": payload.get("notes") or payload.get("note"),
+            "createdAt": datetime.utcnow().isoformat(),
+        }
 
-    # 1. Cache in Redis (24-hour TTL)
-    try:
-        from utils.cache import set_cache
-        await set_cache(f"rzp_pending:{rzp_order_id}", draft_payload, ttl=86400)
-        # Mirror to cf_pending so shared recovery functions locate it instantaneously
-        await set_cache(f"cf_pending:{rzp_order_id}", draft_payload, ttl=86400)
-        await set_cache(f"draft_cf_order:{rzp_order_id}", draft_payload, ttl=86400)
-    except Exception as cache_err:
-        logger.warning(f"Draft order caching note: {cache_err}")
+        # 1. Cache in Redis (24-hour TTL)
+        try:
+            from utils.cache import set_cache
+            await set_cache(f"rzp_pending:{rzp_order_id}", draft_payload, ttl=86400)
+            # Mirror to cf_pending so shared recovery functions locate it instantaneously
+            await set_cache(f"cf_pending:{rzp_order_id}", draft_payload, ttl=86400)
+            await set_cache(f"draft_cf_order:{rzp_order_id}", draft_payload, ttl=86400)
+        except Exception as cache_err:
+            logger.warning(f"Draft order caching note: {cache_err}")
 
-    # 2. Persist durable snapshot in PostgreSQL IdempotencyRecord
-    try:
-        intent_expiry = datetime.utcnow() + timedelta(days=2)
-        intent_rec = IdempotencyRecord(
-            key=f"rzp_intent:{rzp_order_id}",
-            userId=str(user_id) if user_id else None,
-            status="PENDING",
-            response=draft_payload,
-            createdAt=datetime.utcnow(),
-            expiresAt=intent_expiry
-        )
-        db.add(intent_rec)
-        # Mirror to cf_intent for zero-downtime cross-lookup
-        cf_intent_rec = IdempotencyRecord(
-            key=f"cf_intent:{rzp_order_id}",
-            userId=str(user_id) if user_id else None,
-            status="PENDING",
-            response=draft_payload,
-            createdAt=datetime.utcnow(),
-            expiresAt=intent_expiry
-        )
-        db.add(cf_intent_rec)
-        await db.flush()
-    except Exception as db_intent_err:
-        logger.warning(f"Durable intent record insert note: {db_intent_err}")
+        # 2. Persist durable snapshot in PostgreSQL IdempotencyRecord
+        try:
+            intent_expiry = datetime.utcnow() + timedelta(days=2)
+            intent_rec = IdempotencyRecord(
+                key=f"rzp_intent:{rzp_order_id}",
+                userId=str(user_id) if user_id else None,
+                status="PENDING",
+                response=draft_payload,
+                createdAt=datetime.utcnow(),
+                expiresAt=intent_expiry
+            )
+            db.add(intent_rec)
+            # Mirror to cf_intent for zero-downtime cross-lookup
+            cf_intent_rec = IdempotencyRecord(
+                key=f"cf_intent:{rzp_order_id}",
+                userId=str(user_id) if user_id else None,
+                status="PENDING",
+                response=draft_payload,
+                createdAt=datetime.utcnow(),
+                expiresAt=intent_expiry
+            )
+            db.add(cf_intent_rec)
+            await db.flush()
+        except Exception as db_intent_err:
+            logger.warning(f"Durable intent record insert note: {db_intent_err}")
 
     return {
         "orderId": rzp_order_id,
@@ -341,6 +360,7 @@ async def verify_razorpay_payment(
         lookup_conds.extend([
             Order.id == target_order_id,
             Order.readableId == target_order_id,
+            Order.combinedId == target_order_id,
         ])
     if lookup_conds:
         existing_stmt = select(Order).options(
@@ -379,6 +399,21 @@ async def verify_razorpay_payment(
 
     # 5. 🛡️ AUTO-RECOVERY: If client app dropped, closed, or hasn't called POST /api/orders yet,
     # IMMEDIATELY RECONSTRUCT & COMMIT ORDER TO POSTGRESQL (EXACT SAME AS CASHFREE LOGIC)!
+    # NEVER create a new order if caller explicitly targeted an existingOrderId (e.g. Order Tracking Pay Now).
+    if target_order_id:
+        logger.warning(
+            f"[Razorpay Verify] existingOrderId '{target_order_id}' not found for rzp_order_id={rzp_order_id}; "
+            "skipping auto-recovery to prevent duplicate order creation."
+        )
+        return {
+            "status": "SUCCESS",
+            "success": True,
+            "isPaid": True,
+            "orderId": target_order_id,
+            "paymentId": rzp_payment_id,
+            "message": "Payment verified; skipped duplicate order creation for existingOrderId"
+        }
+
     recovered_order = None
     try:
         from routers.cashfree_router import auto_recover_unplaced_cashfree_order
@@ -519,6 +554,8 @@ async def razorpay_webhook(
             p_id = payment_entity.get("id")
             o_id = payment_entity.get("order_id")
             amt = float(payment_entity.get("amount", 0)) / 100.0
+            p_notes = payment_entity.get("notes") if isinstance(payment_entity.get("notes"), dict) else {}
+            existing_order_id = str(p_notes.get("existingOrderId") or "").strip().lstrip("#")
 
             if o_id:
                 from utils.cache import set_cache
@@ -526,21 +563,83 @@ async def razorpay_webhook(
                 await set_cache(f"rzp_paid:{p_id}", {"orderId": o_id, "amount": amt, "isPaid": True}, ttl=86400)
                 await set_cache(f"cf_paid:{o_id}", {"paymentId": p_id, "amount": amt, "isPaid": True}, ttl=86400)
 
-                # Auto-recover order immediately from draft snapshot!
+                # First check if this payment belongs to an ALREADY-EXISTING order (e.g. Order Tracking Pay Now).
+                # If so, ONLY mark it PAID — NEVER run auto-recovery / create a duplicate order!
+                matched_existing_orders = []
                 try:
-                    from routers.cashfree_router import auto_recover_unplaced_cashfree_order
-                    recovered = await auto_recover_unplaced_cashfree_order(
-                        cf_order_id=o_id,
-                        clean_id=o_id,
-                        cf_ref=p_id,
-                        order_data={"order_amount": amt},
-                        payment_data={"payment_amount": amt, "cf_payment_id": p_id},
-                        db=db
-                    )
-                    if recovered:
-                        logger.info(f"🎉 [Razorpay Webhook SUCCESS] Auto-recovered Order #{recovered.readableId} ({recovered.id}) for ₹{amt}")
-                except Exception as wh_rec_err:
-                    logger.error(f"Error auto-recovering Razorpay order from webhook: {wh_rec_err}", exc_info=True)
+                    wh_filters = [
+                        Order.cfOrderId == o_id,
+                        Order.id == o_id,
+                        Order.readableId == o_id,
+                    ]
+                    if existing_order_id:
+                        wh_filters.extend([
+                            Order.id == existing_order_id,
+                            Order.readableId == existing_order_id,
+                            Order.combinedId == existing_order_id,
+                        ])
+                    wh_res = await db.execute(select(Order).where(or_(*wh_filters)))
+                    matched_existing_orders = wh_res.scalars().all()
+                    if matched_existing_orders:
+                        comb_ids = {o.combinedId for o in matched_existing_orders if o.combinedId}
+                        if comb_ids:
+                            comp_res = await db.execute(select(Order).where(Order.combinedId.in_(list(comb_ids))))
+                            by_id = {o.id: o for o in matched_existing_orders}
+                            for co in comp_res.scalars().all():
+                                by_id[co.id] = co
+                            matched_existing_orders = list(by_id.values())
+
+                        rzp_note = f"Razorpay PG Paid (Ref: {p_id})"
+                        for mo in matched_existing_orders:
+                            mo.paymentStatus = PaymentStatus.PAID
+                            mo.paymentMethod = PaymentMethod.UPI
+                            if not mo.notes or "Razorpay PG Paid" not in mo.notes:
+                                mo.notes = f"{mo.notes} | {rzp_note}" if mo.notes else rzp_note
+                        await db.commit()
+                        logger.info(
+                            f"🎉 [Razorpay Webhook] Marked {len(matched_existing_orders)} existing order(s) PAID "
+                            f"for rzp_order={o_id}, payment={p_id}, ₹{amt}"
+                        )
+                        try:
+                            from utils.supabase_broadcast import broadcast_supabase_realtime
+                            for mo in matched_existing_orders:
+                                topics = ["orders", f"order:{mo.id}", f"order-payment-{mo.id}"]
+                                if mo.readableId:
+                                    topics.append(f"order-payment-{mo.readableId}")
+                                if mo.deliveryUserId:
+                                    topics.append(f"rider_{mo.deliveryUserId}")
+                                await broadcast_supabase_realtime(
+                                    topics=topics,
+                                    event="PAYMENT_RECEIVED",
+                                    payload={
+                                        "orderId": mo.id,
+                                        "paymentStatus": "PAID",
+                                        "paymentMethod": "UPI",
+                                        "amount": amt,
+                                        "paymentId": p_id,
+                                    }
+                                )
+                        except Exception as b_err:
+                            logger.warning(f"Failed to broadcast webhook payment update: {b_err}")
+                except Exception as ex_wh_err:
+                    logger.error(f"Error updating existing order in Razorpay webhook: {ex_wh_err}", exc_info=True)
+
+                # Only auto-recover from draft snapshot for fresh checkout payments (never for existingOrderId)
+                if not matched_existing_orders and not existing_order_id:
+                    try:
+                        from routers.cashfree_router import auto_recover_unplaced_cashfree_order
+                        recovered = await auto_recover_unplaced_cashfree_order(
+                            cf_order_id=o_id,
+                            clean_id=o_id,
+                            cf_ref=p_id,
+                            order_data={"order_amount": amt},
+                            payment_data={"payment_amount": amt, "cf_payment_id": p_id},
+                            db=db
+                        )
+                        if recovered:
+                            logger.info(f"🎉 [Razorpay Webhook SUCCESS] Auto-recovered Order #{recovered.readableId} ({recovered.id}) for ₹{amt}")
+                    except Exception as wh_rec_err:
+                        logger.error(f"Error auto-recovering Razorpay order from webhook: {wh_rec_err}", exc_info=True)
 
             logger.info(f"Webhook payment.captured for order {o_id}, payment {p_id}, ₹{amt}")
     except Exception as e:
