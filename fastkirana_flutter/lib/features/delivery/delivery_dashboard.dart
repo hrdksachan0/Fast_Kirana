@@ -311,10 +311,13 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
   Future<void> _flushOfflineQueue() async {
     try {
+      final dio = ref.read(dioProvider);
+      // Also flush any buffered offline GPS coordinates whenever connectivity returns
+      RiderLocationService().setDio(dio);
+      unawaited(RiderLocationService().syncOfflineLocations());
+
       final pendingBefore = await OfflineSyncService.getPendingCount(OfflineSyncService.queueDelivery);
       if (pendingBefore == 0 || !mounted) return;
-
-      final dio = ref.read(dioProvider);
 
       final syncedCount = await OfflineSyncService.flushQueue(
         OfflineSyncService.queueDelivery,

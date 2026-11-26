@@ -17,7 +17,9 @@ import 'core/services/secure_storage_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/config/app_config.dart';
 import 'data/repositories/product_repository.dart';
+import 'data/repositories/restaurant_repository.dart';
 import 'providers/product_provider.dart';
+import 'providers/home_layout_provider.dart';
 import 'firebase_options.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -205,12 +207,14 @@ void main() async {
     ),
   );
 
-  // Fast warm-up for auth cache & local product/category disk cache (<100ms timeout so it never blocks UI)
+  // Fast warm-up for auth cache & local product/category/restaurant disk cache (<120ms timeout so it never blocks UI)
   try {
     await Future.wait([
       LocationService.loadCachedAddress().timeout(const Duration(milliseconds: 350)),
       SecureStorage.loadCache().timeout(const Duration(milliseconds: 150)),
       ProductRepository.preloadDiskCache().timeout(const Duration(milliseconds: 120)),
+      RestaurantRepository.preloadDiskCache().timeout(const Duration(milliseconds: 120)),
+      preloadHomeLayoutDiskCache().timeout(const Duration(milliseconds: 80)),
     ]);
   } catch (_) {}
 

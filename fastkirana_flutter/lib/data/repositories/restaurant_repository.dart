@@ -1,4 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/config/app_config.dart';
 import '../../core/services/logger_service.dart';
 import '../../core/utils/restaurant_utils.dart';
 import '../models/restaurant.dart';
@@ -13,15 +18,102 @@ class RestaurantRepository {
   static final Map<String, DateTime> _menuCacheTimes = {};
   static final Map<String, Future<List<Product>>> _inFlightMenuFetches = {};
 
-  RestaurantRepository(this._dio);
+  static const int _cacheTTLMinutes = 5;
+  static bool _preloadStarted = false;
+  static bool _preloadComplete = false;
 
-  static void invalidateCache([String? storeId]) {
+  static String _diskRestaurantsKey(String storeKey) => 'cached_restaurants_${storeKey}_v1';
+  static String _diskRestaurantsTsKey(String storeKey) => 'cached_restaurants_ts_${storeKey}_v1';
+
+  /// Synchronous preloaded getter for instant 0ms cold-start rendering
+  static List<Restaurant> preloadedRestaurants([String? storeId]) {
+    final effectiveStore = (storeId != null && storeId.isNotEmpty)
+        ? storeId
+        : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
+    return _cachedRestaurantsByStore['${effectiveStore}__'] ??
+        _cachedRestaurantsByStore['all__'] ??
+        const [];
+  }
+
+  RestaurantRepository(this._dio) {
+    if (!_preloadStarted) {
+      _preloadStarted = true;
+      unawaited(preloadDiskCache());
+    }
+  }
+
+  /// Warm up restaurant disk cache during main() cold start (<80ms)
+  static Future<void> preloadDiskCache([String? storeId]) async {
+    if (_preloadComplete && (storeId == null || storeId.isEmpty)) return;
+    try {
+      final effectiveStore = (storeId != null && storeId.isNotEmpty)
+          ? storeId
+          : (AppConfig.darkstoreId.isNotEmpty ? AppConfig.darkstoreId : 'hub-209206');
+      final cacheKey = '${effectiveStore}__';
+      final diskList = await _loadRestaurantsFromDisk(effectiveStore);
+      if (diskList != null && diskList.isNotEmpty) {
+        _cachedRestaurantsByStore[cacheKey] = diskList;
+        RestaurantRegistry.registerAll(diskList);
+        final ts = await _loadDiskTimestamp(effectiveStore);
+        if (ts != null) {
+          _lastRestaurantsFetchByStore[cacheKey] = DateTime.fromMillisecondsSinceEpoch(ts);
+        }
+      }
+      _preloadComplete = true;
+    } catch (e) {
+      LoggerService.error('RestaurantRepository: disk preload failed', e);
+    }
+  }
+
+  static Future<List<Restaurant>?> _loadRestaurantsFromDisk(String storeKey) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_diskRestaurantsKey(storeKey));
+      if (raw == null || raw.isEmpty) return null;
+      final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .whereType<Map>()
+          .map((j) => Restaurant.fromJson(Map<String, dynamic>.from(j)))
+          .toList();
+    } catch (e) {
+      LoggerService.error('RestaurantRepository: disk load failed for $storeKey', e);
+      return null;
+    }
+  }
+
+  static Future<int?> _loadDiskTimestamp(String storeKey) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt(_diskRestaurantsTsKey(storeKey));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _saveRestaurantsToDisk(String storeKey, List<Restaurant> list) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(list.map((r) => r.toJson()).toList());
+      await prefs.setString(_diskRestaurantsKey(storeKey), encoded);
+      await prefs.setInt(_diskRestaurantsTsKey(storeKey), DateTime.now().millisecondsSinceEpoch);
+    } catch (e) {
+      LoggerService.error('RestaurantRepository: disk save failed for $storeKey', e);
+    }
+  }
+
+  static Future<void> invalidateCache([String? storeId]) async {
     if (storeId != null && storeId.isNotEmpty && storeId != 'all') {
       _cachedRestaurantsByStore.removeWhere((k, _) => k.startsWith(storeId));
       _lastRestaurantsFetchByStore.removeWhere((k, _) => k.startsWith(storeId));
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_diskRestaurantsKey(storeId));
+        await prefs.remove(_diskRestaurantsTsKey(storeId));
+      } catch (_) {}
     } else {
       _cachedRestaurantsByStore.clear();
       _lastRestaurantsFetchByStore.clear();
+      _preloadComplete = false;
     }
   }
 
@@ -31,16 +123,61 @@ class RestaurantRepository {
     String? search,
     bool forceRefresh = false,
   }) async {
-    final cacheKey = '${storeId ?? 'all'}_${cuisine ?? ''}_${search ?? ''}';
+    final storeKey = (storeId != null && storeId.isNotEmpty) ? storeId : 'all';
+    final isBaseFeed = (cuisine == null || cuisine.isEmpty || cuisine == 'all') &&
+        (search == null || search.isEmpty);
+    final cacheKey = '${storeKey}_${cuisine ?? ''}_${search ?? ''}';
+
+    if (!_preloadComplete && isBaseFeed) {
+      await preloadDiskCache(storeKey == 'all' ? null : storeKey);
+    }
+
     try {
       final now = DateTime.now();
       final lastFetch = _lastRestaurantsFetchByStore[cacheKey];
-      final cached = _cachedRestaurantsByStore[cacheKey];
+      var cached = _cachedRestaurantsByStore[cacheKey];
 
-      if (!forceRefresh &&
-          cached != null &&
-          lastFetch != null &&
-          now.difference(lastFetch).inMinutes < 5) {
+      // Lazy disk hydrate if switching to a hub that wasn't preloaded yet
+      if (!forceRefresh && cached == null && isBaseFeed) {
+        final diskList = await _loadRestaurantsFromDisk(storeKey);
+        if (diskList != null && diskList.isNotEmpty) {
+          cached = diskList;
+          _cachedRestaurantsByStore[cacheKey] = diskList;
+          RestaurantRegistry.registerAll(diskList);
+          final ts = await _loadDiskTimestamp(storeKey);
+          if (ts != null) {
+            _lastRestaurantsFetchByStore[cacheKey] = DateTime.fromMillisecondsSinceEpoch(ts);
+          }
+        }
+      }
+
+      if (!forceRefresh && cached != null && cached.isNotEmpty) {
+        final effectiveLastFetch = _lastRestaurantsFetchByStore[cacheKey] ?? lastFetch;
+        final isFresh = effectiveLastFetch != null &&
+            now.difference(effectiveLastFetch).inMinutes < _cacheTTLMinutes;
+        if (isFresh) {
+          return cached;
+        }
+
+        // Stale-While-Revalidate (SWR): return cached restaurants in 0ms and refresh silently in background
+        debugPrint('[RestaurantRepo] SWR HIT for $cacheKey (${cached.length} restaurants) — refreshing in background');
+        if (!_inFlightByStore.containsKey(cacheKey)) {
+          final bgFuture = _fetchRestaurants(storeId: storeId, cuisine: cuisine, search: search);
+          _inFlightByStore[cacheKey] = bgFuture;
+          unawaited(bgFuture.then((fresh) async {
+            _inFlightByStore.remove(cacheKey);
+            if (fresh.isNotEmpty) {
+              _cachedRestaurantsByStore[cacheKey] = fresh;
+              _lastRestaurantsFetchByStore[cacheKey] = DateTime.now();
+              if (isBaseFeed) {
+                await _saveRestaurantsToDisk(storeKey, fresh);
+              }
+            }
+          }).catchError((Object e) {
+            _inFlightByStore.remove(cacheKey);
+            debugPrint('[RestaurantRepo] background SWR refresh skipped: $e');
+          }));
+        }
         return cached;
       }
 
@@ -54,6 +191,9 @@ class RestaurantRepository {
       _inFlightByStore.remove(cacheKey);
       _cachedRestaurantsByStore[cacheKey] = list;
       _lastRestaurantsFetchByStore[cacheKey] = DateTime.now();
+      if (isBaseFeed && list.isNotEmpty) {
+        unawaited(_saveRestaurantsToDisk(storeKey, list));
+      }
       return list;
     } catch (e, st) {
       LoggerService.error('RestaurantRepository: getRestaurants failed', e, st);

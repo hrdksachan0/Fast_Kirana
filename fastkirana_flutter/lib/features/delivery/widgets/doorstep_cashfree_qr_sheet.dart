@@ -38,7 +38,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
   bool _isPaid = false;
   bool _isCheckingStatus = false;
   bool _isManualChecking = false;
-  String _statusHint = 'Awaiting payment • Auto-verifying...';
+  String _statusHint = 'Waiting for UPI...';
   String _razorpayQrUrl = '';
   String _razorpayQrId = '';
   bool _isCombined = false;
@@ -206,13 +206,13 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
     HapticFeedback.lightImpact();
     setState(() {
       _isManualChecking = true;
-      _statusHint = 'Checking with Razorpay now...';
+      _statusHint = 'Checking Razorpay...';
     });
     final paid = await _checkPaymentStatusOnce();
     if (mounted && !paid) {
       setState(() {
         _isManualChecking = false;
-        _statusHint = 'Not received yet • Still listening live...';
+        _statusHint = 'Still listening live...';
       });
     }
   }
@@ -635,31 +635,42 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: AppDesignSystem.slate200),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         child: activeQr.startsWith('data:image')
                             ? Image.memory(
                                 base64Decode(activeQr.split(',').last),
-                                width: 224,
-                                height: 224,
+                                width: 236,
+                                height: 236,
                                 fit: BoxFit.contain,
                                 filterQuality: FilterQuality.none,
                                 errorBuilder: (c, e, s) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
                               )
-                            : CachedNetworkImage(
-                                imageUrl: activeQr,
-                                width: 224,
-                                height: 224,
-                                fit: BoxFit.contain,
-                                placeholder: (c, u) => const SizedBox(
-                                  width: 224,
-                                  height: 224,
-                                  child: Center(child: CircularProgressIndicator(color: AppDesignSystem.success)),
+                            : SizedBox(
+                                width: 236,
+                                height: 236,
+                                child: ClipRect(
+                                  child: Transform.scale(
+                                    scale: 1.28,
+                                    alignment: const Alignment(0.0, 0.02),
+                                    child: CachedNetworkImage(
+                                      imageUrl: activeQr,
+                                      width: 236,
+                                      height: 236,
+                                      fit: BoxFit.fitWidth,
+                                      alignment: const Alignment(0.0, 0.03),
+                                      placeholder: (c, u) => const SizedBox(
+                                        width: 236,
+                                        height: 236,
+                                        child: Center(child: CircularProgressIndicator(color: AppDesignSystem.success)),
+                                      ),
+                                      errorWidget: (c, u, e) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
+                                    ),
+                                  ),
                                 ),
-                                errorWidget: (c, u, e) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
                               ),
                       ),
                     ),

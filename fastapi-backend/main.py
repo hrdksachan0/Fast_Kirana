@@ -174,9 +174,34 @@ app.add_middleware(
     expose_headers=["x-process-time", "x-request-id", "x-trace-id", "traceparent"],
 )
 
-# In-memory sliding window rate limiter for public scraper protection
+# In-memory sliding window rate limiter with tiered per-endpoint protection
 _ip_request_history: dict = {}
 _MAX_REQUESTS_PER_MINUTE = 200
+_MAX_AUTH_REQUESTS_PER_MINUTE = 10
+_MAX_ORDER_CREATE_PER_MINUTE = 20
+_SLOW_API_THRESHOLD_SECONDS = 1.5
+
+_AUTH_STRICT_PATH_FRAGMENTS = (
+    "/auth/send-otp",
+    "/auth/verify-otp",
+    "/auth/otp",
+    "/auth/login",
+    "/auth/register",
+    "/auth/forgot",
+    "/auth/reset",
+)
+
+
+def resolve_rate_limit_bucket(path: str, method: str) -> tuple[str, int]:
+    """Return (bucket_name, max_requests_per_minute) for tiered endpoint protection."""
+    clean_path = (path or "").rstrip("/").lower()
+    upper_method = (method or "GET").upper()
+    if any(frag in clean_path for frag in _AUTH_STRICT_PATH_FRAGMENTS):
+        return ("auth_strict", _MAX_AUTH_REQUESTS_PER_MINUTE)
+    if upper_method == "POST" and clean_path in ("/api/orders", "/orders"):
+        return ("order_create", _MAX_ORDER_CREATE_PER_MINUTE)
+    return ("general", _MAX_REQUESTS_PER_MINUTE)
+
 
 # Middleware for Request Correlation ID, Enterprise Security Headers, Rate Limiting & Distributed Tracing
 @app.middleware("http")
@@ -198,14 +223,21 @@ async def enterprise_security_and_tracing_middleware(request: Request, call_next
     )
     request.state.trace_span = span
 
-    # 2. Public Scraper & Abuse Rate Limiting (exclude health, probes, docs, webhooks)
+    # 2. Tiered Abuse & Scraper Rate Limiting (exclude health, probes, docs, webhooks)
     path = request.url.path
     if not (path.startswith("/health") or path.startswith("/readyz") or path.startswith("/api/readyz") or path.startswith("/api/healthz") or path.startswith("/docs") or path.startswith("/openapi") or path.startswith("/ws") or "webhook" in path):
         client_ip = request.client.host if request.client else "unknown"
+        bucket, bucket_limit = resolve_rate_limit_bucket(path, request.method)
+        rate_key = f"{bucket}:{client_ip}"
         now_ts = time.time()
-        history = [ts for ts in _ip_request_history.get(client_ip, []) if now_ts - ts < 60]
-        if len(history) >= _MAX_REQUESTS_PER_MINUTE:
-            span.end(extra_attributes={"rate_limited": True})
+        # Prevent unbounded memory growth under rotating IPs
+        if len(_ip_request_history) > 5000:
+            stale_keys = [k for k, v in _ip_request_history.items() if not v or now_ts - v[-1] >= 60]
+            for k in stale_keys:
+                _ip_request_history.pop(k, None)
+        history = [ts for ts in _ip_request_history.get(rate_key, []) if now_ts - ts < 60]
+        if len(history) >= bucket_limit:
+            span.end(extra_attributes={"rate_limited": True, "rate_bucket": bucket})
             return JSONResponse(
                 status_code=429,
                 content={
@@ -223,14 +255,27 @@ async def enterprise_security_and_tracing_middleware(request: Request, call_next
                 }
             )
         history.append(now_ts)
-        _ip_request_history[client_ip] = history
+        _ip_request_history[rate_key] = history
 
-    # 3. Execution Timing
+    # 3. Execution Timing + Slow API Alerting
     start_time = time.perf_counter()
     try:
         response = await call_next(request)
         process_time = time.perf_counter() - start_time
-        span.end(extra_attributes={"status_code": response.status_code, "duration_ms": process_time * 1000})
+        duration_ms = round(process_time * 1000, 1)
+        span.end(extra_attributes={"status_code": response.status_code, "duration_ms": duration_ms})
+        if process_time >= _SLOW_API_THRESHOLD_SECONDS:
+            logger.warning(
+                f"[SLOW_API] {request.method} {path} took {duration_ms}ms "
+                f"(status={response.status_code}, req={request_id})"
+            )
+            if sentry_sdk is not None and settings.SENTRY_DSN:
+                sentry_sdk.add_breadcrumb(
+                    category="performance",
+                    message=f"SLOW_API {request.method} {path} ({duration_ms}ms)",
+                    level="warning",
+                    data={"status_code": response.status_code, "request_id": request_id},
+                )
     except Exception as exc:
         process_time = time.perf_counter() - start_time
         span.end(extra_attributes={"duration_ms": process_time * 1000}, error=str(exc))

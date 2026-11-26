@@ -1,81 +1,158 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/routes/page_transitions.dart';
 import '../core/services/location_service.dart';
+import '../core/widgets/app_cached_image.dart';
+import '../data/models/cart.dart';
 import '../features/cart/cart_screen.dart';
 import '../providers/cart_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Universal Apple Watch Style Radial Gauge Painter
+// 3D Fanned Mini-Card Product Deck (Shows last 1-3 added cart products)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _CartRadialGaugePainter extends CustomPainter {
-  final double progress; // 0.0 to 1.0
-  final Color trackColor;
-  final Color progressColor;
-  final double strokeWidth;
+class _FannedCartProductDeck extends StatelessWidget {
+  final List<CartItem> items;
+  final int totalItemCount;
   final bool isFreeDelivery;
 
-  const _CartRadialGaugePainter({
-    required this.progress,
-    required this.trackColor,
-    required this.progressColor,
-    this.strokeWidth = 2.8,
-    this.isFreeDelivery = false,
+  const _FannedCartProductDeck({
+    required this.items,
+    required this.totalItemCount,
+    required this.isFreeDelivery,
   });
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - strokeWidth) / 2;
-
-    // Background track circle
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..isAntiAlias = true;
-    canvas.drawCircle(center, radius, trackPaint);
-
-    // Active progress arc with luxury gradient sweep
-    if (progress > 0) {
-      final rect = Rect.fromCircle(center: center, radius: radius);
-      final progressPaint = Paint()
-        ..shader = SweepGradient(
-          startAngle: 0.0,
-          endAngle: 2 * math.pi,
-          colors: isFreeDelivery
-              ? const [Color(0xFF10B981), Color(0xFF34D399), Color(0xFF10B981)]
-              : const [Color(0xFFE20A22), Color(0xFFFF385C), Color(0xFFE20A22)],
-          transform: const GradientRotation(-math.pi / 2),
-        ).createShader(rect)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round
-        ..isAntiAlias = true;
-
-      final sweepAngle = (2 * math.pi) * progress.clamp(0.0, 1.0);
-      canvas.drawArc(
-        rect,
-        -math.pi / 2,
-        sweepAngle,
-        false,
-        progressPaint,
-      );
+  Widget build(BuildContext context) {
+    // Take last 3 distinct products so the most recently added item pops on top
+    final List<CartItem> distinct = [];
+    final Set<String> seen = {};
+    for (final item in items.reversed) {
+      final pid = item.product.id.isNotEmpty ? item.product.id : item.productId;
+      if (seen.add(pid)) {
+        distinct.add(item);
+        if (distinct.length == 3) break;
+      }
     }
+    final shown = distinct.reversed.toList();
+    final int extraDistinct = math.max(0, items.length - shown.length);
+
+    final List<double> angles = shown.length == 1
+        ? [0.0]
+        : shown.length == 2
+            ? [-0.16, 0.12]
+            : [-0.20, 0.0, 0.20];
+    final List<double> offsets = shown.length == 1
+        ? [0.0]
+        : shown.length == 2
+            ? [-6.0, 6.0]
+            : [-9.0, 0.0, 9.0];
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('fan_deck_$totalItemCount'),
+      tween: Tween<double>(begin: 0.84, end: 1.0),
+      duration: const Duration(milliseconds: 340),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) => Transform.scale(
+        scale: scale,
+        child: child,
+      ),
+      child: SizedBox(
+        width: shown.length == 1 ? 40 : (shown.length == 2 ? 48 : 54),
+        height: 40,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            for (int i = 0; i < shown.length; i++)
+              Transform.translate(
+                offset: Offset(offsets[i], i == shown.length - 1 ? -1.0 : 1.0),
+                child: Transform.rotate(
+                  angle: angles[i],
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    padding: const EdgeInsets.all(2.5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: i == shown.length - 1
+                            ? (isFreeDelivery
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFFDA4AF))
+                            : const Color(0xFFE2E8F0),
+                        width: i == shown.length - 1 ? 1.5 : 1.1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.13),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(7),
+                      child: _buildThumb(shown[i].product.imageUrl),
+                    ),
+                  ),
+                ),
+              ),
+            if (extraDistinct > 0)
+              Positioned(
+                top: -3,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(99),
+                    border: Border.all(color: Colors.white, width: 1.2),
+                  ),
+                  child: Text(
+                    '+$extraDistinct',
+                    style: GoogleFonts.inter(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
-  @override
-  bool shouldRepaint(_CartRadialGaugePainter old) =>
-      old.progress != progress ||
-      old.progressColor != progressColor ||
-      old.trackColor != trackColor ||
-      old.isFreeDelivery != isFreeDelivery;
+  Widget _buildThumb(String? imageUrl) {
+    final url = imageUrl?.trim() ?? '';
+    if (url.isEmpty || url.startsWith('data:')) {
+      return Container(
+        color: const Color(0xFFF8FAFC),
+        child: const Icon(Icons.shopping_bag_rounded, size: 16, color: Color(0xFFE11D48)),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: url,
+      cacheManager: FastKiranaImageCacheManager.instance,
+      fit: BoxFit.contain,
+      memCacheWidth: 96,
+      memCacheHeight: 96,
+      placeholder: (_, __) => Container(color: const Color(0xFFF8FAFC)),
+      errorWidget: (_, __, ___) => Container(
+        color: const Color(0xFFF8FAFC),
+        child: const Icon(Icons.shopping_bag_rounded, size: 16, color: Color(0xFFE11D48)),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,9 +195,6 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
 
     final isFreeDelivery = tier.deliveryFee == 0;
     final remainingForFree = (tier.freeDeliveryThreshold - total).clamp(0.0, tier.freeDeliveryThreshold).toInt();
-    final targetProgress = tier.freeDeliveryThreshold > 0
-        ? (total / tier.freeDeliveryThreshold).clamp(0.0, 1.0)
-        : 1.0;
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 350),
@@ -186,80 +260,11 @@ class _FloatingCartBarState extends ConsumerState<FloatingCartBar> {
                     ),
                     child: Row(
                     children: [
-                      // 1. Sleek Compact Radial Progress Gauge with Elastic Scooter Bounce
-                      TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 650),
-                        curve: Curves.easeOutCubic,
-                        tween: Tween<double>(end: targetProgress),
-                        builder: (context, animProgress, _) {
-                          return SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                CustomPaint(
-                                  size: const Size(36, 36),
-                                  painter: _CartRadialGaugePainter(
-                                    progress: animProgress,
-                                    trackColor: const Color(0xFFF1F5F9),
-                                    progressColor: isFreeDelivery
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFE20A22),
-                                    strokeWidth: 2.8,
-                                    isFreeDelivery: isFreeDelivery,
-                                  ),
-                                ),
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  width: 26,
-                                  height: 26,
-                                  decoration: BoxDecoration(
-                                    color: isFreeDelivery
-                                        ? const Color(0xFFECFDF5)
-                                        : const Color(0xFFFEF3C7),
-                                    shape: BoxShape.circle,
-                                    boxShadow: isFreeDelivery
-                                        ? [
-                                            BoxShadow(
-                                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ]
-                                        : [
-                                            BoxShadow(
-                                              color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
-                                              blurRadius: 5,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ],
-                                  ),
-                                  child: Center(
-                                    child: TweenAnimationBuilder<double>(
-                                      key: ValueKey('scooter_$itemCount'),
-                                      tween: Tween<double>(begin: 0.8, end: 1.0),
-                                      duration: const Duration(milliseconds: 380),
-                                      curve: Curves.elasticOut,
-                                      builder: (context, scale, child) => Transform.scale(
-                                        scale: scale,
-                                        child: child,
-                                      ),
-                                      child: const Text(
-                                        '🛵',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          height: 1.0,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                      // 1. 3D Fanned Mini-Card Product Deck (shows last 1-3 added products)
+                      _FannedCartProductDeck(
+                        items: cart.items,
+                        totalItemCount: itemCount,
+                        isFreeDelivery: isFreeDelivery,
                       ),
                       const SizedBox(width: 8),
 

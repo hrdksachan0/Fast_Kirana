@@ -1,8 +1,8 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../data/models/product.dart';
 import '../../../data/models/category.dart';
@@ -11,7 +11,6 @@ import '../../../providers/store_hub_provider.dart';
 import '../../../widgets/product_card.dart';
 import '../utils/category_visual_helper.dart';
 import 'home_end_of_aisle_search_card.dart';
-import 'home_aisle_spotlight_banner.dart';
 
 class HomeInfiniteFeed {
   HomeInfiniteFeed._();
@@ -124,7 +123,7 @@ class HomeInfiniteFeed {
       loading: () => [
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 26, 16, 12),
+            padding: const EdgeInsets.fromLTRB(12, 16, 12, 10),
             child: _buildInfiniteFeedHeader(
               context: context,
               ref: ref,
@@ -173,10 +172,10 @@ class HomeInfiniteFeed {
         final hasMore = visibleGridCount < filteredProducts.length;
 
         return [
-          // Section Title Header with Dynamic Total Count Badge & SUBCATEGORY Filter Chips
+          // Section Title Header with Cool Porcelain Mist Liquid Bento & Slim Super Saver Strip
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 26, 16, 14),
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 10),
               child: _buildInfiniteFeedHeader(
                 context: context,
                 ref: ref,
@@ -287,216 +286,276 @@ class HomeInfiniteFeed {
     final currentHub = ref.watch(currentStoreHubProvider);
     final hubCity = currentHub.city.isNotEmpty ? currentHub.city : currentHub.name;
     String title = 'All Groceries & Essentials';
-    String subtitle = '⚡ Fast Delivery from $hubCity darkstore';
-    IconData icon = Icons.flash_on_rounded;
+    String subtitle = 'Fresh daily essentials from $hubCity';
 
     if (selectedFilterIndex > 0 && selectedFilterIndex <= subcategories.length) {
       final selectedSub = subcategories[selectedFilterIndex - 1];
       title = selectedSub.name;
       subtitle = _getSubcategorySubtitle(selectedSub.name);
-      icon = Icons.grid_view_rounded;
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 1. Header Title & Dynamic Count Badge
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(icon, size: 18, color: AppDesignSystem.primary),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          title,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: Responsive.scaledFontSize(context, 16.5),
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF0F172A),
-                            letterSpacing: -0.3,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: Responsive.scaledFontSize(context, 11),
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
+    final int totalTabs = 1 + subcategories.length;
+    final int safeSelectedIdx = selectedFilterIndex.clamp(0, math.max(0, totalTabs - 1));
+
+    const headerGradStart = Color(0xFFF8FAFC);
+    const headerGradEnd = Color(0xFFEEF2F6);
+    const borderColor = Color(0xFFE2E8F0);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: borderColor, width: 1.15),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.045),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. Cool Porcelain Mist Top Header + Connected Liquid Subcategory Tabs
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [headerGradStart, headerGradEnd],
               ),
             ),
-            const SizedBox(width: 8),
-            if (!isLoading)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                decoration: BoxDecoration(
-                  color: AppDesignSystem.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppDesignSystem.primary.withValues(alpha: 0.22),
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.inventory_2_outlined, size: 12, color: AppDesignSystem.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$totalCount Items',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.scaledFontSize(context, 10.5),
-                        fontWeight: FontWeight.w800,
-                        color: AppDesignSystem.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // 2. Horizontal SUBCATEGORY Visual Rail (Packshot images + labels, Zepto/Blinkit style)
-        SizedBox(
-          height: 114,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            itemCount: 1 + subcategories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final isSelected = selectedFilterIndex == index;
-              final isAll = index == 0;
-              final Category? sub = isAll ? null : subcategories[index - 1];
-              final String label = isAll ? 'All Items' : sub!.name;
-
-              return Bounceable(
-                scaleFactor: 0.94,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onFilterChanged(index);
-                },
-                child: SizedBox(
-                  width: 76,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(13, 12, 12, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Square packshot / icon card (Bigger 68x68 for prominent visibility!)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        width: 68,
-                        height: 68,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? (isAll ? const Color(0xFF0F172A) : AppDesignSystem.primary.withValues(alpha: 0.10))
-                              : const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: isSelected
-                                ? (isAll ? const Color(0xFF0F172A) : AppDesignSystem.primary)
-                                : const Color(0xFFE2E8F0),
-                            width: isSelected ? 2 : 1,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 16),
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF0F172A),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 1.5),
+                            Text(
+                              subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 10.8),
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (!isLoading)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFFECDD3), width: 1.0),
                           ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: (isAll ? Colors.black : AppDesignSystem.primary).withValues(alpha: 0.20),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ]
-                              : [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
+                          child: Text(
+                            '$totalCount Items',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: Responsive.scaledFontSize(context, 10),
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFFE11D48),
+                            ),
+                          ),
                         ),
-                        child: Center(
-                          child: isAll
-                              ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.flash_on_rounded,
-                                      size: 26,
-                                      color: isSelected ? const Color(0xFFFBBF24) : AppDesignSystem.primary,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'ALL',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: 0.8,
-                                        color: isSelected ? Colors.white : AppDesignSystem.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(3.0),
-                                    child: CategoryVisualHelper.buildAvatarImage(
-                                      context,
-                                      sub!,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-
-                      // Subcategory title (2 lines max, clean, centered)
-                      Text(
-                        label,
-                        maxLines: 2,
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: Responsive.scaledFontSize(context, 10.5),
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          height: 1.15,
-                          color: isSelected ? AppDesignSystem.primary : const Color(0xFF334155),
-                        ),
-                      ),
                     ],
                   ),
                 ),
-              );
-            },
+
+                // 2. Animated Connected Liquid Scoop Filter Tabs
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    const double sidePadding = 8.0;
+                    final double availableWidth = constraints.maxWidth - (sidePadding * 2);
+                    final double tabWidth = totalTabs <= 4
+                        ? (availableWidth / totalTabs).clamp(74.0, 120.0)
+                        : 82.0;
+                    const double tabHeight = 82.0;
+                    final double fullWidth = math.max(
+                      constraints.maxWidth,
+                      sidePadding * 2 + (tabWidth * totalTabs),
+                    );
+                    final double targetX = sidePadding + (safeSelectedIdx * tabWidth);
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: SizedBox(
+                        width: fullWidth,
+                        height: tabHeight,
+                        child: TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                          tween: Tween<double>(end: targetX),
+                          builder: (context, animX, child) => CustomPaint(
+                            painter: _InfiniteFeedLiquidTabPainter(
+                              x: animX,
+                              width: tabWidth,
+                              radius: 17.0,
+                              borderColor: borderColor,
+                              fill: Colors.white,
+                              glowColor: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                              lineWidth: 1.15,
+                            ),
+                            child: child,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: sidePadding),
+                            child: Row(
+                              children: [
+                                for (int index = 0; index < totalTabs; index++)
+                                  _buildLiquidFilterTab(
+                                    context: context,
+                                    isAll: index == 0,
+                                    sub: index == 0 ? null : subcategories[index - 1],
+                                    isSelected: safeSelectedIdx == index,
+                                    tabWidth: tabWidth,
+                                    tabHeight: tabHeight,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      onFilterChanged(index);
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // 3. Slim Animated Silk-Sheen Super Saver Strip + Breathing Live 10–15 min Pill
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+            child: _SilkSheenSuperSaverStrip(hubCity: hubCity),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _buildLiquidFilterTab({
+    required BuildContext context,
+    required bool isAll,
+    required Category? sub,
+    required bool isSelected,
+    required double tabWidth,
+    required double tabHeight,
+    required VoidCallback onTap,
+  }) {
+    final String label = isAll ? 'All Items' : (sub?.name ?? '');
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        width: tabWidth,
+        height: tabHeight,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 6, bottom: 4, left: 3, right: 3),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedScale(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutBack,
+                scale: isSelected ? 1.06 : 0.94,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  width: 40,
+                  height: 40,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFFFFF1F2)
+                        : Colors.white.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFFFDA4AF)
+                          : const Color(0xFFE2E8F0),
+                      width: isSelected ? 1.4 : 1.0,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFFE11D48).withValues(alpha: 0.14),
+                              blurRadius: 7,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: isAll
+                      ? Center(
+                          child: Icon(
+                            Icons.flash_on_rounded,
+                            size: 20,
+                            color: isSelected
+                                ? const Color(0xFFE11D48)
+                                : const Color(0xFF475569),
+                          ),
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(9),
+                          child: CategoryVisualHelper.buildAvatarImage(
+                            context,
+                            sub!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 180),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: Responsive.scaledFontSize(context, isSelected ? 10.0 : 9.6),
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                  color: isSelected ? const Color(0xFFE11D48) : const Color(0xFF475569),
+                  height: 1.12,
+                ),
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
-
-        const SizedBox(height: 14),
-
-        // 3. Dynamic Animated Spotlight Hero Banner (Badi image, pretty animations)
-        HomeAisleSpotlightBanner(
-          selectedSubcategory: (selectedFilterIndex > 0 && selectedFilterIndex <= subcategories.length)
-              ? subcategories[selectedFilterIndex - 1]
-              : null,
-          totalCount: totalCount,
-        ),
-      ],
+      ),
     );
   }
 
@@ -616,6 +675,276 @@ class HomeInfiniteFeed {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Silky Concave Liquid Scoop Tab Painter for All Groceries & Essentials Bento
+class _InfiniteFeedLiquidTabPainter extends CustomPainter {
+  final double x;
+  final double width;
+  final double radius;
+  final Color borderColor;
+  final Color fill;
+  final Color glowColor;
+  final double lineWidth;
+
+  const _InfiniteFeedLiquidTabPainter({
+    required this.x,
+    required this.width,
+    required this.radius,
+    required this.borderColor,
+    required this.fill,
+    required this.glowColor,
+    required this.lineWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bottom = size.height;
+    const filletR = 16.0;
+    final topR = radius.clamp(15.0, 22.0);
+    const top = 3.0;
+    const k = 0.58;
+    const invK = 1.0 - k;
+
+    final tabLeft = x;
+    final tabRight = x + width;
+
+    final path = Path();
+    path.moveTo(0, bottom);
+
+    final effectiveLeftFillet = math.min(filletR, tabLeft).clamp(6.0, filletR);
+    final leftScoopStartX = math.max(0.0, tabLeft - effectiveLeftFillet);
+    if (leftScoopStartX > 0) {
+      path.lineTo(leftScoopStartX, bottom);
+    }
+
+    path.cubicTo(
+      leftScoopStartX + (effectiveLeftFillet * k),
+      bottom,
+      tabLeft,
+      (bottom - effectiveLeftFillet) + (effectiveLeftFillet * invK),
+      tabLeft,
+      bottom - effectiveLeftFillet,
+    );
+
+    path.lineTo(tabLeft, top + topR);
+    path.cubicTo(
+      tabLeft,
+      top + (topR * invK),
+      tabLeft + (topR * invK),
+      top,
+      tabLeft + topR,
+      top,
+    );
+
+    path.lineTo(tabRight - topR, top);
+    path.cubicTo(
+      tabRight - (topR * invK),
+      top,
+      tabRight,
+      top + (topR * invK),
+      tabRight,
+      top + topR,
+    );
+
+    final effectiveRightFillet = math.min(filletR, math.max(6.0, size.width - tabRight));
+    final rightScoopEndX = math.min(size.width, tabRight + effectiveRightFillet);
+
+    path.lineTo(tabRight, bottom - effectiveRightFillet);
+    path.cubicTo(
+      tabRight,
+      (bottom - effectiveRightFillet) + (effectiveRightFillet * invK),
+      rightScoopEndX - (effectiveRightFillet * k),
+      bottom,
+      rightScoopEndX,
+      bottom,
+    );
+
+    path.lineTo(size.width, bottom);
+
+    final fillPath = Path.from(path)
+      ..lineTo(size.width, size.height + 2)
+      ..lineTo(0, size.height + 2)
+      ..close();
+
+    final glowPaint = Paint()
+      ..color = glowColor
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5)
+      ..isAntiAlias = true;
+    canvas.drawPath(fillPath, glowPaint);
+
+    final fillPaint = Paint()
+      ..color = fill
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+    canvas.drawPath(fillPath, fillPaint);
+
+    final strokePaint = Paint()
+      ..color = borderColor
+      ..strokeWidth = lineWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(path, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(_InfiniteFeedLiquidTabPainter old) =>
+      old.x != x ||
+      old.width != width ||
+      old.radius != radius ||
+      old.borderColor != borderColor ||
+      old.fill != fill ||
+      old.glowColor != glowColor ||
+      old.lineWidth != lineWidth;
+}
+
+/// Lightweight 60fps Silk Glass Sheen + Breathing Live Delivery Pill Strip
+class _SilkSheenSuperSaverStrip extends StatefulWidget {
+  final String hubCity;
+  const _SilkSheenSuperSaverStrip({required this.hubCity});
+
+  @override
+  State<_SilkSheenSuperSaverStrip> createState() => _SilkSheenSuperSaverStripState();
+}
+
+class _SilkSheenSuperSaverStripState extends State<_SilkSheenSuperSaverStrip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(11),
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, child) {
+          final double t = _ctrl.value;
+          // Diagonal silk sheen sweeps across during the last 38% of the cycle
+          final double sheenProgress = t < 0.62 ? -1.0 : ((t - 0.62) / 0.38);
+          // Smooth breathing pulse for the emerald live dot
+          final double pulse = 0.5 + 0.5 * math.sin(t * math.pi * 4);
+
+          return Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+                  ),
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 0.9),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Text('✨', style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '${widget.hubCity} Super Saver Deals',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: Responsive.scaledFontSize(context, 10.8),
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(99),
+                        border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.25 + 0.4 * pulse),
+                                  blurRadius: 3 + 3 * pulse,
+                                  spreadRadius: 0.5 + 1.2 * pulse,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Live Stock',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF047857),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (sheenProgress >= 0.0 && sheenProgress <= 1.0)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: FractionallySizedBox(
+                      alignment: Alignment(-1.6 + (3.2 * sheenProgress), 0),
+                      widthFactor: 0.35,
+                      child: Transform(
+                        transform: Matrix4.skewX(-0.3),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withValues(alpha: 0.0),
+                                Colors.white.withValues(alpha: 0.65),
+                                Colors.white.withValues(alpha: 0.0),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

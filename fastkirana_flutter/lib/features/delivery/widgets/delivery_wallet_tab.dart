@@ -29,7 +29,16 @@ class DeliveryWalletTab extends StatelessWidget {
 
   String _formatTime(dynamic dateStr) {
     if (dateStr == null) return '';
-    final dt = DateTime.tryParse(dateStr.toString())?.toLocal();
+    var raw = dateStr.toString().trim();
+    if (raw.isEmpty) return '';
+    // Backend stores naive UTC timestamps without 'Z'; ensure UTC parsing before converting to IST/local
+    final hasTz = raw.endsWith('Z') ||
+        raw.endsWith('z') ||
+        RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(raw);
+    if (!hasTz && raw.contains('T')) {
+      raw = '${raw}Z';
+    }
+    final dt = DateTime.tryParse(raw)?.toLocal();
     if (dt == null) return '';
     final h = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
     final m = dt.minute.toString().padLeft(2, '0');

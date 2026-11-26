@@ -488,35 +488,73 @@ class RiderLocationService {
     }
   }
 
-  /// Flush offline queued location updates when connection is restored
-  Future<void> syncOfflineLocations() async {
+  /// Flush offline queued location updates when connection is restored.
+  /// Retains unsent items if network is still unstable instead of dropping them.
+  Future<int> syncOfflineLocations() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final queueStr = prefs.getString('offline_location_queue');
-      if (queueStr == null || queueStr.isEmpty) return;
+      if (queueStr == null || queueStr.isEmpty) return 0;
 
       final List<dynamic> queue = jsonDecode(queueStr);
-      if (queue.isEmpty) return;
+      if (queue.isEmpty) return 0;
+      if (_dio == null) return 0;
 
-      debugPrint('[RiderLocation] Syncing ${queue.length} offline GPS updates...');
-      if (_dio != null) {
-        for (final item in queue) {
-          try {
-            await _dio!.post('/api/delivery/location', data: {
+      // Collapse bursts to the latest 5 points per order so reconnect sync is fast
+      final Map<String, List<Map<String, dynamic>>> grouped = {};
+      for (final raw in queue) {
+        if (raw is! Map) continue;
+        final item = Map<String, dynamic>.from(raw);
+        final key = (item['order_id'] ?? item['orderId'] ?? 'idle').toString();
+        grouped.putIfAbsent(key, () => []).add(item);
+      }
+      final List<Map<String, dynamic>> compacted = [];
+      for (final entries in grouped.values) {
+        final start = entries.length > 5 ? entries.length - 5 : 0;
+        compacted.addAll(entries.sublist(start));
+      }
+
+      debugPrint('[RiderLocation] Syncing ${compacted.length} offline GPS updates...');
+      final List<Map<String, dynamic>> remaining = [];
+      int synced = 0;
+
+      for (int i = 0; i < compacted.length; i++) {
+        final item = compacted[i];
+        try {
+          await _dio!.post(
+            '/api/delivery/location',
+            data: {
               'lat': item['latitude'] ?? item['lat'],
               'lng': item['longitude'] ?? item['lng'],
-              'orderId': item['order_id'],
+              'orderId': item['order_id'] ?? item['orderId'],
               'heading': item['heading'],
               'speed': item['speed'],
               'accuracy': item['accuracy'],
-            });
-          } catch (e, _) { LoggerService.error('RiderLocationService: error', e); }
+            },
+            options: Options(
+              sendTimeout: const Duration(seconds: 4),
+              receiveTimeout: const Duration(seconds: 4),
+            ),
+          );
+          synced++;
+        } catch (e, _) {
+          LoggerService.error('RiderLocationService: offline sync failed, keeping remaining points', e);
+          remaining.addAll(compacted.sublist(i));
+          break;
         }
       }
-      await prefs.remove('offline_location_queue');
-      debugPrint('[RiderLocation] Offline location queue synced successfully.');
+
+      if (remaining.isEmpty) {
+        await prefs.remove('offline_location_queue');
+        debugPrint('[RiderLocation] Offline location queue synced ($synced points).');
+      } else {
+        await prefs.setString('offline_location_queue', jsonEncode(remaining));
+        debugPrint('[RiderLocation] Partial GPS sync: $synced sent, ${remaining.length} retained.');
+      }
+      return synced;
     } catch (e) {
       debugPrint('[RiderLocation] Offline sync error: $e');
+      return 0;
     }
   }
 

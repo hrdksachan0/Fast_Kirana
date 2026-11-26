@@ -280,7 +280,7 @@ class GiftingCelebrationBentoBox extends StatelessWidget {
                     itemCount: products.length,
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: Responsive.isTablet(context) ? 3 : 2,
-                      childAspectRatio: Responsive.isTablet(context) ? 0.76 : 0.72,
+                      childAspectRatio: Responsive.isTablet(context) ? 0.72 : 0.68,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
                     ),
@@ -811,14 +811,14 @@ class _LuxuryGiftingCard extends StatelessWidget {
                   ],
                 ),
 
-                // Compact ADD Button / Stepper / Out of Stock / Closed
+                // Spacious Touchable ADD Button / Stepper / Out of Stock / Closed
                 isOutOfStock
                     ? Container(
-                        height: 27,
-                        padding: const EdgeInsets.symmetric(horizontal: 7),
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: const Color(0xFFE2E8F0),
                             width: 1.0,
@@ -828,7 +828,7 @@ class _LuxuryGiftingCard extends StatelessWidget {
                           child: Text(
                             'SOLD OUT',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 9.0,
+                              fontSize: 9.5,
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFF94A3B8),
                               letterSpacing: 0.2,
@@ -838,11 +838,11 @@ class _LuxuryGiftingCard extends StatelessWidget {
                       )
                     : !isStoreOpen
                         ? Container(
-                            height: 27,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            height: 32,
+                            padding: const EdgeInsets.symmetric(horizontal: 9),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: const Color(0xFFE2E8F0),
                                 width: 1.0,
@@ -852,7 +852,7 @@ class _LuxuryGiftingCard extends StatelessWidget {
                               child: Text(
                                 'CLOSED',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 9.5,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF94A3B8),
                                   letterSpacing: 0.2,
@@ -861,75 +861,99 @@ class _LuxuryGiftingCard extends StatelessWidget {
                             ),
                           )
                         : inCartCount == 0
-                            ? GestureDetector(
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  onAdd();
-                                },
-                                child: Container(
-                                  width: 64,
-                                  height: 27,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF1F2),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: const Color(0xFFE11D48),
-                                      width: 1.2,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'ADD',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w900,
+                            ? Material(
+                                color: const Color(0xFFFFF1F2),
+                                borderRadius: BorderRadius.circular(10),
+                                elevation: 1.5,
+                                shadowColor: const Color(0xFFE11D48).withValues(alpha: 0.18),
+                                child: InkWell(
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    onAdd();
+                                  },
+                                  borderRadius: BorderRadius.circular(10),
+                                  splashColor: const Color(0xFFE11D48).withValues(alpha: 0.18),
+                                  highlightColor: const Color(0xFFE11D48).withValues(alpha: 0.10),
+                                  child: Container(
+                                    constraints: const BoxConstraints(minWidth: 78),
+                                    height: 34,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
                                         color: const Color(0xFFE11D48),
-                                        letterSpacing: 0.2,
+                                        width: 1.4,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'ADD',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w900,
+                                          color: const Color(0xFFE11D48),
+                                          letterSpacing: 0.4,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               )
-                    : Container(
-                        height: 27,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE11D48),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                onDecrement();
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                child: Icon(Icons.remove, size: 14, color: Colors.white),
+                            : Material(
+                                color: const Color(0xFFE11D48),
+                                borderRadius: BorderRadius.circular(10),
+                                elevation: 1.5,
+                                shadowColor: const Color(0xFFE11D48).withValues(alpha: 0.30),
+                                child: SizedBox(
+                                  height: 34,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      InkWell(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          onDecrement();
+                                        },
+                                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+                                        child: const SizedBox(
+                                          width: 30,
+                                          height: 34,
+                                          child: Center(
+                                            child: Icon(Icons.remove, size: 16, color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(minWidth: 20),
+                                        child: Center(
+                                          child: Text(
+                                            '$inCartCount',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      InkWell(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          onIncrement();
+                                        },
+                                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+                                        child: const SizedBox(
+                                          width: 30,
+                                          height: 34,
+                                          child: Center(
+                                            child: Icon(Icons.add, size: 16, color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                            Text(
-                              '$inCartCount',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                onIncrement();
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                child: Icon(Icons.add, size: 14, color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
               ],
             ),
           ],

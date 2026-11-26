@@ -435,8 +435,8 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                                 ),
                               ),
 
-                              // Top-Left Badges (Discount % OFF / Bestseller)
-                              if (resolvedDiscount > 0)
+                              // Top-Left Badges (Discount >= 10% OFF / Bestseller)
+                              if (resolvedDiscount >= 10)
                                 Positioned(
                                   top: s(5),
                                   left: s(5),

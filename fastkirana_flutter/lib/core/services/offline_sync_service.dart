@@ -30,7 +30,27 @@ class OfflineSyncService {
         'createdAt': DateTime.now().toIso8601String(),
       };
 
-      list.add(item);
+      // Deduplicate repeated offline taps for the same (action, orderId, newStatus)
+      final orderId = payload['orderId']?.toString();
+      final newStatus = payload['newStatus']?.toString();
+      if (orderId != null && orderId.isNotEmpty) {
+        final existingIdx = list.indexWhere((rawItem) {
+          if (rawItem is! Map) return false;
+          if (rawItem['action'] != action) return false;
+          final p = rawItem['payload'];
+          if (p is! Map) return false;
+          return p['orderId']?.toString() == orderId &&
+              (newStatus == null || p['newStatus']?.toString() == newStatus);
+        });
+        if (existingIdx != -1) {
+          list[existingIdx] = item;
+        } else {
+          list.add(item);
+        }
+      } else {
+        list.add(item);
+      }
+
       await prefs.setString(queueName, jsonEncode(list));
       LoggerService.info('[OfflineSync] Enqueued action in $queueName: $action');
     } catch (e) {

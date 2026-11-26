@@ -14,11 +14,13 @@ import '../../widgets/card_media_widget.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/banner_provider.dart';
 import '../../providers/store_hub_provider.dart';
+import '../../providers/restaurant_provider.dart';
 
 import '../../data/models/product.dart';
 import '../../data/models/category.dart';
 import '../../data/models/banner.dart';
 import '../../data/models/store_hub.dart';
+import '../../data/models/restaurant.dart';
 
 import '../home/utils/category_visual_helper.dart';
 import '../navratri/navratri_data.dart';
@@ -72,18 +74,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         ref.read(homeProductCatalogProvider.future).catchError((_) => <Product>[]);
     final bannersFuture =
         ref.read(bannersProvider('grocery').future).catchError((_) => <Banner>[]);
+    final restaurantsFuture =
+        ref.read(restaurantsProvider.future).catchError((_) => <Restaurant>[]);
     final campaignFuture =
         ref.read(navratriDataProvider.future).then<NavratriData?>((v) => v).catchError((_) => null);
     final homeLayoutFuture =
         ref.read(homeLayoutConfigProvider.future).catchError((_) => const HomeLayoutConfigModel());
 
-    // 3. Texture Precaching:
-    // Pre-cache top 12 category packshots, first 2 hero banners, and top 16 product images
-    // with exact memory downsampling and cache managers so Home opens with images ready on Frame 0.
-    final categoryPrecacheFuture = categoriesFuture.then((categories) async {
-      if (!mounted || categories.isEmpty) return;
+    // 3. Texture Precaching (respecting Admin unhidden/enabled layout sections):
+    // Pre-cache all root Bento category packshots, hero banners, restaurant covers,
+    // and top 16 product images ONLY for sections that are enabled (unhidden).
+    bool isSectionEnabled(HomeLayoutConfigModel layout, String id) {
+      for (final s in layout.sections) {
+        if (s.id == id) return s.enabled;
+      }
+      return true;
+    }
+
+    final categoryPrecacheFuture = Future.wait([categoriesFuture, homeLayoutFuture]).then((res) async {
+      final categories = res[0] as List<Category>;
+      final layout = res[1] as HomeLayoutConfigModel;
+      final bentoEnabled = isSectionEnabled(layout, 'top_categories') ||
+          layout.sections.any((s) => s.id.startsWith('bento_') && s.enabled);
+      if (!mounted || !bentoEnabled || categories.isEmpty) return;
+      final rootCats = categories
+          .where((c) => c.parentId == null || c.parentId!.isEmpty)
+          .take(16)
+          .toList();
+      final targets = rootCats.isNotEmpty ? rootCats : categories.take(16).toList();
       final tasks = <Future<void>>[];
-      for (final cat in categories.take(12)) {
+      for (final cat in targets) {
         final imgUrl = CategoryVisualHelper.resolveRealisticImageUrl(cat);
         if (imgUrl.isNotEmpty) {
           tasks.add(
@@ -102,10 +122,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (tasks.isNotEmpty) {
         await Future.wait(tasks);
       }
-    }).timeout(const Duration(milliseconds: 3000), onTimeout: () {}).catchError((_) {});
+    }).timeout(const Duration(milliseconds: 2800), onTimeout: () {}).catchError((_) {});
 
-    final bannerPrecacheFuture = bannersFuture.then((banners) async {
-      if (!mounted || banners.isEmpty) return;
+    final restaurantPrecacheFuture = restaurantsFuture.then((restaurants) async {
+      if (!mounted || restaurants.isEmpty) return;
+      final tasks = <Future<void>>[];
+      for (final rest in restaurants.take(6)) {
+        final img = rest.bannerUrl ?? rest.logoUrl;
+        if (img != null && img.trim().isNotEmpty) {
+          tasks.add(
+            precacheImage(
+              CachedNetworkImageProvider(
+                CardMediaWidget.resolveUrl(img),
+                cacheManager: FastKiranaImageCacheManager.instance,
+                maxWidth: 800,
+                maxHeight: 500,
+              ),
+              context,
+            ).catchError((_) {}),
+          );
+        }
+      }
+      if (tasks.isNotEmpty) {
+        await Future.wait(tasks);
+      }
+    }).timeout(const Duration(milliseconds: 2200), onTimeout: () {}).catchError((_) {});
+
+    final bannerPrecacheFuture = Future.wait([bannersFuture, homeLayoutFuture]).then((res) async {
+      final banners = res[0] as List<Banner>;
+      final layout = res[1] as HomeLayoutConfigModel;
+      if (!mounted || !isSectionEnabled(layout, 'hero_banners') || banners.isEmpty) return;
       final tasks = <Future<void>>[];
       for (final banner in banners.take(2)) {
         final rawImg = banner.imageUrl;
@@ -171,6 +217,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       prefFuture,
       locationFuture,
       categoryPrecacheFuture,
+      restaurantPrecacheFuture,
       bannerPrecacheFuture,
       catalogPrecacheFuture,
       campaignFuture,

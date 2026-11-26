@@ -252,7 +252,14 @@ class DeliveryHistoryTab extends StatelessWidget {
               String timeStr = 'Today';
               if (item['deliveredAt'] != null || item['createdAt'] != null) {
                 try {
-                  final dt = DateTime.parse(item['deliveredAt'] ?? item['createdAt']).toLocal();
+                  var rawTs = (item['deliveredAt'] ?? item['createdAt']).toString().trim();
+                  final hasTz = rawTs.endsWith('Z') ||
+                      rawTs.endsWith('z') ||
+                      RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(rawTs);
+                  if (!hasTz && rawTs.contains('T')) {
+                    rawTs = '${rawTs}Z';
+                  }
+                  final dt = DateTime.parse(rawTs).toLocal();
                   timeStr = DateFormat('h:mm a').format(dt);
                 } catch (e, _) { LoggerService.error('DeliveryDashboard: silent catch', e); }
               }

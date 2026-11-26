@@ -103,6 +103,13 @@ async def get_rider_wallet(
     is_locked = wallet.cashInHand >= wallet.cashLimit
     is_warning = wallet.cashInHand >= wallet.cashLimit * 0.75
 
+    def _to_utc_iso(dt: Optional[datetime]) -> Optional[str]:
+        if not dt:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+        return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
     def _serialize_order(o: Order) -> Dict[str, Any]:
         return {
             "id": o.id,
@@ -110,8 +117,8 @@ async def get_rider_wallet(
             "total": float(o.total or 0.0),
             "paymentMethod": o.paymentMethod.value if o.paymentMethod else "COD",
             "paymentStatus": o.paymentStatus.value if o.paymentStatus else "PENDING",
-            "deliveredAt": o.deliveredAt.isoformat() if o.deliveredAt else None,
-            "createdAt": o.createdAt.isoformat() if o.createdAt else None,
+            "deliveredAt": _to_utc_iso(o.deliveredAt),
+            "createdAt": _to_utc_iso(o.createdAt),
             "cashSettledToAdmin": o.cashSettledToAdmin,
             "shopName": o.shopName,
         }
@@ -148,7 +155,7 @@ async def get_rider_wallet(
                 "amount": float(d.amount),
                 "adminName": d.admin.name if d.admin else "Admin",
                 "notes": d.notes,
-                "createdAt": d.createdAt.isoformat() if d.createdAt else None
+                "createdAt": _to_utc_iso(d.createdAt)
             } for d in recent_deposits
         ]
     }

@@ -6,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 import '../../../core/theme/design_system.dart';
 import '../../../data/models/category.dart';
+import '../../../data/repositories/product_repository.dart';
 import '../../../providers/product_provider.dart';
 import '../main_shell.dart';
 import '../utils/category_visual_helper.dart';
@@ -17,12 +18,23 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesProvider);
+    final preloaded = ProductRepository.preloadedCategories;
+    final effectiveCategories = categoriesAsync.valueOrNull ?? (preloaded.isNotEmpty ? preloaded : null);
 
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 12),
-      child: categoriesAsync.when(
-        data: (categories) {
-          // Filter out restaurant/cafe items
+      child: effectiveCategories != null
+          ? _buildBentoBody(context, ref, effectiveCategories)
+          : categoriesAsync.when(
+              data: (categories) => _buildBentoBody(context, ref, categories),
+              loading: () => _buildBentoShimmer(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+    );
+  }
+
+  Widget _buildBentoBody(BuildContext context, WidgetRef ref, List<Category> categories) {
+    // Filter out restaurant/cafe items
           final groceryCategories = categories.where((c) {
             final slug = c.slug.toLowerCase().trim();
             final name = c.name.toLowerCase().trim();
@@ -143,11 +155,6 @@ class HomeTopCategoriesGrid extends ConsumerWidget {
               ],
             ),
           );
-        },
-        loading: () => _buildBentoShimmer(),
-        error: (_, __) => const SizedBox.shrink(),
-      ),
-    );
   }
 
   // ─── HERO CARD (50% WIDTH, WIDE LUXURY APPETIZING CONTAINER) ───

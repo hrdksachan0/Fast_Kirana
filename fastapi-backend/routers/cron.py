@@ -71,14 +71,51 @@ async def _send_whatsapp_alert(phone: str, text_message: str) -> bool:
         return False
 
 
+def _extract_captured_razorpay_payment(payments_payload: Any) -> Optional[str]:
+    """Return the first captured Razorpay payment ID from a /v1/orders/{id}/payments payload."""
+    if not isinstance(payments_payload, dict):
+        return None
+    items = payments_payload.get("items")
+    if not isinstance(items, list):
+        return None
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        status_val = str(item.get("status") or "").lower()
+        if status_val == "captured" or item.get("captured") is True:
+            return str(item.get("id") or "captured")
+    return None
+
+
+async def _check_razorpay_order_paid(order: Order) -> Optional[str]:
+    """Verify against Razorpay API if an order's linked Razorpay order has a captured payment."""
+    rzp_order_id = str(getattr(order, "cfOrderId", None) or "").strip()
+    if not rzp_order_id.startswith("order_"):
+        return None
+    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as rzp_client:
+            res = await rzp_client.get(
+                f"https://api.razorpay.com/v1/orders/{rzp_order_id}/payments",
+                auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET),
+            )
+            if res.status_code == 200:
+                return _extract_captured_razorpay_payment(res.json())
+    except Exception as rzp_err:
+        logger.warning(f"Razorpay reconciliation check failed for order {order.id} ({rzp_order_id}): {rzp_err}")
+    return None
+
+
 async def run_payment_recovery_cron(db: AsyncSession) -> Dict[str, Any]:
     """
     Enterprise Quick-Commerce Payment Recovery & Order Lifecycle Engine.
     Follows Swiggy/Zepto model:
-    1. 2-30 min unpaid UPI attempts: Trigger automated WhatsApp recovery with direct COD / retry link.
-    2. >30 min abandoned orders: Auto-cancel, restore reserved inventory, and emit real-time updates.
+    1. 2-30 min unpaid UPI attempts: Auto-reconcile Razorpay first; if still unpaid, trigger WhatsApp recovery.
+    2. >30 min abandoned orders: Verify Razorpay + Cashfree before auto-cancelling, restore inventory, and emit updates.
     """
     summary = {
+        "razorpayReconciled": 0,
         "recoveredAlertsSent": 0,
         "timedOutCancelled": 0,
         "errors": []
@@ -113,6 +150,27 @@ async def run_payment_recovery_cron(db: AsyncSession) -> Dict[str, Any]:
         recovery_orders = res_rec.scalars().all()
 
         for order in recovery_orders:
+            # 🛡️ Step 0: Active Razorpay Reconciliation before sending "Payment Pending" WhatsApp alert
+            rzp_pay_id = await _check_razorpay_order_paid(order)
+            if rzp_pay_id:
+                order.paymentStatus = PaymentStatus.PAID
+                order.status = OrderStatus.CONFIRMED
+                rzp_note = f"Razorpay Auto-Reconciled by Cron ({rzp_pay_id} ✅)"
+                order.notes = f"{order.notes} | {rzp_note}" if order.notes else rzp_note
+                await db.commit()
+                summary["razorpayReconciled"] += 1
+                logger.info(f"Cron auto-reconciled Razorpay Order #{order.readableId or order.id} ({rzp_pay_id})")
+                try:
+                    await ws_manager.broadcast_order_update(order.id, {
+                        "type": "ORDER_UPDATED",
+                        "orderId": order.id,
+                        "status": "CONFIRMED",
+                        "paymentStatus": "PAID",
+                    })
+                except Exception:
+                    pass
+                continue
+
             # Fetch user phone
             user_stmt = select(User).where(User.id == order.userId)
             u_res = await db.execute(user_stmt)
@@ -166,7 +224,19 @@ async def run_payment_recovery_cron(db: AsyncSession) -> Dict[str, Any]:
 
         for order in expired_orders:
             try:
-                # 🛡️ CRITICAL GATEWAY SAFEGUARD: Check Cashfree status before cancelling to protect paid orders!
+                # 🛡️ CRITICAL GATEWAY SAFEGUARD 1: Check Razorpay before cancelling to protect paid orders!
+                rzp_pay_id = await _check_razorpay_order_paid(order)
+                if rzp_pay_id:
+                    order.paymentStatus = PaymentStatus.PAID
+                    order.status = OrderStatus.CONFIRMED
+                    rzp_note = f"Razorpay Auto-Reconciled by Cron ({rzp_pay_id} ✅)"
+                    order.notes = f"{order.notes} | {rzp_note}" if order.notes else rzp_note
+                    await db.commit()
+                    summary["razorpayReconciled"] += 1
+                    logger.info(f"Cron salvaged Razorpay Order #{order.readableId or order.id} ({rzp_pay_id}) - marked PAID & CONFIRMED")
+                    continue
+
+                # 🛡️ CRITICAL GATEWAY SAFEGUARD 2: Check Cashfree status before cancelling to protect paid orders!
                 is_cf_paid = False
                 try:
                     from routers.cashfree_router import CASHFREE_BASE_URL, _get_cashfree_headers

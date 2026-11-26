@@ -411,21 +411,31 @@ class AddToCartButton extends ConsumerWidget {
                 }
               },
               child: Center(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 120),
-                  transitionBuilder: (child, animation) => ScaleTransition(
-                    scale: Tween<double>(begin: 0.78, end: 1.0).animate(animation),
-                    child: FadeTransition(opacity: animation, child: child),
-                  ),
-                  child: Text(
-                    '$inCartQty',
-                    key: ValueKey(inCartQty),
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: s(16.5),
-                      height: 1.0,
-                      letterSpacing: -0.2,
+                child: ClipRect(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    switchInCurve: Curves.easeOutBack,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) => SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.55),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: 0.78, end: 1.0).animate(animation),
+                        child: FadeTransition(opacity: animation, child: child),
+                      ),
+                    ),
+                    child: Text(
+                      '$inCartQty',
+                      key: ValueKey(inCartQty),
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: s(16.5),
+                        height: 1.0,
+                        letterSpacing: -0.2,
+                      ),
                     ),
                   ),
                 ),
