@@ -135,6 +135,7 @@ class _AdminFilterHeaderState extends State<AdminFilterHeader> {
     if (status == 'PAYMENT_PENDING') {
       return '⚠️ Payment Pending${widget.displayPendingPaymentCount > 0 ? ' (${widget.displayPendingPaymentCount})' : ''}';
     }
+    if (status == 'KOT_PENDING') return '🖨️ KOT Pending$countSuffix';
     if (status == 'ADMIN_PENDING') return '⚠️ Needs Approval$countSuffix';
     if (status == 'PENDING') return 'Kitchen Pending$countSuffix';
     if (status == 'CONFIRMED') return 'Confirmed$countSuffix';

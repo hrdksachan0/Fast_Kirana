@@ -312,7 +312,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   Future<void> _flushOfflineQueue() async {
     try {
       final pendingBefore = await OfflineSyncService.getPendingCount(OfflineSyncService.queueDelivery);
-      if (pendingBefore == 0) return;
+      if (pendingBefore == 0 || !mounted) return;
 
       final dio = ref.read(dioProvider);
 
@@ -815,6 +815,10 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     }
 
     // Fallback to Dio REST API
+    if (!mounted) {
+      _isFetchingOrders = false;
+      return;
+    }
     try {
       final dio = ref.read(dioProvider);
       final prefs = await SharedPreferences.getInstance();
@@ -1173,6 +1177,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
   Future<void> _fetchWallet() async {
     try {
+      if (!mounted) return;
       final dio = ref.read(dioProvider);
       final prefs = await SharedPreferences.getInstance();
       final phone = prefs.getString('user_phone') ?? '';
@@ -1511,6 +1516,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     }
 
     try {
+      if (!mounted) return;
       final dio = ref.read(dioProvider);
 
       // Concurrent direct update to Supabase for immediate sync across consoles

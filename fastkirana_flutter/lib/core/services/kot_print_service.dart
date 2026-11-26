@@ -27,6 +27,7 @@ class KotPrintService {
     List<dynamic>? items,
     String? deliveryMethod,
     String? notes,
+    String? printedBy,
     Dio? dioClient,
   }) async {
     bool success = false;
@@ -64,6 +65,7 @@ class KotPrintService {
       'deliveryMethod': deliveryMethod ?? 'DELIVERY',
       'notes': notes,
       'printedAt': DateTime.now().toIso8601String(),
+      if (printedBy != null && printedBy.trim().isNotEmpty) 'printedBy': printedBy.trim(),
       'manual': true,
       'source': 'flutter_app',
     };
@@ -99,6 +101,7 @@ class KotPrintService {
             'orderId': cleanId,
             'readableId': cleanReadable.isNotEmpty ? cleanReadable : cleanId,
             'kotPrinted': true,
+            if (printedBy != null && printedBy.trim().isNotEmpty) 'kotPrintedBy': printedBy.trim(),
             'timestamp': DateTime.now().toIso8601String(),
           },
         );

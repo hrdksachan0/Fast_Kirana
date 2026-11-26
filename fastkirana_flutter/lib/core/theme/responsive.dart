@@ -150,7 +150,7 @@ class Responsive {
 
   /// Responsive scaled font size with safety clamping
   static double scaledFontSize(BuildContext context, double baseSize) {
-    if (baseSize <= 0) return baseSize;
+    if (!baseSize.isFinite || baseSize <= 0) return baseSize;
     final width = MediaQuery.of(context).size.width;
     if (width > tabletBreakpoint) return baseSize * 1.1;
     // On small/narrow phones (e.g. Moto ~360dp), never degrade small labels below readable thresholds
@@ -164,7 +164,8 @@ class Responsive {
   /// Returns a scale factor (1.0–1.15) for the current screen width relative to a base phone width
   static double uiScale(BuildContext context, {double baseWidth = 375.0, double maxScale = 1.15}) {
     final width = MediaQuery.of(context).size.width;
-    return (width / baseWidth).clamp(1.0, maxScale);
+    final safeMax = maxScale < 1.0 ? 1.0 : maxScale;
+    return (width / baseWidth).clamp(1.0, safeMax);
   }
 
   /// Scales any value proportionally to the screen width

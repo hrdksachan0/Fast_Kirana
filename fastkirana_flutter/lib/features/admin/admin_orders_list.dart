@@ -44,6 +44,7 @@ import '../../core/services/order_alarm_service.dart';
 import '../common/widgets/battery_optimization_dialog.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../widgets/app_confirmation_dialog.dart';
+import '../../providers/auth_provider.dart' show authProvider;
 
 class _OptimisticStatusLock {
   final OrderStatus status;
@@ -373,11 +374,13 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 
   final Set<String> _printedKOTOrders = {};
+  final Map<String, String> _printedKOTBy = {};
   final Set<String> _sendingKOTOrderIds = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   final List<String> _liveStatusFilters = [
     'ALL',
+    'KOT_PENDING',
     'PAYMENT_PENDING',
     'ADMIN_PENDING',
     'PENDING',
@@ -500,8 +503,15 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
           if (isKot) {
             final oid = (record['orderId'] ?? record['id'])?.toString();
             final rid = record['readableId']?.toString();
-            if (oid != null && oid.isNotEmpty) _printedKOTOrders.add(oid);
-            if (rid != null && rid.isNotEmpty) _printedKOTOrders.add(rid);
+            final byName = (record['kotPrintedBy'] ?? record['printedBy'])?.toString().trim();
+            if (oid != null && oid.isNotEmpty) {
+              _printedKOTOrders.add(oid);
+              if (byName != null && byName.isNotEmpty) _printedKOTBy[oid] = byName;
+            }
+            if (rid != null && rid.isNotEmpty) {
+              _printedKOTOrders.add(rid);
+              if (byName != null && byName.isNotEmpty) _printedKOTBy[rid] = byName;
+            }
             if (mounted) setState(() {});
             return;
           }
@@ -999,18 +1009,27 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         _saveDiskOrders(mergedOrders);
 
         if (mounted) {
-          // Hydrate KOT printed state from DB so button stays disabled across refreshes
+          // Hydrate KOT printed state & admin name from DB
           for (final o in mergedOrders) {
             if (o.kotPrinted) {
               _printedKOTOrders.add(o.id);
               if (o.readableId != null) _printedKOTOrders.add(o.readableId!);
+              if (o.kotPrintedBy != null && o.kotPrintedBy!.isNotEmpty) {
+                _printedKOTBy[o.id] = o.kotPrintedBy!;
+                if (o.readableId != null) _printedKOTBy[o.readableId!] = o.kotPrintedBy!;
+              }
             }
-            // Also check sub-orders
             if (o.subOrders != null) {
               for (final sub in o.subOrders!) {
                 if (sub.kotPrinted) {
                   _printedKOTOrders.add(sub.id);
+                  _printedKOTOrders.add(o.id);
                   if (sub.readableId != null) _printedKOTOrders.add(sub.readableId!);
+                  if (sub.kotPrintedBy != null && sub.kotPrintedBy!.isNotEmpty) {
+                    _printedKOTBy[sub.id] = sub.kotPrintedBy!;
+                    _printedKOTBy[o.id] = sub.kotPrintedBy!;
+                    if (sub.readableId != null) _printedKOTBy[sub.readableId!] = sub.kotPrintedBy!;
+                  }
                 }
               }
             }
@@ -1351,17 +1370,27 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
         _cachedOrders = mergedOrders;
         _saveDiskOrders(mergedOrders);
         if (mounted) {
-          // Hydrate KOT printed state from DB
+          // Hydrate KOT printed state & admin name from DB
           for (final o in mergedOrders) {
             if (o.kotPrinted) {
               _printedKOTOrders.add(o.id);
               if (o.readableId != null) _printedKOTOrders.add(o.readableId!);
+              if (o.kotPrintedBy != null && o.kotPrintedBy!.isNotEmpty) {
+                _printedKOTBy[o.id] = o.kotPrintedBy!;
+                if (o.readableId != null) _printedKOTBy[o.readableId!] = o.kotPrintedBy!;
+              }
             }
             if (o.subOrders != null) {
               for (final sub in o.subOrders!) {
                 if (sub.kotPrinted) {
                   _printedKOTOrders.add(sub.id);
+                  _printedKOTOrders.add(o.id);
                   if (sub.readableId != null) _printedKOTOrders.add(sub.readableId!);
+                  if (sub.kotPrintedBy != null && sub.kotPrintedBy!.isNotEmpty) {
+                    _printedKOTBy[sub.id] = sub.kotPrintedBy!;
+                    _printedKOTBy[o.id] = sub.kotPrintedBy!;
+                    if (sub.readableId != null) _printedKOTBy[sub.readableId!] = sub.kotPrintedBy!;
+                  }
                 }
               }
             }
@@ -1900,6 +1929,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       }
 
       final authOptions = await AdminAuthorization.optionsAsync();
+      if (!mounted) return;
       for (final id in targetIds) {
         var cleanId = id.trim();
         if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
@@ -1944,6 +1974,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     // 2. Sync to Supabase & API
     try {
       final authOptions = await AdminAuthorization.optionsAsync();
+      if (!mounted) return;
       final idsToUpdate = <String>{order.id};
       if (order.subOrders != null) {
         for (final s in order.subOrders!) {
@@ -2301,6 +2332,32 @@ $formattedItems
       return;
     }
 
+    // Reprint confirmation guard so two admins never double-print accidentally
+    final alreadyPrinted = _isOrderKOTPrinted(order) || _isOrderKOTPrinted(targetOrder);
+    if (alreadyPrinted && mounted) {
+      final byName = _getOrderKOTPrintedBy(order) ?? _getOrderKOTPrintedBy(targetOrder) ?? 'Admin';
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('KOT Already Printed', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          content: Text('Already printed by $byName — Reprint duplicate KOT?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEA580C), foregroundColor: Colors.white),
+              child: const Text('Yes, Reprint'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true || !mounted) return;
+    }
+
+    final currentAdminName = (ref.read(authProvider).valueOrNull?.name ?? 'Admin').trim();
+    final adminShortName = currentAdminName.isNotEmpty ? currentAdminName.split(' ').first : 'Admin';
+
     setState(() {
       _sendingKOTOrderIds.add(order.id);
       _sendingKOTOrderIds.add(targetOrder.id);
@@ -2331,15 +2388,24 @@ $formattedItems
         deliveryMethod: targetOrder.deliveryMethod?.toString() ?? order.deliveryMethod?.toString() ?? 'DELIVERY',
         notes: kitchenNotes,
         kotText: _generateKOTText(targetOrder),
+        printedBy: adminShortName,
         dioClient: ref.read(dioProvider),
       );
 
       if (mounted) {
         setState(() {
           _printedKOTOrders.add(order.id);
-          if (order.readableId != null) _printedKOTOrders.add(order.readableId!);
+          _printedKOTBy[order.id] = adminShortName;
+          if (order.readableId != null) {
+            _printedKOTOrders.add(order.readableId!);
+            _printedKOTBy[order.readableId!] = adminShortName;
+          }
           _printedKOTOrders.add(targetOrder.id);
-          if (targetOrder.readableId != null) _printedKOTOrders.add(targetOrder.readableId!);
+          _printedKOTBy[targetOrder.id] = adminShortName;
+          if (targetOrder.readableId != null) {
+            _printedKOTOrders.add(targetOrder.readableId!);
+            _printedKOTBy[targetOrder.readableId!] = adminShortName;
+          }
         });
 
         AppToast.showSuccess(
@@ -2462,6 +2528,39 @@ $formattedItems
     return result;
   }
 
+  bool _needsKitchenKOT(Order o) {
+    if (o.status == OrderStatus.cancelled || o.status == OrderStatus.delivered) return false;
+    if (o.isRestaurantOrder) return true;
+    if (o.isCombined && o.subOrders != null) {
+      return o.subOrders!.any((s) => s.isRestaurantOrder && s.status != OrderStatus.cancelled);
+    }
+    return false;
+  }
+
+  bool _isOrderKOTPrinted(Order o) {
+    if (_printedKOTOrders.contains(o.id) || o.kotPrinted) return true;
+    if (o.readableId != null && _printedKOTOrders.contains(o.readableId)) return true;
+    if (o.subOrders != null) {
+      for (final s in o.subOrders!) {
+        if (_printedKOTOrders.contains(s.id) || s.kotPrinted) return true;
+        if (s.readableId != null && _printedKOTOrders.contains(s.readableId)) return true;
+      }
+    }
+    return false;
+  }
+
+  String? _getOrderKOTPrintedBy(Order o) {
+    final direct = _printedKOTBy[o.id] ?? (o.readableId != null ? _printedKOTBy[o.readableId!] : null) ?? o.kotPrintedBy;
+    if (direct != null && direct.trim().isNotEmpty) return direct;
+    if (o.subOrders != null) {
+      for (final s in o.subOrders!) {
+        final subBy = _printedKOTBy[s.id] ?? (s.readableId != null ? _printedKOTBy[s.readableId!] : null) ?? s.kotPrintedBy;
+        if (subBy != null && subBy.trim().isNotEmpty) return subBy;
+      }
+    }
+    return null;
+  }
+
   Map<String, int> _buildStatusCounts() {
     final relevantOrders = _selectedTab == 0
         ? _allOrders.where(_isLiveOrder).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList()
@@ -2469,6 +2568,7 @@ $formattedItems
 
     final Map<String, int> counts = {};
     counts['ALL'] = relevantOrders.length;
+    counts['KOT_PENDING'] = relevantOrders.where((o) => _needsKitchenKOT(o) && !_isOrderKOTPrinted(o) && !(o.status == OrderStatus.pending && _isUnpaidOnline(o))).length;
     counts['PAYMENT_PENDING'] = relevantOrders.where((o) => o.status == OrderStatus.pending && _isUnpaidOnline(o)).length;
     counts['ADMIN_PENDING'] = relevantOrders.where((o) => o.status == OrderStatus.adminPending).length;
     counts['PENDING'] = relevantOrders.where((o) => o.status == OrderStatus.pending && !_isUnpaidOnline(o)).length;
@@ -2580,7 +2680,9 @@ $formattedItems
     if (_selectedTab == 0) {
       // Live Tab with Outlet Filter
       list = _allOrders.where(_isLiveOrder).where((o) => _orderMatchesOutlet(o, _selectedOutlet)).toList();
-      if (_liveSubFilter == 'PAYMENT_PENDING') {
+      if (_liveSubFilter == 'KOT_PENDING') {
+        list = list.where((o) => _needsKitchenKOT(o) && !_isOrderKOTPrinted(o) && !(o.status == OrderStatus.pending && _isUnpaidOnline(o))).toList();
+      } else if (_liveSubFilter == 'PAYMENT_PENDING') {
         list = list.where((o) => o.status == OrderStatus.pending && _isUnpaidOnline(o)).toList();
       } else if (_liveSubFilter == 'PENDING') {
         list = list.where((o) => o.status == OrderStatus.pending && !_isUnpaidOnline(o)).toList();
@@ -2939,8 +3041,8 @@ $formattedItems
                         order: order,
                         isProcessing: _inProgressOrderIds.contains(order.id),
                         isLive: _isLiveOrder(order),
-                        isKOTPrinted: _printedKOTOrders.contains(order.id) ||
-                            (order.readableId != null && _printedKOTOrders.contains(order.readableId)),
+                        isKOTPrinted: _isOrderKOTPrinted(order),
+                        kotPrintedBy: _getOrderKOTPrintedBy(order),
                         isKOTSending: _sendingKOTOrderIds.contains(order.id) ||
                             (order.readableId != null && _sendingKOTOrderIds.contains(order.readableId)),
                         availableRiders: _availableRiders,

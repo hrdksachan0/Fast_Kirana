@@ -383,6 +383,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     HapticFeedback.lightImpact();
     setState(() => _isProcessingPayment = true);
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final phone = _order?.customerPhone ?? prefs.getString('user_phone') ?? '';
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '').replaceAll(RegExp(r'^91'), '');
     final email = prefs.getString('user_email') ?? 'customer@fastminute.in';

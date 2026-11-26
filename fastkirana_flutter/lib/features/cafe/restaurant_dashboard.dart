@@ -1931,6 +1931,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       await prefs.setString('close_time_$outletKey', close);
 
       if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
+        if (!mounted) return;
         final dio = ref.read(dioProvider);
         await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {
           'openTime': open,
@@ -1956,8 +1957,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
           } catch (_) {}
         }
         // Invalidate providers so Home and Storefront reflect immediately
-        ref.invalidate(restaurantsProvider);
-        ref.invalidate(storeSettingsProvider);
+        if (mounted) {
+          ref.invalidate(restaurantsProvider);
+          ref.invalidate(storeSettingsProvider);
+        }
       }
 
       if (mounted) {
@@ -1983,6 +1986,7 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       await prefs.setBool('store_open_$outletKey', val);
       
       if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
+        if (!mounted) return;
         final dio = ref.read(dioProvider);
         await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {'isOpen': val});
         if (val) {
@@ -2013,12 +2017,13 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       }
       
       if (_assignedRestaurantId != null && _assignedRestaurantId!.isNotEmpty && _assignedRestaurantId != 'ALL') {
+        if (!mounted) return;
         final dio = ref.read(dioProvider);
         await dio.patch('/api/restaurants/$_assignedRestaurantId', data: {
           'discountBadge': val ? 'HIGH RUSH' : '',
         });
         RestaurantRepository.invalidateCache();
-        ref.invalidate(restaurantsProvider);
+        if (mounted) ref.invalidate(restaurantsProvider);
       }
     } catch (e) {
       LoggerService.error('Busy mode toggle error: $e');

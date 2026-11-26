@@ -218,6 +218,7 @@ class ProfileEditModal {
 
                     HapticFeedback.mediumImpact();
                     final authRepo = AuthRepository(ref.read(dioProvider));
+                    final authNotifier = ref.read(authProvider.notifier);
 
                     // 1. Phone number changed -> Require Phone OTP Verification
                     if (newPhone.isNotEmpty && newPhone != user.phone) {
@@ -290,7 +291,7 @@ class ProfileEditModal {
                       createdAt: user.createdAt,
                     );
 
-                    await ref.read(authProvider.notifier).updateUser(updatedUser);
+                    await authNotifier.updateUser(updatedUser);
 
                     if (ctx.mounted && Navigator.canPop(ctx)) {
                       Navigator.pop(ctx);

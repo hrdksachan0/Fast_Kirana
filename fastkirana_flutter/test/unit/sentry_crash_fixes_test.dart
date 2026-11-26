@@ -1,12 +1,17 @@
+import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fastminute_flutter/core/network/api_client.dart';
 import 'package:fastminute_flutter/core/services/location_service.dart';
 import 'package:fastminute_flutter/core/theme/responsive.dart';
 import 'package:fastminute_flutter/data/models/category.dart';
 import 'package:fastminute_flutter/data/models/product.dart';
 import 'package:fastminute_flutter/features/categories/category_products_screen.dart';
+import 'package:fastminute_flutter/features/profile/address_book_screen.dart';
 import 'package:fastminute_flutter/providers/product_provider.dart';
+import 'package:fastminute_flutter/providers/referral_provider.dart';
 import 'package:fastminute_flutter/providers/store_hub_provider.dart';
 import 'package:fastminute_flutter/data/models/store_hub.dart';
 import 'package:fastminute_flutter/features/delivery/widgets/doorstep_cashfree_qr_sheet.dart';
@@ -204,5 +209,95 @@ void main() {
         expect(find.textContaining('Switch to Normal UPI'), findsNothing);
       },
     );
+
+    testWidgets(
+      'applyReferralCode safely completes without StateError if caller ConsumerWidget is disposed mid-request',
+      (tester) async {
+        final gate = Completer<void>();
+        final fakeDio = _FakePostDio(gate);
+        WidgetRef? capturedRef;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [dioProvider.overrideWithValue(fakeDio)],
+            child: MaterialApp(
+              home: Consumer(
+                builder: (context, ref, _) {
+                  capturedRef = ref;
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ),
+        );
+
+        final future = applyReferralCode(capturedRef!, 'SAVE25');
+        // Unmount Consumer before the network response arrives.
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [dioProvider.overrideWithValue(fakeDio)],
+            child: const MaterialApp(home: SizedBox.shrink()),
+          ),
+        );
+        gate.complete();
+
+        final result = await future.timeout(const Duration(seconds: 2));
+        expect(result.success, isTrue);
+        expect(result.codeUsed, 'SAVE25');
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'AddressBookScreen unmounted before initState microtask fires does not throw StateError',
+      (tester) async {
+        final fakeDio = _FakePostDio(Completer<void>()..complete());
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [dioProvider.overrideWithValue(fakeDio)],
+            child: const MaterialApp(home: AddressBookScreen()),
+          ),
+        );
+        // Unmount immediately before the queued initState microtask runs.
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [dioProvider.overrideWithValue(fakeDio)],
+            child: const MaterialApp(home: SizedBox.shrink()),
+          ),
+        );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
+}
+
+class _FakePostDio extends Fake implements Dio {
+  _FakePostDio(this._gate);
+
+  final Completer<void> _gate;
+
+  @override
+  Future<Response<T>> post<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    await _gate.future;
+    return Response<T>(
+      requestOptions: RequestOptions(path: path),
+      statusCode: 200,
+      data: <String, dynamic>{
+        'success': true,
+        'discountAmount': 25,
+        'codeUsed': 'SAVE25',
+        'message': 'ok',
+      } as T,
+    );
+  }
 }

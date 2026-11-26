@@ -73,6 +73,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       await SecureStorage.write('auth_token', token);
       await SecureStorage.write('user_role', 'ADMIN');
 
+      if (!mounted) return;
       ref.read(authProvider.notifier).setUser(adminUser);
       await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
 

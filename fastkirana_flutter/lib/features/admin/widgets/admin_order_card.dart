@@ -24,6 +24,7 @@ class AdminOrderCard extends ConsumerWidget {
   final Order order;
   final bool? isLive;
   final bool isKOTPrinted;
+  final String? kotPrintedBy;
   final bool isKOTSending;
   final List<Map<String, String>> availableRiders;
   final VoidCallback? onTap;
@@ -48,6 +49,7 @@ class AdminOrderCard extends ConsumerWidget {
     required this.order,
     this.isLive,
     this.isKOTPrinted = false,
+    this.kotPrintedBy,
     this.isKOTSending = false,
     this.availableRiders = const [],
     this.onTap,
@@ -550,6 +552,32 @@ class AdminOrderCard extends ConsumerWidget {
                           letterSpacing: 0.3,
                         ),
                       ),
+                      if (order.isRestaurantOrder || order.isCombined) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isKOTPrinted ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isKOTPrinted ? const Color(0xFF86EFAC) : const Color(0xFFFDBA74),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            isKOTPrinted
+                                ? ((kotPrintedBy != null && kotPrintedBy!.trim().isNotEmpty)
+                                    ? 'KOT ✓ · ${kotPrintedBy!.trim().split(' ').first}'
+                                    : 'KOT ✓')
+                                : 'KOT Pending',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 9.5),
+                              fontWeight: FontWeight.w800,
+                              color: isKOTPrinted ? const Color(0xFF15803D) : const Color(0xFFC2410C),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   Builder(builder: (context) {
@@ -2037,22 +2065,31 @@ class AdminOrderCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 5),
 
-                // 3. Send KOT
+                // 3. Send KOT (with Reprint guard & Printed-By indicator)
                 Expanded(
                   child: InkWell(
                     borderRadius: BorderRadius.circular(8),
-                    onTap: (isKOTSending || isKOTPrinted || onSendRemoteKOT == null) ? null : () => onSendRemoteKOT!(order),
+                    onTap: (isKOTSending || onSendRemoteKOT == null) ? null : () => onSendRemoteKOT!(order),
                     child: Container(
                       height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         color: isKOTSending
                             ? AppDesignSystem.statusPending
-                            : (isKOTPrinted ? AppDesignSystem.green100 : const Color(0xFFEFF6FF)),
+                            : (isKOTPrinted
+                                ? AppDesignSystem.green100
+                                : ((order.isRestaurantOrder || order.isCombined) && live
+                                    ? const Color(0xFFFFF7ED)
+                                    : const Color(0xFFEFF6FF))),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: isKOTSending
                               ? AppDesignSystem.yellow200
-                              : (isKOTPrinted ? AppDesignSystem.emerald200 : const Color(0xFFBFDBFE)),
+                              : (isKOTPrinted
+                                  ? AppDesignSystem.emerald200
+                                  : ((order.isRestaurantOrder || order.isCombined) && live
+                                      ? const Color(0xFFFDBA74)
+                                      : const Color(0xFFBFDBFE))),
                           width: 1,
                         ),
                       ),
@@ -2069,15 +2106,31 @@ class AdminOrderCard extends ConsumerWidget {
                             Icon(
                               isKOTPrinted ? Icons.check_circle_rounded : Icons.print_rounded,
                               size: 13,
-                              color: isKOTPrinted ? AppDesignSystem.green600 : const Color(0xFF2563EB),
+                              color: isKOTPrinted
+                                  ? AppDesignSystem.green600
+                                  : ((order.isRestaurantOrder || order.isCombined) && live
+                                      ? const Color(0xFFEA580C)
+                                      : const Color(0xFF2563EB)),
                             ),
                             const SizedBox(width: 3),
-                            Text(
-                              isKOTPrinted ? 'Sent' : 'KOT',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 10.5),
-                                fontWeight: FontWeight.w800,
-                                color: isKOTPrinted ? AppDesignSystem.green700 : const Color(0xFF1D4ED8),
+                            Flexible(
+                              child: Text(
+                                isKOTPrinted
+                                    ? ((kotPrintedBy != null && kotPrintedBy!.trim().isNotEmpty)
+                                        ? '✓ ${kotPrintedBy!.trim().split(' ').first}'
+                                        : 'KOT ✓')
+                                    : ((order.isRestaurantOrder || order.isCombined) && live ? 'KOT !' : 'KOT'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w800,
+                                  color: isKOTPrinted
+                                      ? AppDesignSystem.green700
+                                      : ((order.isRestaurantOrder || order.isCombined) && live
+                                          ? const Color(0xFFC2410C)
+                                          : const Color(0xFF1D4ED8)),
+                                ),
                               ),
                             ),
                           ],

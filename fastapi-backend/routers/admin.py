@@ -1118,12 +1118,36 @@ async def get_admin_all_orders(
 
     res = await db.execute(stmt)
     orders = res.scalars().all()
-    
+
+    kot_map = {}
+    if orders:
+        oids = [o.id for o in orders if o.id]
+        rids = [o.readableId for o in orders if o.readableId]
+        try:
+            k_res = await db.execute(
+                text(
+                    "SELECT order_id, readable_id, payload->>'printedBy' AS printed_by "
+                    "FROM kitchen_kot_queue "
+                    "WHERE order_id = ANY(:oids) OR readable_id = ANY(:rids)"
+                ),
+                {"oids": oids, "rids": rids or [""]},
+            )
+            for kr in k_res.mappings().all():
+                pby = (kr["printed_by"] or "Admin").strip()
+                if kr["order_id"]:
+                    kot_map[kr["order_id"]] = pby
+                if kr["readable_id"]:
+                    kot_map[kr["readable_id"]] = pby
+        except Exception:
+            pass
+
     # Return formatted list matching Next.js Order response
     return [
         {
             "id": o.id,
             "readableId": o.readableId,
+            "kotPrinted": bool(kot_map.get(o.id) or (kot_map.get(o.readableId) if o.readableId else None)),
+            "kotPrintedBy": kot_map.get(o.id) or (kot_map.get(o.readableId) if o.readableId else None),
             "userId": o.userId,
             "addressId": o.addressId,
             "restaurantId": o.restaurantId,

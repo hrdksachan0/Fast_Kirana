@@ -434,8 +434,8 @@ async def razorpay_webhook(
         event = json.loads(body.decode("utf-8"))
         event_name = event.get("event")
 
-        # ── 1. Doorstep QR Event: qr_code.credited ──
-        if event_name == "qr_code.credited" or (event_name == "payment.captured" and (
+        # ── 1. Doorstep QR Event: qr_code.credited / payment.authorized / payment.captured ──
+        if event_name == "qr_code.credited" or (event_name in ("payment.captured", "payment.authorized") and (
             event.get("payload", {}).get("qr_code") or
             (event.get("payload", {}).get("payment", {}).get("entity", {}).get("notes", {}).get("purpose") == "doorstep_delivery")
         )):

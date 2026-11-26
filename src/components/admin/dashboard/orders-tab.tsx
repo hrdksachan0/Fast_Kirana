@@ -253,9 +253,49 @@ export function OrdersTab({
       return new Set()
     }
   })
+  const [printedKotBy, setPrintedKotBy] = React.useState<Record<string, string>>({})
   const [sendingKotIds, setSendingKotIds] = React.useState<Set<string>>(new Set())
 
-  const markOrderKotPrinted = React.useCallback((orderId: string) => {
+  // Sync KOT printed status & admin name from DB orders across all admin devices
+  React.useEffect(() => {
+    if (!Array.isArray(orders)) return
+    const dbIds: string[] = []
+    const dbBy: Record<string, string> = {}
+    for (const o of orders) {
+      if (o?.kotPrinted) {
+        dbIds.push(o.id)
+        if (o.kotPrintedBy) dbBy[o.id] = o.kotPrintedBy
+      }
+      if (Array.isArray(o?.subOrders)) {
+        for (const s of o.subOrders) {
+          if (s?.kotPrinted) {
+            dbIds.push(s.id)
+            dbIds.push(o.id)
+            if (s.kotPrintedBy) {
+              dbBy[s.id] = s.kotPrintedBy
+              dbBy[o.id] = s.kotPrintedBy
+            }
+          }
+        }
+      }
+    }
+    if (dbIds.length > 0) {
+      setPrintedKotIds((prev) => {
+        let changed = false
+        const next = new Set(prev)
+        for (const id of dbIds) {
+          if (!next.has(id)) { next.add(id); changed = true }
+        }
+        return changed ? next : prev
+      })
+    }
+    if (Object.keys(dbBy).length > 0) {
+      setPrintedKotBy((prev) => ({ ...prev, ...dbBy }))
+    }
+  }, [orders])
+
+  const markOrderKotPrinted = React.useCallback((orderId: string, byName?: string) => {
+    if (byName) setPrintedKotBy((prev) => ({ ...prev, [orderId]: byName }))
     setPrintedKotIds((prev) => {
       const next = new Set(prev).add(orderId)
       try {
@@ -502,6 +542,18 @@ export function OrdersTab({
     const targetOrder = o.subOrders?.find((s: any) => s.type === 'RESTAURANT') || o
     if (sendingKotIds.has(targetOrder.id) || sendingKotIds.has(o.id)) {
       return
+    }
+
+    const alreadyPrinted = Boolean(
+      printedKotIds.has(o.id) ||
+      printedKotIds.has(targetOrder.id) ||
+      o.kotPrinted ||
+      targetOrder.kotPrinted
+    )
+    if (alreadyPrinted && typeof window !== 'undefined') {
+      const byName = printedKotBy[o.id] || printedKotBy[targetOrder.id] || o.kotPrintedBy || targetOrder.kotPrintedBy || 'another admin'
+      const ok = window.confirm(`KOT already printed by ${byName}. Reprint duplicate KOT?`)
+      if (!ok) return
     }
 
     setSendingKotIds((prev) => new Set(prev).add(targetOrder.id).add(o.id))
@@ -844,8 +896,12 @@ export function OrdersTab({
   // Filter Active Table by status, store, method & search query
   const filteredActiveOrders = (Array.isArray(rawActiveList) ? rawActiveList : []).filter((o) => {
     const isUnpaidOnline = o.paymentStatus !== 'PAID' && o.paymentMethod !== 'COD'
+    const isRestOrder = Boolean(o.restaurantId || o.orderType === 'RESTAURANT' || (o.isCombined && o.subOrders?.some((s: any) => s.type === 'RESTAURANT' || s.restaurantId)))
+    const isKotDone = Boolean(printedKotIds.has(o.id) || o.kotPrinted || o.subOrders?.some((s: any) => printedKotIds.has(s.id) || s.kotPrinted))
     const matchesFilter = orderStatusFilter === 'ALL'
       ? (!isUnpaidOnline || o.status !== 'PENDING')
+      : orderStatusFilter === 'KOT_PENDING'
+      ? (isRestOrder && !isKotDone && (!isUnpaidOnline || o.status !== 'PENDING'))
       : orderStatusFilter === 'PAYMENT_PENDING'
       ? (o.status === 'PENDING' && isUnpaidOnline)
       : orderStatusFilter === 'PENDING'
@@ -1019,6 +1075,7 @@ export function OrdersTab({
             <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
               {[
                 { key: 'ALL', label: '🔥 All Active' },
+                { key: 'KOT_PENDING', label: '🖨️ KOT Pending' },
                 { key: 'ADMIN_PENDING', label: '🛡️ Needs Approval' },
                 { key: 'PENDING', label: '⏳ Placed (New)' },
                 { key: 'PAYMENT_PENDING', label: '⚠️ Payment Pending' },
@@ -1026,8 +1083,16 @@ export function OrdersTab({
                 { key: 'PACKED', label: '📦 Packed' },
                 { key: 'SHIPPED', label: '🛵 On the Way' },
               ].map((pill) => {
+                const kotPendingCount = (Array.isArray(rawActiveList) ? rawActiveList : []).filter((o: any) => {
+                  const isUnpaid = o.paymentStatus !== 'PAID' && o.paymentMethod !== 'COD'
+                  const isRest = Boolean(o.restaurantId || o.orderType === 'RESTAURANT' || (o.isCombined && o.subOrders?.some((s: any) => s.type === 'RESTAURANT' || s.restaurantId)))
+                  const isDone = Boolean(printedKotIds.has(o.id) || o.kotPrinted || o.subOrders?.some((s: any) => printedKotIds.has(s.id) || s.kotPrinted))
+                  return isRest && !isDone && (!isUnpaid || o.status !== 'PENDING')
+                }).length
                 const count = pill.key === 'ALL' 
                   ? (totalActiveQueueCount || rawActiveList?.length || 0)
+                  : pill.key === 'KOT_PENDING'
+                  ? kotPendingCount
                   : (orderCounts[pill.key] ?? 0)
                 const isActive = orderStatusFilter === pill.key || (orderStatusFilter === 'ALL' && pill.key === 'ALL')
                 const isPaymentPendingAlert = pill.key === 'PAYMENT_PENDING' && count > 0 && !isActive
@@ -1682,7 +1747,8 @@ export function OrdersTab({
                               <div className="flex items-center justify-center gap-1 w-full">
                                 {(() => {
                                   const isRest = o.restaurantId || o.orderType === 'RESTAURANT' || o.isCombined
-                                  const isKotPrinted = printedKotIds.has(o.id) || o.subOrders?.some((s: any) => printedKotIds.has(s.id))
+                                  const isKotPrinted = printedKotIds.has(o.id) || Boolean(o.kotPrinted) || o.subOrders?.some((s: any) => printedKotIds.has(s.id) || Boolean(s.kotPrinted))
+                                  const kotBy = printedKotBy[o.id] || o.kotPrintedBy || o.subOrders?.find((s: any) => printedKotBy[s.id] || s.kotPrintedBy)?.kotPrintedBy || ''
 
                                   const isSending = sendingKotIds.has(o.id) || o.subOrders?.some((s: any) => sendingKotIds.has(s.id))
 
@@ -1702,7 +1768,7 @@ export function OrdersTab({
                                       }`}
                                       title={isSending ? "Sending KOT to kitchen printer..." : (isKotPrinted ? "KOT already printed! Click to reprint." : "Send Print Command to Kitchen PC Printer")}
                                     >
-                                      {isSending ? '⏳ Sending...' : (isKotPrinted ? '🖨️ KOT ✓' : '🖨️ Send KOT')}
+                                      {isSending ? '⏳ Sending...' : (isKotPrinted ? `🖨️ KOT ✓${kotBy ? ` · ${String(kotBy).split(' ')[0]}` : ''}` : '🟠 KOT Pending')}
                                     </button>
                                   )
                                 })()}

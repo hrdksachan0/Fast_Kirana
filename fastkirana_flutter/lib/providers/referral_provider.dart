@@ -26,10 +26,13 @@ Future<ReferralApplyResult> applyReferralCode(WidgetRef ref, String code) async 
       data: {'referralCode': code.trim().toUpperCase()},
     );
     if (response.statusCode == 200 && response.data['success'] == true) {
-      ref.invalidate(referralStatsProvider);
-      ref.invalidate(referralInfoProvider);
-      ref.read(walletNotifierProvider.notifier).fetchBalance();
-      ref.invalidate(walletTransactionsProvider);
+      // Caller widget may dispose while /api/referral/apply is in flight.
+      try {
+        ref.invalidate(referralStatsProvider);
+        ref.invalidate(referralInfoProvider);
+        ref.read(walletNotifierProvider.notifier).fetchBalance();
+        ref.invalidate(walletTransactionsProvider);
+      } catch (_) {}
       return ReferralApplyResult(
         success: true,
         message: response.data['message']?.toString() ?? 'Referral code applied successfully!',

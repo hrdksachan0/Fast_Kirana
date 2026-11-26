@@ -24,7 +24,10 @@ class _AddressBookScreenState extends ConsumerState<AddressBookScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(addressesProvider.notifier).loadAddresses());
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(addressesProvider.notifier).loadAddresses();
+    });
   }
 
   @override

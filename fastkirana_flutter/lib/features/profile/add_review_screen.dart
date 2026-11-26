@@ -87,11 +87,11 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
 
       await dio.post('/api/restaurants/$targetId/reviews', data: payload);
 
+      if (!mounted) return;
+
       // Instantly refresh reviews and restaurant stats across the entire app
       ref.invalidate(restaurantReviewsProvider(targetId));
       ref.invalidate(restaurantsProvider);
-
-      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

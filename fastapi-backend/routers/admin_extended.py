@@ -729,14 +729,39 @@ async def admin_get_orders(
     result = await db.execute(stmt)
     orders = result.scalars().all()
 
+    kot_map = {}
+    if orders:
+        oids = [o.id for o in orders if o.id]
+        rids = [o.readableId for o in orders if o.readableId]
+        try:
+            k_res = await db.execute(
+                text(
+                    "SELECT order_id, readable_id, payload->>'printedBy' AS printed_by "
+                    "FROM kitchen_kot_queue "
+                    "WHERE order_id = ANY(:oids) OR readable_id = ANY(:rids)"
+                ),
+                {"oids": oids, "rids": rids or [""]},
+            )
+            for kr in k_res.mappings().all():
+                pby = (kr["printed_by"] or "Admin").strip()
+                if kr["order_id"]:
+                    kot_map[kr["order_id"]] = pby
+                if kr["readable_id"]:
+                    kot_map[kr["readable_id"]] = pby
+        except Exception:
+            pass
+
     order_list = []
     for o in orders:
         user_name = (o.user.name.strip() if (o.user and o.user.name) else None) or "Customer"
         user_phone = (o.address.phone if (o.address and o.address.phone) else None) or (o.user.phone if (o.user and o.user.phone) else None) or o.shopPhone or None
         user_email = (o.user.email if o.user else None) or ""
+        kot_by = kot_map.get(o.id) or (kot_map.get(o.readableId) if o.readableId else None)
         order_list.append({
             "id": o.id,
             "readableId": o.readableId,
+            "kotPrinted": bool(kot_by),
+            "kotPrintedBy": kot_by,
             "userId": o.userId,
             "addressId": o.addressId,
             "restaurantId": o.restaurantId,

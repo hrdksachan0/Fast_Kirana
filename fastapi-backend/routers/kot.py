@@ -38,6 +38,7 @@ class KotBroadcastRequest(BaseModel):
     deliveryMethod: Optional[str] = None
     shopName: Optional[str] = None
     printedAt: Optional[str] = None
+    printedBy: Optional[str] = None
     manual: Optional[bool] = None
     source: Optional[str] = None
 
@@ -381,6 +382,7 @@ async def broadcast_kot(
         "deliveryMethod": delivery_method,
         "shopName": shop_name or "Kitchen",
         "printedAt": req.printedAt or datetime.now(timezone.utc).isoformat(),
+        "printedBy": (req.printedBy or (current_user.get("name") if isinstance(current_user, dict) else None) or "Admin").strip(),
         "manual": True,
         "source": req.source or "orders_tab",
         "timestamp": int(now * 1000)
@@ -443,6 +445,7 @@ async def broadcast_kot(
             "orderId": clean_id,
             "readableId": final_readable,
             "kotPrinted": True,
+            "kotPrintedBy": payload.get("printedBy") or "Admin",
             "printedAt": datetime.now(timezone.utc).isoformat()
         }
         asyncio.create_task(broadcast_supabase_realtime(["admin-global-orders-websocket"], "kot_printed", kot_admin_payload))

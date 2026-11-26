@@ -81,6 +81,7 @@ class _RestaurantLoginScreenState extends ConsumerState<RestaurantLoginScreen> {
       }
       await SecureStorage.write('user_role', role);
 
+      if (!mounted) return;
       await ref.read(authProvider.notifier).setUser(kitchenUser);
       await ref.read(staffCustomerModeProvider.notifier).setCustomerMode(false);
 

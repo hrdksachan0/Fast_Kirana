@@ -180,6 +180,7 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         // Also check if this number is a registered supplier/vendor in database
         String? activeVendorId;
         try {
+          if (!mounted) return;
           final dio = ref.read(dioProvider);
           final vRes = await dio.post('/api/vendors/login', data: {'phone': phone});
           if (vRes.statusCode == 200 && vRes.data != null) {
@@ -206,6 +207,7 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         await SecureStorage.write('auth_token', response.token!);
         await SecureStorage.loadCache();
 
+        if (!mounted) return;
         await ref.read(authProvider.notifier).setUser(user);
 
         // Topic subscriptions
@@ -316,6 +318,7 @@ class _VendorLoginScreenState extends ConsumerState<VendorLoginScreen> {
         await SecureStorage.write('user_phone', phone);
         await SecureStorage.loadCache();
 
+        if (!mounted) return;
         ref.read(authProvider.notifier).setUser(user);
 
         HapticFeedback.heavyImpact();

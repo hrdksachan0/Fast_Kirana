@@ -450,6 +450,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                       color: AppDesignSystem.primary,
                       onRefresh: () async {
                         await ProductRepository.invalidateAllCache();
+                        if (!mounted) return;
                         ref.invalidate(productsProvider(widget.category.slug));
                         ref.invalidate(productsProvider(widget.category.id));
                       },

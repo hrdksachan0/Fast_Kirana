@@ -903,6 +903,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
           if (isAllowed && serviceEnabled) {
+            if (!mounted) return;
             try {
               // Agar Pehle se Allowed hai:
               // App khulte hi bina kuch puche background me current location auto-set ho jati hai.

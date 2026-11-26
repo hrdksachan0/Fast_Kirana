@@ -269,6 +269,7 @@ class CartBottomCheckoutBar extends ConsumerWidget {
                         context,
                         FadeSlideRoute(page: const LoginScreen()),
                       );
+                      if (!context.mounted) return;
 
                       final updatedUser = ref.read(authProvider).value;
                       final updatedPrefs = await SharedPreferences.getInstance();

@@ -769,7 +769,7 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
       } catch (_) {}
     }
 
-    ref.invalidate(storeSettingsProvider);
+    if (mounted) ref.invalidate(storeSettingsProvider);
   }
 
   Future<void> _updateRestaurant(Restaurant rest, bool val) async {
@@ -819,8 +819,10 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
       } catch (_) {}
     }
 
-    ref.invalidate(restaurantsProvider);
-    ref.invalidate(storeSettingsProvider);
+    if (mounted) {
+      ref.invalidate(restaurantsProvider);
+      ref.invalidate(storeSettingsProvider);
+    }
   }
 
   Future<void> _updateMaster(bool val) async {
@@ -883,8 +885,10 @@ class _OperationsBottomSheetState extends ConsumerState<_OperationsBottomSheet> 
       } catch (_) {}
     }
 
-    ref.invalidate(storeSettingsProvider);
-    ref.invalidate(restaurantsProvider);
+    if (mounted) {
+      ref.invalidate(storeSettingsProvider);
+      ref.invalidate(restaurantsProvider);
+    }
   }
 
   @override

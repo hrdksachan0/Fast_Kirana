@@ -85,6 +85,7 @@ class _DeliveryLoginScreenState extends ConsumerState<DeliveryLoginScreen> {
         await SecureStorage.loadCache();
 
         if (userMap != null) {
+          if (!mounted) return;
           final user = User.fromJson(Map<String, dynamic>.from(userMap));
           await ref.read(authProvider.notifier).setUser(user);
         }

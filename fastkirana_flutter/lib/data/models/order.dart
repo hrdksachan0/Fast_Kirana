@@ -118,6 +118,7 @@ class Order {
   final List<Order>? subOrders;
   final List<String>? subLabels;
   final bool kotPrinted;
+  final String? kotPrintedBy;
 
   Order({
     required this.id,
@@ -163,6 +164,7 @@ class Order {
     this.subOrders,
     this.subLabels,
     this.kotPrinted = false,
+    this.kotPrintedBy,
   });
 
   ({String? name, String? phone})? get deliveryUser =>
@@ -563,6 +565,7 @@ class Order {
       subOrders: parsedSubOrders,
       subLabels: (json['subLabels'] is List) ? (json['subLabels'] as List).map((x) => x.toString()).toList() : null,
       kotPrinted: json['kot_printed'] == true || json['kotPrinted'] == true || json['kot_sent'] == true || json['kotSent'] == true,
+      kotPrintedBy: (json['kotPrintedBy'] ?? json['kot_printed_by'])?.toString(),
     );
   }
 
@@ -608,6 +611,7 @@ class Order {
     List<Order>? subOrders,
     List<String>? subLabels,
     bool? kotPrinted,
+    String? kotPrintedBy,
   }) {
     return Order(
       id: id ?? this.id,
@@ -650,6 +654,7 @@ class Order {
       subOrders: subOrders ?? this.subOrders,
       subLabels: subLabels ?? this.subLabels,
       kotPrinted: kotPrinted ?? this.kotPrinted,
+      kotPrintedBy: kotPrintedBy ?? this.kotPrintedBy,
     );
   }
 
@@ -690,6 +695,7 @@ class Order {
     'deliveredAt': deliveredAt?.toUtc().toIso8601String(),
     'items': items?.map((i) => i.toJson()).toList(),
     'kot_printed': kotPrinted,
+    'kot_printed_by': kotPrintedBy,
     'isCombined': isCombined,
     'combinedId': combinedId,
     'subOrders': subOrders?.map((s) => s.toJson()).toList(),

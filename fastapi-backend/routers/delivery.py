@@ -455,6 +455,168 @@ async def get_delivery_orders(
     return result
 
 
+def _crop_razorpay_qr_to_data_url(image_bytes: bytes) -> str:
+    """
+    Extracts ONLY the crisp black-and-white QR matrix from Razorpay's tall branded standee PNG
+    using Pillow + numpy, returning a clean data:image/png;base64,... with white quiet zone.
+    Falls back to empty string if a valid square QR matrix cannot be isolated.
+    """
+    if not image_bytes:
+        return ""
+    try:
+        import base64
+        from io import BytesIO
+        import numpy as np
+        from PIL import Image
+
+        img = Image.open(BytesIO(image_bytes)).convert("RGB")
+        rgb = np.asarray(img)
+        h, w, _ = rgb.shape
+        if h < 120 or w < 120:
+            return ""
+
+        # Pure black QR modules (excludes blue Razorpay header, gray text, and colored UPI icons)
+        black = (rgb[:, :, 0] < 45) & (rgb[:, :, 1] < 45) & (rgb[:, :, 2] < 45)
+        row_has_qr = black.sum(axis=1) > max(12, int(w * 0.08))
+
+        # Group contiguous vertical bands allowing small internal white gaps inside QR rows
+        max_gap = max(8, int(h * 0.015))
+        bands = []
+        in_band = False
+        start_y = 0
+        last_true = 0
+        for y in range(h):
+            if row_has_qr[y]:
+                if not in_band:
+                    start_y = y
+                    in_band = True
+                last_true = y
+            elif in_band and (y - last_true) > max_gap:
+                bands.append((start_y, last_true))
+                in_band = False
+        if in_band:
+            bands.append((start_y, last_true))
+
+        best_box = None
+        best_area = 0
+        for y0, y1 in bands:
+            band_h = y1 - y0 + 1
+            if band_h < int(h * 0.16):
+                continue
+            sub = black[y0:y1 + 1, :]
+            col_has_qr = sub.sum(axis=0) > max(8, int(band_h * 0.08))
+            xs = np.where(col_has_qr)[0]
+            if xs.size == 0:
+                continue
+            x0, x1 = int(xs[0]), int(xs[-1])
+            band_w = x1 - x0 + 1
+            if band_w < int(w * 0.22):
+                continue
+            ratio = band_w / float(band_h)
+            if not (0.82 <= ratio <= 1.22):
+                continue
+            density = float(sub[:, x0:x1 + 1].mean())
+            if not (0.16 <= density <= 0.75):
+                continue
+            area = band_w * band_h
+            if area > best_area:
+                best_area = area
+                best_box = (x0, y0, x1 + 1, y1 + 1)
+
+        if not best_box:
+            return ""
+
+        cropped = img.crop(best_box)
+        cw, ch = cropped.size
+        side = max(cw, ch)
+        pad = max(18, int(side * 0.06))
+        canvas_size = side + (pad * 2)
+        canvas = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
+        canvas.paste(cropped, ((canvas_size - cw) // 2, (canvas_size - ch) // 2))
+
+        if canvas_size != 420:
+            canvas = canvas.resize((420, 420), Image.Resampling.NEAREST)
+
+        out = BytesIO()
+        canvas.save(out, format="PNG", optimize=True)
+        b64 = base64.b64encode(out.getvalue()).decode("ascii")
+        return f"data:image/png;base64,{b64}"
+    except Exception:
+        return ""
+
+
+async def _check_razorpay_qr_paid_fast(qr_id: str, auth: tuple) -> tuple:
+    """
+    Parallel Razorpay check hitting /payments and /qr_codes/{qr_id} simultaneously.
+    /payments reflects authorized/captured UPI payments 3-6 seconds faster than /qr_codes status.
+    Returns (is_paid: bool, payment_id: str).
+    """
+    import asyncio
+    import httpx
+
+    if not qr_id:
+        return False, ""
+
+    async with httpx.AsyncClient(timeout=3.5) as client:
+        async def _get_payments():
+            try:
+                return await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}/payments", auth=auth)
+            except Exception:
+                return None
+
+        async def _get_qr_state():
+            try:
+                return await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}", auth=auth)
+            except Exception:
+                return None
+
+        pay_resp, chk_resp = await asyncio.gather(_get_payments(), _get_qr_state())
+
+        if pay_resp is not None and pay_resp.status_code == 200:
+            items = (pay_resp.json() or {}).get("items") or []
+            for p_item in items:
+                if p_item.get("status") in ("captured", "authorized"):
+                    return True, str(p_item.get("id") or qr_id)
+
+        if chk_resp is not None and chk_resp.status_code == 200:
+            qr_state = chk_resp.json() or {}
+            if (
+                (qr_state.get("status") == "closed" and qr_state.get("close_reason") == "paid")
+                or ((qr_state.get("payments_count_received") or 0) > 0)
+                or ((qr_state.get("payments_amount_received") or 0) > 0)
+            ):
+                return True, qr_id
+
+    return False, ""
+
+
+async def _broadcast_doorstep_payment_received(all_orders: list, total_amount: float, payment_id: str, companions_exist: bool) -> None:
+    try:
+        from utils.supabase_broadcast import broadcast_supabase_realtime
+        sub_order_ids = [o.id for o in all_orders]
+        for o in all_orders:
+            topics = ["orders", f"order:{o.id}", f"order-payment-{o.id}"]
+            if o.readableId:
+                topics.append(f"order-payment-{o.readableId}")
+            if o.deliveryUserId:
+                topics.append(f"rider_{o.deliveryUserId}")
+            await broadcast_supabase_realtime(
+                topics=topics,
+                event="PAYMENT_RECEIVED",
+                payload={
+                    "orderId": o.id,
+                    "paymentStatus": "PAID",
+                    "paymentMethod": "ONLINE",
+                    "paymentId": payment_id,
+                    "amount": total_amount,
+                    "isCombined": companions_exist,
+                    "subOrderIds": sub_order_ids,
+                },
+            )
+    except Exception:
+        pass
+
+
 async def _get_or_create_razorpay_doorstep_qr(
     order_id: str,
     base_display: str,
@@ -469,7 +631,8 @@ async def _get_or_create_razorpay_doorstep_qr(
     rider_phone: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Creates or reuses cached single-use Razorpay Dynamic UPI QR code with locked order amount.
+    Creates or reuses cached single-use Razorpay Dynamic UPI QR code with locked order amount,
+    cropping away the bulky Razorpay standee poster into a crisp pure QR image.
     """
     import os
     import httpx
@@ -492,7 +655,7 @@ async def _get_or_create_razorpay_doorstep_qr(
         return {}
 
     clean_rider_tag = (rider_name or "norider").replace(" ", "_")[:20]
-    cache_key = f"rzp_doorstep_qr_v4:{order_id}:{amount_paise}:{clean_rider_tag}"
+    cache_key = f"rzp_doorstep_qr_v5:{order_id}:{amount_paise}:{clean_rider_tag}"
     try:
         cached = await get_cache(cache_key)
         if cached and isinstance(cached, dict) and cached.get("image_url"):
@@ -534,16 +697,28 @@ async def _get_or_create_razorpay_doorstep_qr(
                 data = resp.json()
                 qr_id = str(data.get("id") or "")
                 official_qr_url = data.get("image_url") or ""
+                cropped_data_url = ""
+
+                if official_qr_url:
+                    try:
+                        img_resp = await client.get(official_qr_url, timeout=5.0)
+                        if img_resp.status_code == 200 and img_resp.content:
+                            cropped_data_url = _crop_razorpay_qr_to_data_url(img_resp.content)
+                    except Exception as crop_err:
+                        log.warning(f"Failed to crop Razorpay QR standee: {crop_err}")
 
                 qr_info = {
                     "id": qr_id,
-                    "image_url": official_qr_url,
+                    "image_url": cropped_data_url or official_qr_url,
                     "standee_url": official_qr_url,
+                    "cropped_qr": cropped_data_url,
                     "status": data.get("status")
                 }
-                log.info(f"✅ Created Official Razorpay Doorstep QR {data.get('id')} for Order #{base_display} (₹{total_amount})")
+                log.info(f"✅ Created Official Razorpay Doorstep QR {data.get('id')} for Order #{base_display} (₹{total_amount}, cropped={bool(cropped_data_url)})")
                 try:
                     await set_cache(cache_key, qr_info, ttl=1800)
+                    if qr_id:
+                        await set_cache(f"rzp_doorstep_qr_id:{order_id}", qr_id, ttl=1800)
                 except Exception:
                     pass
                 return qr_info
@@ -675,76 +850,32 @@ async def get_doorstep_qr(
         rider_phone=rider_phone
     )
 
-    # 3. Active In-Flight Verification: If order is still UNPAID, check if Razorpay QR was paid!
+    # 3. Active In-Flight Verification: Parallel check on Razorpay /payments + /qr_codes
     if order.paymentStatus != PaymentStatus.PAID and rzp_qr_info.get("id"):
         qr_id = rzp_qr_info.get("id")
         try:
             import os
-            import httpx
             from config import settings
             rzp_key = (os.getenv("RAZORPAY_KEY_ID") or db_rzp_key or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
             rzp_sec = (os.getenv("RAZORPAY_KEY_SECRET") or db_rzp_sec or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
-            if not rzp_key or not rzp_sec:
-                return rzp_qr_info
-            auth = (rzp_key, rzp_sec)
-            async with httpx.AsyncClient(timeout=4.0) as client:
-                chk_resp = await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}", auth=auth)
-                if chk_resp.status_code == 200:
-                    qr_state = chk_resp.json()
-                    is_paid = (
-                        (qr_state.get("status") == "closed" and qr_state.get("close_reason") == "paid") or
-                        ((qr_state.get("payments_count_received") or 0) > 0) or
-                        ((qr_state.get("payments_amount_received") or 0) > 0)
-                    )
-                    # Fallback payment check if count/status not yet updated on QR entity
-                    if not is_paid:
-                        try:
-                            pay_resp = await client.get(f"https://api.razorpay.com/v1/payments/qr_codes/{qr_id}/payments", auth=auth)
-                            if pay_resp.status_code == 200:
-                                p_data = pay_resp.json()
-                                items = p_data.get("items") or []
-                                for p_item in items:
-                                    if p_item.get("status") in ["captured", "authorized"]:
-                                        is_paid = True
-                                        break
-                        except Exception:
-                            pass
-
-                    if is_paid:
-                        ref_text = f"Doorstep Razorpay QR Paid ({qr_id})"
-                        for o in all_orders:
-                            o.paymentMethod = PaymentMethod.ONLINE
-                            o.paymentStatus = PaymentStatus.PAID
-                            o.notes = f"{o.notes} | {ref_text}" if o.notes else ref_text
-                        await db.commit()
-                        for o in all_orders:
-                            await db.refresh(o)
-
-                        # Broadcast instant real-time event to Rider & Admin
-                        try:
-                            from utils.supabase_broadcast import broadcast_supabase_realtime
-                            topics = ["orders", f"order:{order.id}"]
-                            if order.deliveryUserId:
-                                topics.append(f"rider_{order.deliveryUserId}")
-                            await broadcast_supabase_realtime(
-                                topics=topics,
-                                event="PAYMENT_RECEIVED",
-                                payload={
-                                    "orderId": order.id,
-                                    "paymentStatus": "PAID",
-                                    "paymentMethod": "ONLINE",
-                                    "amount": total_amount,
-                                    "isCombined": bool(companions),
-                                    "subOrderIds": sub_order_ids
-                                }
-                            )
-                        except Exception:
-                            pass
+            if rzp_key and rzp_sec:
+                is_paid, pay_id = await _check_razorpay_qr_paid_fast(qr_id, (rzp_key, rzp_sec))
+                if is_paid:
+                    ref_text = f"Doorstep Razorpay QR Paid ({pay_id or qr_id})"
+                    for o in all_orders:
+                        o.paymentMethod = PaymentMethod.ONLINE
+                        o.paymentStatus = PaymentStatus.PAID
+                        o.notes = f"{o.notes} | {ref_text}" if o.notes else ref_text
+                    await db.commit()
+                    for o in all_orders:
+                        await db.refresh(o)
+                    await _broadcast_doorstep_payment_received(all_orders, total_amount, pay_id or qr_id, bool(companions))
         except Exception:
             pass
 
     razorpay_qr_url = rzp_qr_info.get("image_url") or ""
     razorpay_qr_id = rzp_qr_info.get("id") or ""
+    standee_qr_url = rzp_qr_info.get("standee_url") or razorpay_qr_url
     active_qr_url = razorpay_qr_url if razorpay_qr_url else direct_upi_qr_url
 
     return {
@@ -757,7 +888,9 @@ async def get_doorstep_qr(
         "subOrderIds": sub_order_ids,
         "razorpayQrUrl": razorpay_qr_url,
         "razorpayQrId": razorpay_qr_id,
-        "qrImageUrl": razorpay_qr_url if razorpay_qr_url else direct_upi_qr_url,
+        "standeeQrUrl": standee_qr_url,
+        "isCroppedQr": bool(rzp_qr_info.get("cropped_qr")),
+        "qrImageUrl": active_qr_url,
         "directUpiQrUrl": direct_upi_qr_url,
         "cashfreeQrUrl": razorpay_qr_url,
         "upiVpa": upi_vpa,
@@ -767,6 +900,106 @@ async def get_doorstep_qr(
         "gateway": "razorpay" if razorpay_qr_url else "direct_upi",
         "riderName": rider_name,
         "riderPhone": rider_phone
+    }
+
+
+@router.get("/orders/{id}/qr-status")
+async def get_doorstep_qr_status(
+    id: str,
+    qrId: Optional[str] = Query(None),
+    current_user: dict = Depends(require_auth),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Ultra-lightweight doorstep QR payment verification endpoint (<20ms on DB hit,
+    parallel Razorpay /payments + /qr_codes check on pending).
+    Used by Rider APK polling & 'Verify Now' button so full QR generation is never re-run.
+    """
+    require_delivery_or_admin(current_user)
+
+    stmt = select(Order).where(or_(Order.id == id, Order.readableId == id))
+    res = await db.execute(stmt)
+    order = res.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.paymentStatus == PaymentStatus.PAID:
+        return {
+            "orderId": order.id,
+            "paymentStatus": "PAID",
+            "paid": True,
+        }
+
+    resolved_qr_id = (qrId or "").strip()
+    if not resolved_qr_id:
+        try:
+            from utils.cache import get_cache
+            cached_id = await get_cache(f"rzp_doorstep_qr_id:{order.id}")
+            if cached_id:
+                resolved_qr_id = str(cached_id).strip()
+        except Exception:
+            pass
+
+    if not resolved_qr_id:
+        return {
+            "orderId": order.id,
+            "paymentStatus": order.paymentStatus.value,
+            "paid": False,
+        }
+
+    import os
+    from config import settings
+    rzp_key = (os.getenv("RAZORPAY_KEY_ID") or getattr(settings, "RAZORPAY_KEY_ID", None) or "").strip()
+    rzp_sec = (os.getenv("RAZORPAY_KEY_SECRET") or getattr(settings, "RAZORPAY_KEY_SECRET", None) or "").strip()
+    if not rzp_key or not rzp_sec:
+        s_res = await db.execute(select(StoreSetting).where(StoreSetting.key.in_(["razorpay_key_id", "razorpay_key_secret"])))
+        s_map = {s.key: s.value for s in s_res.scalars().all()}
+        rzp_key = rzp_key or (s_map.get("razorpay_key_id") or "").strip()
+        rzp_sec = rzp_sec or (s_map.get("razorpay_key_secret") or "").strip()
+
+    if not rzp_key or not rzp_sec:
+        return {
+            "orderId": order.id,
+            "paymentStatus": order.paymentStatus.value,
+            "paid": False,
+        }
+
+    is_paid, pay_id = await _check_razorpay_qr_paid_fast(resolved_qr_id, (rzp_key, rzp_sec))
+    if not is_paid:
+        return {
+            "orderId": order.id,
+            "paymentStatus": order.paymentStatus.value,
+            "paid": False,
+        }
+
+    # Fetch companion orders if combined
+    companions = []
+    if order.combinedId:
+        c_res = await db.execute(
+            select(Order).where(
+                Order.combinedId == order.combinedId,
+                Order.id != order.id,
+                Order.status != OrderStatus.CANCELLED
+            )
+        )
+        companions = c_res.scalars().all()
+    all_orders = [order] + list(companions)
+    total_amount = sum(float(o.total or 0.0) for o in all_orders)
+
+    ref_text = f"Doorstep Razorpay QR Paid ({pay_id or resolved_qr_id})"
+    for o in all_orders:
+        o.paymentMethod = PaymentMethod.ONLINE
+        o.paymentStatus = PaymentStatus.PAID
+        o.notes = f"{o.notes} | {ref_text}" if o.notes else ref_text
+    await db.commit()
+
+    await _broadcast_doorstep_payment_received(all_orders, total_amount, pay_id or resolved_qr_id, bool(companions))
+
+    return {
+        "orderId": order.id,
+        "paymentStatus": "PAID",
+        "paid": True,
+        "paymentId": pay_id or resolved_qr_id,
     }
 
 
