@@ -135,7 +135,7 @@ export function StorefrontClient({
       setOnlineAlert('FastMinute Store is now ONLINE! Fresh delivery active.')
 
       // Smoothly refresh current products & banners
-      fetch(`${catalogApiUrl()}/api/products?limit=500&excludeRestaurant=true`)
+      fetch(`${catalogApiUrl()}/api/products?limit=2000&excludeRestaurant=true`)
         .then((r) => r.json())
         .then((d) => {
           if (Array.isArray(d?.products)) {
@@ -180,7 +180,7 @@ export function StorefrontClient({
 
         // Lazy-load complete catalog in background once if initial SSR slice was small
         if (allGroceryProducts.length < 350) {
-          fetch(`${catalogApiUrl()}/api/products?storeId=hub-209206&limit=500&excludeRestaurant=true`)
+          fetch(`${catalogApiUrl()}/api/products?storeId=hub-209206&limit=2000&excludeRestaurant=true`)
             .then((r) => r.json())
             .then((d) => {
               if (Array.isArray(d?.products) && d.products.length > 0) {
@@ -201,7 +201,7 @@ export function StorefrontClient({
     setIsLoadingStoreData(true)
 
     Promise.all([
-      fetch(`${catalogApiUrl()}/api/products?storeId=${encodeURIComponent(activeStoreId)}&limit=500&excludeRestaurant=true`).then((r) => r.json()).catch(() => ({ products: [] })),
+      fetch(`${catalogApiUrl()}/api/products?storeId=${encodeURIComponent(activeStoreId)}&limit=2000&excludeRestaurant=true`).then((r) => r.json()).catch(() => ({ products: [] })),
       fetch(`${catalogApiUrl()}/api/banners?storeId=${encodeURIComponent(activeStoreId)}`).then((r) => r.json()).catch(() => []),
       fetch(`${catalogApiUrl()}/api/restaurants?storeId=${encodeURIComponent(activeStoreId)}`).then((r) => r.json()).catch(() => []),
     ])

@@ -906,10 +906,17 @@ async def get_products(
         products = [m[0] for m in matches[memory_skip:memory_skip + limit]]
     else:
         # 2. Database cursor / offset pagination
+        # Full-catalog storefront fetches (limit >= 500 on page 1 without category/search/cursor)
+        # must never truncate categories like Fruits & Vegetables once a hub exceeds 500 SKUs.
+        effective_limit = (
+            max(limit, 2000)
+            if (not category and not categoryId and not cursor and page == 1 and limit >= 500)
+            else limit
+        )
         stmt = select(Product).options(
             selectinload(Product.category),
             selectinload(Product.restaurant)
-        ).where(and_(*filters)).order_by(*order_by_clauses).limit(limit + 1)
+        ).where(and_(*filters)).order_by(*order_by_clauses).limit(effective_limit + 1)
         
         has_cursor = False
         if cursor:
@@ -925,13 +932,13 @@ async def get_products(
                 pass
 
         if not has_cursor:
-            stmt = stmt.offset((page - 1) * limit)
+            stmt = stmt.offset((page - 1) * effective_limit)
 
         res = await db.execute(stmt)
         db_products = res.scalars().all()
         
-        has_more = len(db_products) > limit
-        products = db_products[:limit] if has_more else db_products
+        has_more = len(db_products) > effective_limit
+        products = db_products[:effective_limit] if has_more else db_products
 
         if has_cursor:
             total = -1

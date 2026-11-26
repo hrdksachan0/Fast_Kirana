@@ -67,7 +67,7 @@ final productsProvider =
   }
   if (categoryKey == null || categoryKey.isEmpty) {
     return repo.getProducts(
-        limit: 500,
+        limit: 2000,
         storeId: hub.id,
         includeRestaurants: false,
         forceRefresh: forceRefresh);
@@ -123,7 +123,7 @@ final searchCatalogProductsProvider = FutureProvider<List<Product>>((ref) async 
 
   // 1. Fetch darkstore products
   final groceryFuture = repo.getProducts(
-    limit: 1000,
+    limit: 2000,
     storeId: hub.id,
     includeRestaurants: false,
   );
@@ -150,7 +150,7 @@ final searchCatalogProductsProvider = FutureProvider<List<Product>>((ref) async 
     return combined;
   } catch (e) {
     // If any fails, fallback to darkstore products
-    return repo.getProducts(limit: 500, storeId: hub.id, includeRestaurants: false);
+    return repo.getProducts(limit: 2000, storeId: hub.id, includeRestaurants: false);
   }
 });
 
@@ -163,7 +163,7 @@ final homeProductCatalogProvider = FutureProvider<List<Product>>((ref) async {
   final hub = ref.watch(currentStoreHubProvider);
   final forceRefresh = ref.read(catalogRecoveryEpochProvider) > 0;
   return repo.getProducts(
-    limit: 1000,
+    limit: 2000,
     storeId: hub.id,
     includeRestaurants: false,
     forceRefresh: forceRefresh,
@@ -176,7 +176,7 @@ final adminProductsProvider =
     FutureProvider.family<List<Product>, String>((ref, hubId) async {
   final repo = ref.watch(productRepositoryProvider);
   return repo.getProducts(
-    limit: 1000,
+    limit: 2000,
     storeId: hubId,
     includeRestaurants: true,
     admin: true,
