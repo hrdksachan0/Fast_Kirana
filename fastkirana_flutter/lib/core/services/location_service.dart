@@ -4,9 +4,7 @@ import 'dart:math';
 
 
 import 'package:flutter/material.dart';
-
-
-
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 
@@ -1365,7 +1363,7 @@ class LocationService {
 
 
 
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      bool serviceEnabled = await isLocationServiceEnabledSafe();
 
 
 
@@ -1982,7 +1980,7 @@ class LocationService {
 
 
 
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled = await isLocationServiceEnabledSafe();
 
 
 
@@ -2465,6 +2463,28 @@ class LocationService {
 
 
 
+  static const MethodChannel _deviceLocationChannel =
+      MethodChannel('com.fastkirana.app/device_location');
+
+  /// Safe location-service check that avoids geolocator_android 4.6.2's
+  /// FusedLocationClient.isLocationServiceEnabled bug (missing `return;`
+  /// after onLocationServiceError, which throws RuntimeExecutionException
+  /// with ApiException: 20 when Google Play Services disconnects).
+  static Future<bool> isLocationServiceEnabledSafe() async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final enabled = await _deviceLocationChannel
+            .invokeMethod<bool>('isLocationServiceEnabled');
+        if (enabled != null) return enabled;
+      } catch (_) {}
+    }
+    try {
+      return await Geolocator.isLocationServiceEnabled();
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Background bootstrap method on app launch (Blinkit / Zepto / Swiggy style)
 
 
@@ -2482,9 +2502,14 @@ class LocationService {
       await loadCachedAddress();
     }
 
-    bool needSetCached = false; try { needSetCached = (ref.read(selectedAddressProvider) == null && _cachedAddress != null); } catch (_) {}
-    if (needSetCached) {
-      ref.read(selectedAddressProvider.notifier).state = _cachedAddress;
+    bool needSetCached = false;
+    try {
+      needSetCached = (ref.read(selectedAddressProvider) == null && _cachedAddress != null);
+      if (needSetCached) {
+        ref.read(selectedAddressProvider.notifier).state = _cachedAddress;
+      }
+    } catch (_) {
+      return;
     }
 
     Address? currentAddress; try { currentAddress = ref.read(selectedAddressProvider); } catch (_) { return; }
@@ -2553,7 +2578,7 @@ class LocationService {
 
 
 
-      final isServiceEnabled = await Geolocator.isLocationServiceEnabled();
+      final isServiceEnabled = await isLocationServiceEnabledSafe();
 
 
 

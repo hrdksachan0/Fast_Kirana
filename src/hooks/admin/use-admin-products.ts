@@ -667,7 +667,10 @@ export function useAdminProducts({
       hasVariants
         ? (p.variants as any[]).map((v) => {
             const vCost = v.costPrice ?? v.cp ?? v.cost
-            const resolvedCost = vCost != null && Number(vCost) > 0 ? Number(vCost) : baseProductCost
+            const resolvedCost =
+              vCost != null && Number(vCost) > 0
+                ? Number(vCost)
+                : (p.variants.length === 1 ? baseProductCost : 0)
             return {
               name: v.name,
               price: String(v.price),
@@ -818,7 +821,7 @@ export function useAdminProducts({
                     name: v.name,
                     price: parseFloat(v.price) || 0,
                     mrp: parseFloat(v.mrp) || 0,
-                    costPrice: vCost > 0 ? vCost : (parentCost > 0 ? parentCost : 0),
+                    costPrice: vCost > 0 ? vCost : (sortedEditVariants.length === 1 && parentCost > 0 ? parentCost : 0),
                     stock: parseInt(v.stock) || 0,
                   }
                 })

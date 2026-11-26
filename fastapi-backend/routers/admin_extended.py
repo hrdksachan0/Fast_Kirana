@@ -506,15 +506,31 @@ async def admin_update_product(
     local_stock_val = None
     local_avail_val = None
 
+    if (not target_store_id or target_store_id == 'all') and "costPrice" in data and data["costPrice"] is not None:
+        # Sync hub-209206 StoreInventory costPrice on global catalog cost update if row exists
+        try:
+            inv_res = await db.execute(
+                select(StoreInventory).where(
+                    StoreInventory.productId == product.id,
+                    StoreInventory.storeId == "hub-209206"
+                )
+            )
+            hub_inv = inv_res.scalars().first()
+            if hub_inv and hub_inv.costPrice is not None:
+                hub_inv.costPrice = float(data["costPrice"])
+        except Exception as inv_err:
+            logger.warning(f"Failed to sync hub-209206 costPrice: {inv_err}")
+
     if target_store_id and target_store_id != 'all':
         has_avail = "isAvailable" in data and data["isAvailable"] is not None
         has_price_override = "priceOverride" in data or ("price" in data and target_store_id != "hub-209206")
+        has_cost_update = "costPrice" in data and data["costPrice"] is not None
         price_ovr = float(data.get("priceOverride") or data.get("price")) if has_price_override else None
         avail_val = bool(data["isAvailable"]) if has_avail else None
         local_avail_val = avail_val
         local_stock_val = parsed_stock
 
-        if has_stock or has_avail or has_price_override:
+        if has_stock or has_avail or has_price_override or has_cost_update:
             try:
                 inv_stmt = select(StoreInventory).where(
                     StoreInventory.productId == product.id,
@@ -527,6 +543,8 @@ async def admin_update_product(
                         existing_inv.stock = parsed_stock
                     if has_price_override and price_ovr is not None:
                         existing_inv.priceOverride = price_ovr
+                    if has_cost_update:
+                        existing_inv.costPrice = float(data["costPrice"])
                     if has_avail:
                         existing_inv.isAvailable = avail_val
                     elif has_stock and parsed_stock > 0 and not existing_inv.isAvailable:
@@ -534,14 +552,15 @@ async def admin_update_product(
                         local_avail_val = True
                     else:
                         local_avail_val = existing_inv.isAvailable
-                else:
+                elif has_stock or has_avail or has_price_override:
                     new_avail = avail_val if has_avail else (parsed_stock > 0 if has_stock else True)
                     new_inv = StoreInventory(
                         productId=product.id,
                         storeId=target_store_id,
                         stock=parsed_stock if has_stock else (product.stock or 0),
                         isAvailable=new_avail,
-                        priceOverride=price_ovr
+                        priceOverride=price_ovr,
+                        costPrice=float(data["costPrice"]) if has_cost_update else None,
                     )
                     local_avail_val = new_avail
                     db.add(new_inv)

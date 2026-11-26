@@ -149,7 +149,12 @@ export function CartDrawer() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const cartProductIdsKey = useMemo(() => items.map((i) => i.product.id).sort().join(','), [items])
+  const safeItems = useMemo(
+    () => (Array.isArray(items) ? items.filter((i) => i && i.product && i.product.id) : []),
+    [items]
+  )
+
+  const cartProductIdsKey = useMemo(() => safeItems.map((i) => i.product.id).sort().join(','), [safeItems])
 
   useEffect(() => {
     if (!isOpen || !cartProductIdsKey) {
@@ -168,25 +173,25 @@ export function CartDrawer() {
       .catch((err) => console.error('Failed to fetch upsell products:', err))
   }, [isOpen, cartProductIdsKey, activeStoreId])
 
-  const groceryItems = items.filter((item) => !isCafeProduct(item.product))
-  const cafeItems = items.filter((item) => isCafeProduct(item.product))
+  const groceryItems = safeItems.filter((item) => !isCafeProduct(item.product))
+  const cafeItems = safeItems.filter((item) => isCafeProduct(item.product))
 
   const subtotal = getSubtotal()
 
   const cartHash = useMemo(
-    () => items.map((i) => `${i.product.id}:${i.quantity}:${i.product.price}`).join('|'),
-    [items]
+    () => safeItems.map((i) => `${i.product.id}:${i.quantity}:${i.product.price}`).join('|'),
+    [safeItems]
   )
 
   // Auto-validate or auto-apply coupon on cart drawer load or item updates
   useEffect(() => {
-    if (items.length === 0) {
+    if (safeItems.length === 0) {
       setAppliedCoupon(null)
       setAppliedCouponCode(null)
       return
     }
 
-    const payloadItems = (items as any[]).map((i: any) => {
+    const payloadItems = (safeItems as any[]).map((i: any) => {
       const p = i.product || {}
       return {
         id: p.id || i.productId || i.id,
@@ -207,7 +212,7 @@ export function CartDrawer() {
     if (appliedCouponCode) {
       // Immediate client-side check: If BOGO offer is applied, ensure cart still has enough qualifying items
       if (appliedCoupon?.discountType === 'BOGO') {
-        const qualifying = items.filter((it) => isProductEligibleForCoupon(it.product, appliedCoupon))
+        const qualifying = safeItems.filter((it) => isProductEligibleForCoupon(it.product, appliedCoupon))
         const qQty = qualifying.reduce((sum, it) => sum + (it.quantity || 1), 0)
         if (appliedCoupon.bogoType === 'CHEAPEST_FREE' && qQty < 2) {
           setAppliedCoupon(null)

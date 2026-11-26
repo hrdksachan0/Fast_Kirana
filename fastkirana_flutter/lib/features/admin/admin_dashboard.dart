@@ -48,6 +48,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _bindAssignedHubIfStoreManager();
     });
   }

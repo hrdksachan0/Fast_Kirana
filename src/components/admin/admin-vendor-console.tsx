@@ -78,6 +78,7 @@ interface ItemizedSale {
   barcode: string | null
   unitsSold: number
   unitCostPrice: number
+  costMissing?: boolean
   sellingPrice: number
   totalPayable: number
   currentStock: number
@@ -91,6 +92,7 @@ interface LowStockItem {
   stock: number
   minStock: number
   costPrice: number
+  costMissing?: boolean
   isLow: boolean
 }
 
@@ -99,6 +101,7 @@ interface DailySaleItem {
   name: string
   unit: string
   unitCostPrice: number
+  costMissing?: boolean
   unitsSold: number
   totalPayable: number
 }
@@ -118,6 +121,7 @@ interface ProductItem {
   price: number
   mrp: number
   costPrice: number
+  costMissing?: boolean
   stock: number
   category?: string
   imageUrl?: string | null
@@ -682,12 +686,12 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
       itemizedSales.forEach((item, idx) => {
         summaryRows.push([
           idx + 1,
-          item.name,
+          item.unit ? `${item.name} (${item.unit})` : item.name,
           item.categoryName,
           item.barcode || '',
           item.currentStock,
           item.unitsSold,
-          item.unitCostPrice,
+          item.unitCostPrice > 0 ? item.unitCostPrice : 'Not Mentioned',
           item.totalPayable,
         ])
       })
@@ -741,7 +745,7 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
             `  ${item.name}`,
             item.unit || '',
             item.unitsSold,
-            item.unitCostPrice,
+            item.unitCostPrice > 0 ? item.unitCostPrice : 'Not Mentioned',
             item.totalPayable,
           ])
         })
@@ -1250,8 +1254,8 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
                       </td>
                     </tr>
                   ) : (
-                    filteredSales.map((item) => (
-                      <tr key={item.productId} className="hover:bg-muted/30 transition">
+                    filteredSales.map((item, idx) => (
+                      <tr key={`${item.productId}-${item.unit || 'base'}-${idx}`} className="hover:bg-muted/30 transition">
                         <td className="p-3 font-bold text-text-primary">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span>{item.name}</span>
@@ -1270,10 +1274,23 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
                           {item.unitsSold}
                         </td>
                         <td className="p-3 text-right font-bold text-text-primary">
-                          {formatPrice(item.unitCostPrice)}
+                          {item.unitCostPrice > 0 ? (
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              {formatPrice(item.unitCostPrice)}
+                              {item.costMissing && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700">
+                                  Partial
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 border border-amber-500/20">
+                              Not Mentioned
+                            </span>
+                          )}
                         </td>
                         <td className="p-3 text-right font-black text-primary">
-                          {formatPrice(item.totalPayable)}
+                          {item.unitCostPrice > 0 ? formatPrice(item.totalPayable) : <span className="text-amber-700 text-xs font-bold">Not Mentioned</span>}
                         </td>
                         <td className="p-3 text-center">
                           <span
@@ -1363,8 +1380,8 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
                               {formatPrice(day.totalPayable)}
                             </td>
                           </tr>
-                          {isExpanded && day.items.map((item) => (
-                            <tr key={`${day.date}-${item.productId}`} className="bg-muted/20">
+                          {isExpanded && day.items.map((item, idx) => (
+                            <tr key={`${day.date}-${item.productId}-${item.unit || 'base'}-${idx}`} className="bg-muted/20">
                               <td className="p-2"></td>
                               <td className="p-2 pl-8 text-text-secondary">
                                 <div className="flex items-center gap-1.5">
@@ -1378,10 +1395,10 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
                                 </div>
                               </td>
                               <td className="p-2 text-right text-text-secondary font-bold text-[11px]">
-                                {item.unitsSold} × {formatPrice(item.unitCostPrice)}
+                                {item.unitCostPrice > 0 ? `${item.unitsSold} × ${formatPrice(item.unitCostPrice)}` : <span className="text-amber-700 font-bold">{item.unitsSold} × Not Mentioned</span>}
                               </td>
                               <td className="p-2 text-right font-bold text-[11px] text-text-primary">
-                                {formatPrice(item.totalPayable)}
+                                {item.unitCostPrice > 0 ? formatPrice(item.totalPayable) : <span className="text-amber-700 font-bold">Not Mentioned</span>}
                               </td>
                             </tr>
                           ))}
@@ -1562,7 +1579,11 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
                             {formatPrice(prod.price)}
                           </td>
                           <td className="p-3 text-right font-bold text-blue-600">
-                            {formatPrice(prod.costPrice)}
+                            {prod.costPrice > 0 ? formatPrice(prod.costPrice) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 border border-amber-500/20">
+                                Not Mentioned
+                              </span>
+                            )}
                           </td>
                           <td className="p-3 text-right">
                             {margin ? (
@@ -1686,7 +1707,11 @@ export function AdminVendorConsole({ storeId }: AdminVendorConsoleProps) {
                             {item.minStock}
                           </td>
                           <td className="p-3 text-right font-bold text-text-primary">
-                            {formatPrice(item.costPrice)}
+                            {item.costPrice > 0 ? formatPrice(item.costPrice) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 border border-amber-500/20">
+                                Not Mentioned
+                              </span>
+                            )}
                           </td>
                           <td className="p-3 text-center">
                             <input

@@ -412,7 +412,10 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       notif.unsubscribeFromTopic('kitchen_$_currentlySubscribedOutletId');
       notif.unsubscribeFromTopic('restaurant_orders_$_currentlySubscribedOutletId');
     }
-    _audioPlayer.dispose();
+    _isAudioDisposed = true;
+    try {
+      _audioPlayer.dispose().catchError((_) {});
+    } catch (_) {}
     super.dispose();
   }
 
@@ -763,11 +766,19 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
     } catch (e, _) { LoggerService.error('RestaurantDashboard: silent catch', e); }
   }
 
+  bool _isAudioBusy = false;
+  bool _isAudioDisposed = false;
+
   Future<void> _playChime() async {
+    if (_isAudioBusy || _isAudioDisposed || !mounted) return;
+    _isAudioBusy = true;
     try {
       HapticFeedback.heavyImpact();
       try {
-        await _audioPlayer.stop();
+        if (_audioPlayer.state == PlayerState.playing) {
+          await _audioPlayer.stop();
+        }
+        if (_isAudioDisposed || !mounted) return;
         // Play local asset audio for zero latency and offline reliability (Kitchen Order Bell)
         await _audioPlayer.play(
           AssetSource('sounds/kitchen_order_bell.wav'),
@@ -782,6 +793,8 @@ class _RestaurantDashboardState extends ConsumerState<RestaurantDashboard> with 
       try {
         await SystemSound.play(SystemSoundType.alert);
       } catch (_) {}
+    } finally {
+      _isAudioBusy = false;
     }
   }
 

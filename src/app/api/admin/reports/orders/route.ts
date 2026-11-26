@@ -103,24 +103,38 @@ export async function GET(request: NextRequest) {
         price: number
         quantity: number
         costPrice: number
+        liveCostPrice?: number
+        snapshotCostPrice?: number
+        liveBasePrice?: number
         restaurantId: string | null
         restaurantName: string | null
         restaurantCommissionRate: number | null
         categoryName: string | null
         variants: any
+        liveVariants?: any
+        snapshotVariants?: any
         selectedVariant: string | null
         isGroceryProduct: boolean
       }>
     >`
       SELECT oi."orderId", oi.name, oi.price, oi.quantity, 
-             COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice",
+             COALESCE(NULLIF(p."costPrice", 0), oi."costPrice", 0) as "costPrice",
+             COALESCE(p."costPrice", 0) as "liveCostPrice",
+             COALESCE(oi."costPrice", 0) as "snapshotCostPrice",
+             COALESCE(p.price, 0) as "liveBasePrice",
              COALESCE(p."restaurantId", o."restaurantId") as "restaurantId",
              r.name as "restaurantName",
              r."commissionRate" as "restaurantCommissionRate",
              c.name as "categoryName",
-             COALESCE(oi.variants, p.variants) as "variants",
+             COALESCE(p.variants, oi.variants) as "variants",
+             p.variants as "liveVariants",
+             oi.variants as "snapshotVariants",
              oi."selectedVariant",
-             CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct"
+             CASE
+               WHEN (p.id IS NOT NULL AND p."restaurantId" IS NULL)
+                 OR (p.id IS NULL AND o."restaurantId" IS NULL AND COALESCE(o."orderType"::text, 'GROCERY') = 'GROCERY')
+               THEN true ELSE false
+             END as "isGroceryProduct"
       FROM order_items oi
       JOIN orders o ON oi."orderId" = o.id
       LEFT JOIN products p ON oi."productId" = p.id
@@ -136,6 +150,56 @@ export async function GET(request: NextRequest) {
       return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
     }
 
+    const canonicalizeUnit = (s: string | null | undefined): string => {
+      let t = (s || '').toLowerCase().replace(/[,;()\[\]]/g, ' ').replace(/\s+/g, ' ').trim()
+      t = t.replace(/\b(kilograms?|kgs)\b/g, 'kg')
+      t = t.replace(/\b(grams?|gms|gm)\b/g, 'g')
+      t = t.replace(/\b(millilitres?|milliliters?|mls)\b/g, 'ml')
+      t = t.replace(/\b(litres?|liters?|ltrs|ltr)\b/g, 'l')
+      t = t.replace(/\b(pieces?|pcs)\b/g, 'pc')
+      t = t.replace(/\b(packets?|pkts)\b/g, 'pkt')
+      return t.replace(/[^a-z0-9]/g, '')
+    }
+
+    const parseVariantsList = (rawVariants: any): any[] => {
+      if (!rawVariants) return []
+      try {
+        const parsed = typeof rawVariants === 'string' ? JSON.parse(rawVariants) : rawVariants
+        if (Array.isArray(parsed)) return parsed
+        if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed.productVariants)) return parsed.productVariants
+          if (Array.isArray(parsed.variants)) return parsed.variants
+        }
+      } catch {}
+      return []
+    }
+
+    const extractVariantCost = (variantsList: any[], targetVariant: string, itemPrice: number): number => {
+      if (!Array.isArray(variantsList) || variantsList.length === 0) return 0
+      if (targetVariant) {
+        const normTarget = normalizeText(targetVariant)
+        const canonTarget = canonicalizeUnit(targetVariant)
+        const matched = variantsList.find((v: any) => {
+          if (!v) return false
+          const vNameRaw = String(v.name || '')
+          const vUnitRaw = String(v.unit || '')
+          return (
+            normalizeText(vNameRaw) === normTarget ||
+            normalizeText(vUnitRaw) === normTarget ||
+            (canonTarget && (canonicalizeUnit(vNameRaw) === canonTarget || canonicalizeUnit(vUnitRaw) === canonTarget))
+          )
+        })
+        const matchedCp = Number(matched?.costPrice ?? matched?.cp ?? matched?.cost ?? 0)
+        if (matchedCp > 0) return matchedCp
+      }
+      if (itemPrice > 0) {
+        const priceMatched = variantsList.find((v: any) => v && Number(v.price) > 0 && Math.abs(Number(v.price) - itemPrice) < 0.01)
+        const priceCp = Number(priceMatched?.costPrice ?? priceMatched?.cp ?? priceMatched?.cost ?? 0)
+        if (priceCp > 0) return priceCp
+      }
+      return 0
+    }
+
     const resolveItemCost = (item: typeof orderItems[0]): { totalCost: number; unitCost: number } => {
       const qty = Number(item.quantity) || 1
       let unitCost = 0
@@ -148,67 +212,37 @@ export async function GET(request: NextRequest) {
         return { totalCost: total, unitCost: qty > 0 ? Math.round((total / qty) * 100) / 100 : total }
       }
 
-      // 1. Explicit costPrice on item
-      if (item.costPrice && Number(item.costPrice) > 0) {
-        unitCost = Number(item.costPrice)
-        return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
-      }
-
-      // 2. Parse variants (supports both array and { productVariants: [...] } with addons)
-      let variantsList: any[] = []
-      if (item.variants) {
-        try {
-          const parsed = typeof item.variants === 'string' ? JSON.parse(item.variants) : item.variants
-          if (Array.isArray(parsed)) {
-            variantsList = parsed
-          } else if (parsed && typeof parsed === 'object') {
-            if (Array.isArray(parsed.productVariants)) {
-              variantsList = parsed.productVariants
-            } else if (Array.isArray(parsed.variants)) {
-              variantsList = parsed.variants
-            }
-          }
-        } catch {}
-      }
-
       let targetVariant = (item.selectedVariant || '').trim()
       if (!targetVariant && item.name) {
         const match = item.name.match(/[\(\[]([^\)\]]+)[\)\]]/)
         if (match) targetVariant = match[1].trim()
       }
 
-      if (Array.isArray(variantsList) && variantsList.length > 0) {
-        if (targetVariant) {
-          const normTarget = normalizeText(targetVariant)
-          const matched = variantsList.find((v: any) => {
-            if (!v) return false
-            const vName = normalizeText(v.name)
-            const vUnit = normalizeText(v.unit)
-            return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
-          })
-          const matchedCp = matched?.costPrice ?? matched?.cp ?? matched?.cost
-          if (matchedCp !== undefined && matchedCp !== null && Number(matchedCp) > 0) {
-            unitCost = Number(matchedCp)
-            return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
-          }
-        }
+      const liveVariants = parseVariantsList(item.liveVariants)
+      const snapshotVariants = parseVariantsList(item.snapshotVariants)
+      const itemPrice = Number(item.price || 0)
+      const liveCost = Number(item.liveCostPrice || 0)
+      const snapshotCost = Number(item.snapshotCostPrice || 0)
+      const liveBasePrice = Number(item.liveBasePrice || 0)
 
-        const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
-        const priceCp = priceMatched?.costPrice ?? priceMatched?.cp ?? priceMatched?.cost
-        if (priceCp !== undefined && priceCp !== null && Number(priceCp) > 0) {
-          unitCost = Number(priceCp)
-          return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
-        }
+      unitCost = extractVariantCost(liveVariants, targetVariant, itemPrice)
+      const isBaseMatch = liveVariants.length <= 1 || !targetVariant || (liveBasePrice > 0 && Math.abs(liveBasePrice - itemPrice) < 0.01)
+      if (unitCost <= 0 && isBaseMatch && liveCost > 0) {
+        unitCost = liveCost
+      }
+      if (unitCost <= 0) {
+        unitCost = extractVariantCost(snapshotVariants, targetVariant, itemPrice)
+      }
+      if (unitCost <= 0 && snapshotCost > 0) {
+        unitCost = snapshotCost
       }
 
-      if (item.costPrice && Number(item.costPrice) > 0) {
-        unitCost = Number(item.costPrice)
+      if (unitCost > 0) {
         return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
       }
 
-      // 3. Fallback 25% margin estimate (75% cost)
-      unitCost = Math.round((Number(item.price) || 0) * 0.75 * 100) / 100
-      return { totalCost: Math.round(unitCost * qty * 100) / 100, unitCost }
+      // Cost not set: return 0 rather than a 25% default estimate
+      return { totalCost: 0, unitCost: 0 }
     }
 
     // Group items by order

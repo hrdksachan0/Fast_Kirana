@@ -137,6 +137,7 @@ class _PickerDashboardState extends ConsumerState<PickerDashboard> {
     _fetchPickerOrders();
     _initSupabaseRealtime();
     SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
       final userRole = (prefs.getString('user_role') ?? '').toUpperCase().trim();
       if (userRole != 'ADMIN' && userRole != 'SUPER_ADMIN') {
         NotificationService().registerDeviceToken(ref.read(dioProvider), role: 'PICKER');

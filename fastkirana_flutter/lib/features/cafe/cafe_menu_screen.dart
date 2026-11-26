@@ -142,6 +142,10 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
     final screenWidth = MediaQuery.of(context).size.width;
     final targetScroll = (index * itemWidth) - (screenWidth / 2) + (itemWidth / 2);
 
+    if (!_horizontalCategoryController.hasClients ||
+        _horizontalCategoryController.positions.length != 1) {
+      return;
+    }
     final maxScroll = _horizontalCategoryController.position.maxScrollExtent;
     final clampedScroll = targetScroll.clamp(0.0, maxScroll);
 

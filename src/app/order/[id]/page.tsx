@@ -360,11 +360,11 @@ export default async function OrderConfirmPage({ params }: OrderConfirmPageProps
                 Bill Details
               </h2>
               <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-muted text-text-secondary tracking-wider">
-                {order.items.length} {order.items.length === 1 ? 'ITEM' : 'ITEMS'}
+                {(Array.isArray(order.items) ? order.items : []).length} {(Array.isArray(order.items) ? order.items : []).length === 1 ? 'ITEM' : 'ITEMS'}
               </span>
             </div>
             <div className="text-xs font-semibold text-text-secondary space-y-2.5">
-              {order.items.map((item: any) => (
+              {(Array.isArray(order.items) ? order.items : []).map((item: any) => (
                 <div key={item.id} className="flex justify-between items-center text-text-primary">
                   <span className="font-semibold">
                     {item.name} <span className="text-text-secondary font-mono">× {item.quantity}</span>

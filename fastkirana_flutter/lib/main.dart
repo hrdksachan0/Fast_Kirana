@@ -223,6 +223,17 @@ void main() async {
       options.enableAutoPerformanceTracing = true;
       options.attachScreenshot = false;
       options.sendDefaultPii = false;
+      options.beforeSend = (event, hint) {
+        final msg = '${event.throwable ?? ''} ${event.message?.formatted ?? ''} '
+                '${event.exceptions?.map((e) => e.value ?? '').join(' ') ?? ''}'
+            .toLowerCase();
+        // Drop transient offline/flaky-network GoogleFonts HTTP fetch failures (bundled fonts act as fallback)
+        if (msg.contains('failed to load font with url') ||
+            msg.contains('fonts.gstatic.com')) {
+          return null;
+        }
+        return event;
+      };
     },
     appRunner: () => runApp(
       DefaultAssetBundle(

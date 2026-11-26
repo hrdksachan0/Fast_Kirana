@@ -962,7 +962,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                       </span>
                       <span className="text-[10px] text-text-secondary font-medium">•</span>
                       <span className="text-[10px] text-text-secondary font-bold">
-                        {ord.items.length} items
+                        {(Array.isArray(ord.items) ? ord.items : []).length} items
                       </span>
                     </div>
                   </div>
@@ -991,7 +991,7 @@ export function AccountDashboard({ user, addresses: initialAddresses, orders: in
                   </div>
                 </div>
                 <div className="text-xs font-bold text-text-secondary flex flex-wrap gap-x-2 gap-y-1.5">
-                  {ord.items.map((item: any) => (
+                  {(Array.isArray(ord.items) ? ord.items : []).map((item: any) => (
                     <span key={item.id || item.name} className="bg-zinc-100 dark:bg-zinc-900/80 px-2.5 py-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
                       {item.name} (×{item.quantity})
                     </span>

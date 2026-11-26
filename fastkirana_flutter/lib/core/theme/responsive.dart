@@ -150,11 +150,12 @@ class Responsive {
 
   /// Responsive scaled font size with safety clamping
   static double scaledFontSize(BuildContext context, double baseSize) {
+    if (baseSize <= 0) return baseSize;
     final width = MediaQuery.of(context).size.width;
     if (width > tabletBreakpoint) return baseSize * 1.1;
     // On small/narrow phones (e.g. Moto ~360dp), never degrade small labels below readable thresholds
     if (width < 360) {
-      if (baseSize <= 13.0) return baseSize.clamp(11.0, baseSize);
+      if (baseSize <= 13.0) return baseSize;
       return (baseSize * 0.96).clamp(baseSize - 1.0, baseSize);
     }
     return baseSize;

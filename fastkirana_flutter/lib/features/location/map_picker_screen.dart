@@ -81,6 +81,7 @@ class _MapPickerScreenState extends ConsumerState<MapPickerScreen>
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final hubs = ref.read(activeStoreHubsProvider).valueOrNull ?? StoreHub.defaultHubs;
       setState(() => _activeHubs = hubs);
       _updateLocationDetails(_currentLat, _currentLng);

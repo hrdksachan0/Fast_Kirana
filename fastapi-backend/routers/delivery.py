@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import desc, func, and_, or_, text
 from typing import List, Dict, Any, Optional
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 import urllib.parse
 import math
 import re
@@ -48,12 +48,16 @@ async def get_rider_wallet(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get real-time rider wallet info, cash capacity limits, and recent deposits.
+    Get real-time rider wallet info, cash capacity limits, today's summary (IST), and recent deposits.
     """
     require_delivery_or_admin(current_user)
     user_id = current_user.get("id") or current_user.get("sub")
 
-    today_start = datetime.combine(datetime.now(timezone.utc).date(), time.min)
+    # Use IST midnight (matching /api/admin/rider-cash) so Rider and Admin totals align
+    ist = timezone(timedelta(hours=5, minutes=30))
+    now_ist = datetime.now(ist)
+    today_start_ist = datetime.combine(now_ist.date(), time.min, tzinfo=ist)
+    today_start = today_start_ist.astimezone(timezone.utc).replace(tzinfo=None)
 
     # Ensure wallet exists
     wallet_stmt = select(RiderWallet).where(RiderWallet.userId == user_id)
@@ -73,15 +77,21 @@ async def get_rider_wallet(
         await db.commit()
         await db.refresh(wallet)
 
-    # Fetch today's COD delivered orders
-    cod_stmt = select(Order).where(
+    # Fetch all of today's delivered orders for this rider (IST day)
+    today_stmt = select(Order).where(
         Order.deliveryUserId == user_id,
         Order.status == OrderStatus.DELIVERED,
-        Order.paymentMethod == PaymentMethod.COD,
-        Order.deliveredAt >= today_start
-    ).order_by(Order.deliveredAt.desc())
-    cod_res = await db.execute(cod_stmt)
-    today_cod_orders = cod_res.scalars().all()
+        func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
+    ).order_by(desc(func.coalesce(Order.deliveredAt, Order.createdAt)))
+    today_res = await db.execute(today_stmt)
+    today_orders = today_res.scalars().all()
+
+    today_cod_orders = [o for o in today_orders if o.paymentMethod == PaymentMethod.COD]
+    today_online_orders = [o for o in today_orders if o.paymentMethod != PaymentMethod.COD]
+
+    total_amount = sum(float(o.total or 0.0) for o in today_orders)
+    cash_amount = sum(float(o.total or 0.0) for o in today_cod_orders)
+    online_amount = sum(float(o.total or 0.0) for o in today_online_orders)
 
     # Fetch recent cash deposits
     dep_stmt = select(CashDepositTransaction).options(selectinload(CashDepositTransaction.admin)).where(
@@ -93,6 +103,19 @@ async def get_rider_wallet(
     is_locked = wallet.cashInHand >= wallet.cashLimit
     is_warning = wallet.cashInHand >= wallet.cashLimit * 0.75
 
+    def _serialize_order(o: Order) -> Dict[str, Any]:
+        return {
+            "id": o.id,
+            "readableId": o.readableId,
+            "total": float(o.total or 0.0),
+            "paymentMethod": o.paymentMethod.value if o.paymentMethod else "COD",
+            "paymentStatus": o.paymentStatus.value if o.paymentStatus else "PENDING",
+            "deliveredAt": o.deliveredAt.isoformat() if o.deliveredAt else None,
+            "createdAt": o.createdAt.isoformat() if o.createdAt else None,
+            "cashSettledToAdmin": o.cashSettledToAdmin,
+            "shopName": o.shopName,
+        }
+
     return {
         "wallet": {
             "cashInHand": float(wallet.cashInHand),
@@ -101,18 +124,24 @@ async def get_rider_wallet(
             "totalDeposited": float(wallet.totalDeposited),
             "isLocked": is_locked,
             "isWarning": is_warning,
-            "remainingLimit": max(0.0, float(wallet.cashLimit - wallet.cashInHand))
+            "remainingLimit": max(0.0, float(wallet.cashLimit - wallet.cashInHand)),
+            "totalOrdersCount": len(today_orders),
+            "totalOrdersAmount": float(total_amount),
+            "onlineCount": len(today_online_orders),
+            "onlineAmount": float(online_amount),
+            "cashCount": len(today_cod_orders),
+            "cashAmount": float(cash_amount),
         },
-        "todayCodOrders": [
-            {
-                "id": o.id,
-                "readableId": o.readableId,
-                "total": float(o.total),
-                "deliveredAt": o.deliveredAt.isoformat() if o.deliveredAt else None,
-                "cashSettledToAdmin": o.cashSettledToAdmin,
-                "shopName": o.shopName
-            } for o in today_cod_orders
-        ],
+        "summary": {
+            "totalCount": len(today_orders),
+            "totalAmount": float(total_amount),
+            "onlineCount": len(today_online_orders),
+            "onlineAmount": float(online_amount),
+            "cashCount": len(today_cod_orders),
+            "cashAmount": float(cash_amount),
+        },
+        "todayOrders": [_serialize_order(o) for o in today_orders],
+        "todayCodOrders": [_serialize_order(o) for o in today_cod_orders],
         "recentDeposits": [
             {
                 "id": d.id,

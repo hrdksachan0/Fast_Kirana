@@ -224,9 +224,9 @@ export function useAdminRealtime({
     try {
       const storeQuery =
         selectedHubId && selectedHubId !== 'all'
-          ? `?storeId=${encodeURIComponent(selectedHubId)}`
-          : ''
-      const res = await fetch(`${apiUrl()}/api/admin/orders/pulse${storeQuery}&t=${Date.now()}`)
+          ? `?storeId=${encodeURIComponent(selectedHubId)}&t=${Date.now()}`
+          : `?t=${Date.now()}`
+      const res = await fetch(`${apiUrl()}/api/admin/orders/pulse${storeQuery}`)
       if (res.ok) {
         const data = await res.json()
         const latest = data?.latestOrder

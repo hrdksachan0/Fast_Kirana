@@ -44,7 +44,8 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
           const data = await response.json()
           if (data.success && Array.isArray(data.items)) {
             const serverItems: CartItem[] = data.items
-            const localItems = useCartStore.getState().items
+            const rawLocalItems = useCartStore.getState().items
+            const localItems = Array.isArray(rawLocalItems) ? rawLocalItems : []
 
             const mergedMap = new Map<string, CartItem>()
 
@@ -96,7 +97,8 @@ export function CartSyncProvider({ children }: { children: React.ReactNode }) {
       return // Don't attempt network sync when client is offline
     }
     try {
-      const currentItems = useCartStore.getState().items
+      const rawCurrentItems = useCartStore.getState().items
+      const currentItems = Array.isArray(rawCurrentItems) ? rawCurrentItems : []
       const mappedItems = currentItems
         .filter((item) => Boolean(item?.product?.id))
         .map((item) => {

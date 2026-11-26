@@ -25,9 +25,9 @@ export async function PUT(
             : variants)
 
       if (Array.isArray(parsedVariants) && parsedVariants.length > 0) {
-        const fallbackCost = updateData.costPrice !== undefined ? updateData.costPrice : 0
+        const fallbackCost = parsedVariants.length === 1 && updateData.costPrice !== undefined ? updateData.costPrice : 0
         parsedVariants = parsedVariants.map((v: any) => {
-          const vCost = Number(v.costPrice) || 0
+          const vCost = Number(v.costPrice ?? v.cp ?? v.cost ?? 0) || 0
           return {
             ...v,
             costPrice: vCost > 0 ? vCost : (fallbackCost > 0 ? fallbackCost : 0),

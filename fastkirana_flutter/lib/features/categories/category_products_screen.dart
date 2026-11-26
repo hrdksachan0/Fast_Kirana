@@ -58,8 +58,12 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients &&
-        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 250) {
+    if (!_scrollController.hasClients || _scrollController.positions.length != 1) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.hasContentDimensions &&
+        position.pixels >= position.maxScrollExtent - 250) {
       if (mounted) {
         setState(() {
           _visibleCount += 12;

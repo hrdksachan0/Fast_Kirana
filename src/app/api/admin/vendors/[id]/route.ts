@@ -121,6 +121,8 @@ export async function GET(
         imageUrl: string | null
         unitsSold: number
         unitCostPrice: number
+        costedUnits?: number
+        costMissing?: boolean
         sellingPrice: number
         totalPayable: number
         currentStock: number
@@ -140,6 +142,8 @@ export async function GET(
             name: string
             unit: string
             unitCostPrice: number
+            costedUnits?: number
+            costMissing?: boolean
             unitsSold: number
             totalPayable: number
           }
@@ -183,9 +187,71 @@ export async function GET(
       }
     }
 
-    // Accumulate delivered sales with robust variant cost resolution
+    const canonUnit = (raw: string | null | undefined) => {
+      let t = String(raw || '').toLowerCase().replace(/[,;()\[\]]/g, ' ').replace(/\s+/g, ' ').trim()
+      t = t.replace(/\b(kilograms?|kgs)\b/g, 'kg')
+      t = t.replace(/\b(grams?|gms|gm)\b/g, 'g')
+      t = t.replace(/\b(millilitres?|milliliters?|mls)\b/g, 'ml')
+      t = t.replace(/\b(litres?|liters?|ltrs|ltr)\b/g, 'l')
+      t = t.replace(/\b(pieces?|pcs)\b/g, 'pc')
+      t = t.replace(/\b(packets?|pkts)\b/g, 'pkt')
+      return t.replace(/[^a-z0-9]/g, '')
+    }
+    const extractVarFromName = (name: string | null | undefined) => {
+      if (!name) return ''
+      const matches = Array.from(name.matchAll(/[\(\[]([^\)\]]+)[\)\]]/g)).map((m) => (m[1] || '').trim()).filter(Boolean)
+      for (const c of matches) {
+        if (/\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b/i.test(c)) return c
+      }
+      return matches[matches.length - 1] || ''
+    }
+    const parseVarsList = (raw: any): any[] => {
+      if (!raw) return []
+      try {
+        const p = typeof raw === 'string' ? JSON.parse(raw) : raw
+        if (Array.isArray(p)) return p.filter((v) => v && typeof v === 'object')
+        if (p && typeof p === 'object') {
+          if (Array.isArray(p.productVariants)) return p.productVariants
+          if (Array.isArray(p.variants)) return p.variants
+        }
+      } catch {}
+      return []
+    }
+    const pickVariantCost = (vars: any[], target: string, itemPrice: number): number => {
+      const normTarget = target.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const canonTarget = canonUnit(target)
+      if (normTarget || canonTarget) {
+        for (const v of vars) {
+          const vNameRaw = String(v.name || '')
+          const vUnitRaw = String(v.unit || '')
+          const vName = vNameRaw.toLowerCase().replace(/[^a-z0-9]/g, '')
+          const vUnit = vUnitRaw.toLowerCase().replace(/[^a-z0-9]/g, '')
+          if (
+            (normTarget && (vName === normTarget || vUnit === normTarget)) ||
+            (canonTarget && (canonUnit(vNameRaw) === canonTarget || canonUnit(vUnitRaw) === canonTarget))
+          ) {
+            const cp = Number(v.costPrice ?? v.cp ?? v.cost ?? 0)
+            if (cp > 0) return cp
+          }
+        }
+      }
+      if (itemPrice > 0) {
+        for (const v of vars) {
+          const vp = Number(v.price || 0)
+          if (vp > 0 && Math.abs(vp - itemPrice) < 0.01) {
+            const cp = Number(v.costPrice ?? v.cp ?? v.cost ?? 0)
+            if (cp > 0) return cp
+          }
+        }
+      }
+      return 0
+    }
+    const soldMultiVariantPids = new Set<string>()
+
+    // Accumulate delivered sales with live-first canonical variant cost resolution
     for (const order of deliveredOrders) {
-      const orderDateStr = order.createdAt.toISOString().split('T')[0]
+      const istTime = new Date(order.createdAt.getTime() + 5.5 * 60 * 60 * 1000)
+      const orderDateStr = istTime.toISOString().split('T')[0]
       if (!dailySalesMap[orderDateStr]) {
         dailySalesMap[orderDateStr] = {
           date: orderDateStr,
@@ -199,77 +265,98 @@ export async function GET(
         if (item.isRefunded || !item.productId) continue
 
         const baseProd = productMap.get(item.productId)
-        let effectiveCostPrice = item.costPrice && item.costPrice > 0 ? Number(item.costPrice) : 0
+        const liveVariants = parseVarsList(baseProd?.variants)
+        const snapVariants = parseVarsList(item.variants)
+        const targetVar = (item.selectedVariant || '').trim() || extractVarFromName(item.name)
+        const itemPrice = Number(item.price || baseProd?.price || 0)
 
-        if (!effectiveCostPrice) {
-          const rawVariants = item.variants || baseProd?.variants
-          let variantsList: any[] = []
-          if (rawVariants) {
-            try {
-              variantsList = typeof rawVariants === 'string' ? JSON.parse(rawVariants as string) : rawVariants
-            } catch {}
-          }
+        // 1. Live catalog variant cost first
+        let effectiveCostPrice = liveVariants.length > 0 ? pickVariantCost(liveVariants, targetVar, itemPrice) : 0
 
-          let target = item.selectedVariant
-          if (!target && item.name && item.name.includes('(')) {
-            const match = item.name.match(/\(([^)]+)\)/)
-            if (match) target = match[1]
-          }
+        // 2. Live hub/product base cost (only when no multi-variant mismatch)
+        const isBaseMatch =
+          liveVariants.length <= 1 ||
+          !canonUnit(targetVar) ||
+          (baseProd?.unit && canonUnit(targetVar) === canonUnit(baseProd.unit)) ||
+          (Number(baseProd?.price || 0) > 0 && Math.abs(Number(baseProd?.price || 0) - itemPrice) < 0.01)
 
-          if (Array.isArray(variantsList) && variantsList.length > 0) {
-            if (target) {
-              const normTarget = target.toLowerCase().replace(/[^a-z0-9]/g, '')
-              const matched = variantsList.find((v: any) => {
-                if (!v) return false
-                const vName = (v.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-                const vUnit = (v.unit || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-                return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
-              })
-              if (matched && Number(matched.costPrice) > 0) {
-                effectiveCostPrice = Number(matched.costPrice)
-              }
-            }
-            if (!effectiveCostPrice) {
-              const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
-              if (priceMatched && Number(priceMatched.costPrice) > 0) {
-                effectiveCostPrice = Number(priceMatched.costPrice)
-              }
-            }
-          }
-
-          if (!effectiveCostPrice && baseProd?.costPrice && Number(baseProd.costPrice) > 0) {
-            effectiveCostPrice = Number(baseProd.costPrice)
-          }
-
-          if (!effectiveCostPrice && item.price > 0) {
-            effectiveCostPrice = Math.round(Number(item.price) * 0.75 * 100) / 100
+        if (effectiveCostPrice <= 0 && isBaseMatch) {
+          const hubInv = baseProd?.inventories?.[0] as any
+          const hubCost = hubInv?.costPrice && Number(hubInv.costPrice) > 0 ? Number(hubInv.costPrice) : 0
+          const prodCost = baseProd?.costPrice && Number(baseProd.costPrice) > 0 ? Number(baseProd.costPrice) : 0
+          const preferHub =
+            hubCost > 0 &&
+            hubInv?.updatedAt &&
+            (!baseProd?.updatedAt || new Date(hubInv.updatedAt) >= new Date(baseProd.updatedAt))
+          if (preferHub) {
+            effectiveCostPrice = hubCost
+          } else if (prodCost > 0) {
+            effectiveCostPrice = prodCost
+          } else if (hubCost > 0) {
+            effectiveCostPrice = hubCost
           }
         }
 
+        // 3. Fallback to order snapshot only when live catalog has no matching cost
+        if (effectiveCostPrice <= 0 && snapVariants.length > 0) {
+          effectiveCostPrice = pickVariantCost(snapVariants, targetVar, itemPrice)
+        }
+        if (effectiveCostPrice <= 0 && item.costPrice && Number(item.costPrice) > 0) {
+          effectiveCostPrice = Number(item.costPrice)
+        }
+
         const qty = item.quantity || 0
-        const itemPayable = qty * effectiveCostPrice
+        const itemPayable = effectiveCostPrice > 0 ? qty * effectiveCostPrice : 0
 
         totalUnitsSold += qty
         totalPayableAmount += itemPayable
 
-        // Update Itemized Sales
-        if (itemSalesSummary[item.productId]) {
-          itemSalesSummary[item.productId].unitsSold += qty
-          itemSalesSummary[item.productId].totalPayable += itemPayable
-          if (itemSalesSummary[item.productId].unitsSold > 0) {
-            itemSalesSummary[item.productId].unitCostPrice = Math.round(
-              (itemSalesSummary[item.productId].totalPayable / itemSalesSummary[item.productId].unitsSold) * 100
-            ) / 100
+        const pUnit = targetVar || baseProd?.unit || ''
+        const pName = baseProd?.name || item.name || 'Item'
+        const canonResolved = canonUnit(pUnit)
+        const summaryKey = liveVariants.length > 1 && targetVar
+          ? `${item.productId}::${canonResolved || targetVar.toLowerCase()}`
+          : item.productId
+
+        if (liveVariants.length > 1 && targetVar) {
+          soldMultiVariantPids.add(item.productId)
+          if (!itemSalesSummary[summaryKey]) {
+            itemSalesSummary[summaryKey] = {
+              productId: item.productId,
+              name: pName,
+              unit: pUnit,
+              categoryName: baseProd?.category?.name || 'Uncategorized',
+              barcode: baseProd?.barcode || null,
+              imageUrl: baseProd?.imageUrl || null,
+              unitsSold: 0,
+              unitCostPrice: effectiveCostPrice,
+              costedUnits: 0,
+              costMissing: effectiveCostPrice <= 0,
+              sellingPrice: itemPrice,
+              totalPayable: 0,
+              currentStock: baseProd?.inventories?.[0]?.stock ?? baseProd?.stock ?? 0,
+            }
           }
+        }
+
+        // Update Itemized Sales
+        const summaryEntry = itemSalesSummary[summaryKey]
+        if (summaryEntry) {
+          summaryEntry.unitsSold += qty
+          summaryEntry.totalPayable += itemPayable
+          if (effectiveCostPrice > 0) {
+            summaryEntry.costedUnits = (summaryEntry.costedUnits || 0) + qty
+          }
+          const cu = summaryEntry.costedUnits || 0
+          summaryEntry.unitCostPrice = cu > 0 ? Math.round((summaryEntry.totalPayable / cu) * 100) / 100 : 0
+          summaryEntry.costMissing = cu < summaryEntry.unitsSold
         }
 
         // Update Daily Sales Map
         dailySalesMap[orderDateStr].totalUnits += qty
         dailySalesMap[orderDateStr].totalPayable += itemPayable
 
-        const pUnit = item.selectedVariant || baseProd?.unit || ''
-        const pName = item.name || baseProd?.name || 'Item'
-        const dayItemKey = `${item.productId}_${pUnit}`
+        const dayItemKey = `${item.productId}_${canonResolved || pUnit}`
 
         if (!dailySalesMap[orderDateStr].items[dayItemKey]) {
           dailySalesMap[orderDateStr].items[dayItemKey] = {
@@ -277,6 +364,8 @@ export async function GET(
             name: pName,
             unit: pUnit,
             unitCostPrice: effectiveCostPrice,
+            costedUnits: effectiveCostPrice > 0 ? qty : 0,
+            costMissing: effectiveCostPrice <= 0,
             unitsSold: qty,
             totalPayable: itemPayable,
           }
@@ -284,11 +373,27 @@ export async function GET(
           const cur = dailySalesMap[orderDateStr].items[dayItemKey]
           cur.unitsSold += qty
           cur.totalPayable += itemPayable
-          if (cur.unitsSold > 0) {
-            cur.unitCostPrice = Math.round((cur.totalPayable / cur.unitsSold) * 100) / 100
+          if (effectiveCostPrice > 0) {
+            cur.costedUnits = (cur.costedUnits || 0) + qty
           }
+          const curCosted = cur.costedUnits || 0
+          cur.unitCostPrice = curCosted > 0 ? Math.round((cur.totalPayable / curCosted) * 100) / 100 : 0
+          cur.costMissing = curCosted < cur.unitsSold
         }
       }
+    }
+
+    for (const pid of soldMultiVariantPids) {
+      if (itemSalesSummary[pid] && itemSalesSummary[pid].unitsSold === 0) {
+        delete itemSalesSummary[pid]
+      }
+    }
+    for (const entry of Object.values(itemSalesSummary)) {
+      entry.totalPayable = Math.round(entry.totalPayable * 100) / 100
+      if (entry.unitsSold === 0) {
+        entry.costMissing = (entry.unitCostPrice || 0) <= 0
+      }
+      delete entry.costedUnits
     }
 
     const itemizedSales = Object.values(itemSalesSummary).sort((a, b) => b.totalPayable - a.totalPayable)
@@ -324,10 +429,14 @@ export async function GET(
     // 5. Low stock items for WhatsApp PO
     const lowStockItems = products
       .map((p) => {
+        const hubInv = p.inventories?.[0] as any
         const stock = storeId && storeId !== 'all'
-          ? (p.inventories?.[0]?.stock ?? p.stock)
+          ? (hubInv?.stock ?? p.stock)
           : p.stock
         const minStock = p.minStock ?? 5
+        const prodCost = p.costPrice && Number(p.costPrice) > 0 ? Number(p.costPrice) : 0
+        const hubCost = hubInv?.costPrice && Number(hubInv.costPrice) > 0 ? Number(hubInv.costPrice) : 0
+        const effectiveLowCost = hubCost > 0 ? hubCost : prodCost
         return {
           id: p.id,
           name: p.name,
@@ -335,7 +444,8 @@ export async function GET(
           barcode: p.barcode,
           stock,
           minStock,
-          costPrice: p.costPrice || 0,
+          costPrice: effectiveLowCost,
+          costMissing: effectiveLowCost <= 0,
           isLow: stock <= minStock,
         }
       })
@@ -375,19 +485,30 @@ export async function GET(
       dailySales,
       payouts: payoutsList,
       lowStockItems,
-      products: products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        unit: p.unit || '',
-        barcode: p.barcode,
-        price: p.price,
-        mrp: p.mrp,
-        costPrice: p.costPrice || 0,
-        stock: storeId && storeId !== 'all' ? (p.inventories?.[0]?.stock ?? p.stock) : p.stock,
-        category: p.category?.name,
-        imageUrl: p.imageUrl,
-        isAvailable: p.isAvailable,
-      })),
+      products: products.map((p) => {
+        const prodCost = p.costPrice && Number(p.costPrice) > 0 ? Number(p.costPrice) : 0
+        const hubInv = p.inventories?.[0] as any
+        const hubCost = hubInv?.costPrice && Number(hubInv.costPrice) > 0 ? Number(hubInv.costPrice) : 0
+        const preferHub =
+          hubCost > 0 &&
+          hubInv?.updatedAt &&
+          (!p.updatedAt || new Date(hubInv.updatedAt) >= new Date(p.updatedAt))
+        const effCost = preferHub ? hubCost : (prodCost > 0 ? prodCost : hubCost)
+        return {
+          id: p.id,
+          name: p.name,
+          unit: p.unit || '',
+          barcode: p.barcode,
+          price: p.price,
+          mrp: p.mrp,
+          costPrice: effCost,
+          costMissing: effCost <= 0,
+          stock: storeId && storeId !== 'all' ? (p.inventories?.[0]?.stock ?? p.stock) : p.stock,
+          category: p.category?.name,
+          imageUrl: p.imageUrl,
+          isAvailable: p.isAvailable,
+        }
+      }),
     })
   } catch (error: any) {
     console.error('Error fetching vendor details:', error)

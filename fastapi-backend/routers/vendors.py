@@ -5,6 +5,7 @@ from sqlalchemy import func, and_, desc, or_, text, not_
 from sqlalchemy.orm import selectinload
 from typing import List, Dict, Any, Optional
 from datetime import datetime, date, timedelta
+import json
 import uuid
 
 from database import get_db
@@ -56,43 +57,175 @@ def check_vendor_or_admin_access(current_user: dict, vendor_id: str) -> dict:
 
 
 
-def resolve_variant_cost_price(product, selected_variant=None, fallback_name=None, current_cost=None) -> float:
-    """
-    Authoritative helper to resolve cost price for vendor products and order items,
-    guaranteeing that products with variants return their true purchase/cost price instead of 0.
-    """
-    if current_cost is not None and float(current_cost) > 0:
-        return float(current_cost)
+def _parse_variants_list(raw_variants: Any) -> List[Dict[str, Any]]:
+    if not raw_variants:
+        return []
+    try:
+        parsed = json.loads(raw_variants) if isinstance(raw_variants, str) else raw_variants
+        if isinstance(parsed, list):
+            return [v for v in parsed if isinstance(v, dict)]
+        if isinstance(parsed, dict):
+            if isinstance(parsed.get("productVariants"), list):
+                return [v for v in parsed["productVariants"] if isinstance(v, dict)]
+            if isinstance(parsed.get("variants"), list):
+                return [v for v in parsed["variants"] if isinstance(v, dict)]
+    except Exception:
+        pass
+    return []
 
-    if not product:
+
+def _canonicalize_unit(s: Any) -> str:
+    t = re.sub(r'[,;()\[\]]', ' ', str(s or '').lower())
+    t = re.sub(r'\s+', ' ', t).strip()
+    t = re.sub(r'\b(kilograms?|kgs)\b', 'kg', t)
+    t = re.sub(r'\b(grams?|gms|gm)\b', 'g', t)
+    t = re.sub(r'\b(millilitres?|milliliters?|mls)\b', 'ml', t)
+    t = re.sub(r'\b(litres?|liters?|ltrs|ltr)\b', 'l', t)
+    t = re.sub(r'\b(pieces?|pcs)\b', 'pc', t)
+    t = re.sub(r'\b(packets?|pkts)\b', 'pkt', t)
+    return re.sub(r'[^a-z0-9]', '', t)
+
+
+def _extract_variant_from_name(name: Any) -> str:
+    if not name:
+        return ""
+    matches = [c.strip() for c in re.findall(r'[\(\[]([^\)\]]+)[\)\]]', str(name)) if c and c.strip()]
+    if not matches:
+        return ""
+    for c in matches:
+        if re.search(r'\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b', c, re.IGNORECASE):
+            return c
+    return matches[-1]
+
+
+def _extract_variant_cost(variants_list: List[Dict[str, Any]], target_variant: Optional[str], item_price: Optional[float]) -> float:
+    if not variants_list:
         return 0.0
-
-    variants = getattr(product, "variants", None)
-    if variants and isinstance(variants, list) and len(variants) > 0:
-        target_name = (str(selected_variant).strip().lower() if selected_variant else None)
-        if not target_name and fallback_name and "(" in str(fallback_name):
+    norm_target = re.sub(r'[^a-z0-9]', '', str(target_variant or '').lower())
+    canon_target = _canonicalize_unit(target_variant)
+    if norm_target or canon_target:
+        for v in variants_list:
+            v_name_raw = str(v.get("name") or '')
+            v_unit_raw = str(v.get("unit") or '')
+            v_name = re.sub(r'[^a-z0-9]', '', v_name_raw.lower())
+            v_unit = re.sub(r'[^a-z0-9]', '', v_unit_raw.lower())
+            if (
+                (norm_target and (v_name == norm_target or v_unit == norm_target))
+                or (canon_target and (_canonicalize_unit(v_name_raw) == canon_target or _canonicalize_unit(v_unit_raw) == canon_target))
+            ):
+                try:
+                    cp = float(v.get("costPrice") or v.get("cp") or v.get("cost") or 0.0)
+                    if cp > 0:
+                        return cp
+                except (TypeError, ValueError):
+                    pass
+    if item_price is not None and float(item_price or 0.0) > 0:
+        target_p = float(item_price)
+        for v in variants_list:
             try:
-                target_name = str(fallback_name).split("(")[1].split(")")[0].strip().lower()
-            except Exception:
-                target_name = None
+                vp = float(v.get("price") or 0.0)
+                if vp > 0 and abs(vp - target_p) < 0.01:
+                    cp = float(v.get("costPrice") or v.get("cp") or v.get("cost") or 0.0)
+                    if cp > 0:
+                        return cp
+            except (TypeError, ValueError):
+                pass
+    return 0.0
 
-        if target_name:
-            for v in variants:
-                if isinstance(v, dict):
-                    v_name = str(v.get("name") or v.get("unit") or "").strip().lower()
-                    if v_name == target_name or v_name.replace(" ", "") == target_name.replace(" ", ""):
-                        cp = v.get("costPrice") or v.get("cp") or v.get("cost")
-                        if cp is not None and float(cp) > 0:
-                            return float(cp)
 
-        for v in variants:
-            if isinstance(v, dict):
-                cp = v.get("costPrice") or v.get("cp") or v.get("cost")
-                if cp is not None and float(cp) > 0:
-                    return float(cp)
+def resolve_variant_cost_price(
+    product,
+    selected_variant=None,
+    fallback_name=None,
+    current_cost=None,
+    hub_inv=None,
+    item_price=None,
+    snapshot_variants=None,
+) -> float:
+    """
+    Authoritative helper to resolve cost price for vendor products and order items.
+    Always prefers live updated catalog/variant/hub cost (newest timestamp first)
+    over stale order snapshots, matches canonical pack sizes accurately, and returns
+    0.0 when unset (never falling back to selling price or 25% guesses).
+    """
+    is_catalog_lookup = (
+        selected_variant is None
+        and fallback_name is None
+        and item_price is None
+        and current_cost is None
+        and snapshot_variants is None
+    )
+    target_variant = (str(selected_variant).strip() if selected_variant else "") or _extract_variant_from_name(fallback_name)
+    if is_catalog_lookup and product:
+        target_variant = (getattr(product, "unit", None) or "").strip()
 
-    prod_cp = getattr(product, "costPrice", None)
-    return float(prod_cp) if prod_cp and float(prod_cp) > 0 else 0.0
+    live_variants = _parse_variants_list(getattr(product, "variants", None)) if product else []
+    snap_variants = _parse_variants_list(snapshot_variants)
+
+    effective_item_price = item_price
+    if effective_item_price is None and is_catalog_lookup and product:
+        effective_item_price = getattr(hub_inv, "priceOverride", None) or getattr(product, "price", None)
+
+    # 1. Always prefer live updated catalog variant cost first
+    if live_variants:
+        var_cp = _extract_variant_cost(live_variants, target_variant, effective_item_price)
+        if var_cp > 0:
+            return var_cp
+
+    # 2. Live hub / product base cost (only when no multi-variant mismatch)
+    prod_unit_canon = _canonicalize_unit(getattr(product, "unit", None)) if product else ""
+    target_var_canon = _canonicalize_unit(target_variant)
+    live_base_price = float(getattr(product, "price", 0.0) or 0.0) if product else 0.0
+    is_base_match = (
+        len(live_variants) <= 1
+        or not target_var_canon
+        or (prod_unit_canon and target_var_canon == prod_unit_canon)
+        or (
+            live_base_price > 0
+            and effective_item_price is not None
+            and abs(live_base_price - float(effective_item_price or 0.0)) < 0.01
+        )
+    )
+
+    hub_cost = float(getattr(hub_inv, "costPrice", 0.0) or 0.0) if hub_inv else 0.0
+    live_cost = float(getattr(product, "costPrice", 0.0) or 0.0) if product else 0.0
+
+    if is_base_match:
+        prod_updated = getattr(product, "updatedAt", None) if product else None
+        hub_updated = getattr(hub_inv, "updatedAt", None) if hub_inv else None
+        prefer_hub = bool(hub_cost > 0 and hub_updated and (not prod_updated or hub_updated >= prod_updated))
+        if prefer_hub:
+            return hub_cost
+        if live_cost > 0:
+            return live_cost
+        if hub_cost > 0:
+            return hub_cost
+
+    # Catalog summary fallback when product defines multi-variants with no matching base unit/price
+    if is_catalog_lookup and live_variants:
+        for v in live_variants:
+            try:
+                cp = float(v.get("costPrice") or v.get("cp") or v.get("cost") or 0.0)
+                if cp > 0:
+                    return cp
+            except (TypeError, ValueError):
+                pass
+
+    # 3. Fallback to order-item snapshot only when live catalog has no matching cost
+    if snap_variants:
+        snap_var_cp = _extract_variant_cost(snap_variants, target_variant, effective_item_price)
+        if snap_var_cp > 0:
+            return snap_var_cp
+
+    if current_cost is not None:
+        try:
+            cc = float(current_cost)
+            if cc > 0:
+                return cc
+        except (TypeError, ValueError):
+            pass
+
+    return 0.0
 
 
 class VendorLoginRequest(BaseModel):
@@ -396,7 +529,7 @@ async def get_vendor_details(
     item_sales_summary: Dict[str, Dict[str, Any]] = {}
     for p in attached_products:
         inv = inv_map.get(p.id)
-        hub_cost = float(inv.costPrice) if inv and inv.costPrice is not None and inv.costPrice > 0 else None
+        init_cost = resolve_variant_cost_price(p, hub_inv=inv)
         item_sales_summary[p.id] = {
             "productId": p.id,
             "name": p.name,
@@ -404,7 +537,9 @@ async def get_vendor_details(
             "categoryName": p.category.name if p.category else "General",
             "barcode": p.barcode or "",
             "unitsSold": 0,
-            "unitCostPrice": hub_cost if hub_cost is not None else resolve_variant_cost_price(p),
+            "unitCostPrice": init_cost,
+            "costedUnits": 0,
+            "costMissing": init_cost <= 0,
             "variants": p.variants,
             "sellingPrice": float(inv.priceOverride if (inv and inv.priceOverride is not None) else p.price),
             "totalPayable": 0.0,
@@ -414,6 +549,7 @@ async def get_vendor_details(
 
     total_units_sold = 0
     total_payable_amount = 0.0
+    sold_multi_variant_pids = set()
     # Date-wise sales breakdown: { "2026-09-24": { totalUnits, totalPayable, items: [...] } }
     daily_sales_map: Dict[str, Dict[str, Any]] = {}
 
@@ -434,27 +570,72 @@ async def get_vendor_details(
         delivered_rows = oi_res.all()
 
         for oi, order_created_at in delivered_rows:
-            if not oi.productId:
+            if getattr(oi, "isRefunded", False) or not oi.productId:
                 continue
 
             base_prod = product_map.get(oi.productId)
             inv = inv_map.get(oi.productId)
-            hub_cost = float(inv.costPrice) if inv and inv.costPrice is not None and inv.costPrice > 0 else None
-            effective_cost = hub_cost if hub_cost is not None else resolve_variant_cost_price(base_prod, selected_variant=getattr(oi, "selectedVariant", None), fallback_name=oi.name, current_cost=oi.costPrice)
+            effective_cost = resolve_variant_cost_price(
+                base_prod,
+                selected_variant=getattr(oi, "selectedVariant", None),
+                fallback_name=oi.name,
+                current_cost=oi.costPrice,
+                hub_inv=inv,
+                item_price=oi.price,
+                snapshot_variants=getattr(oi, "variants", None),
+            )
             qty = int(oi.quantity or 0)
-            item_payable = qty * effective_cost
+            item_payable = qty * effective_cost if effective_cost > 0 else 0.0
 
             total_units_sold += qty
             total_payable_amount += item_payable
 
-            if oi.productId in item_sales_summary:
-                item_sales_summary[oi.productId]["unitsSold"] += qty
-                item_sales_summary[oi.productId]["totalPayable"] += item_payable
-                if effective_cost > 0:
-                    item_sales_summary[oi.productId]["unitCostPrice"] = effective_cost
+            oi_variant = (getattr(oi, "selectedVariant", None) or "").strip() or _extract_variant_from_name(oi.name)
+            prod_name = (base_prod.name if base_prod else None) or oi.name or "Item"
+            prod_unit = (base_prod.unit or "") if base_prod else ""
+            resolved_unit = oi_variant or prod_unit
+            canon_resolved = _canonicalize_unit(resolved_unit)
+            has_multi_variants = len(_parse_variants_list(base_prod.variants if base_prod else None)) > 1
 
-            # Build daily breakdown
-            day_key = order_created_at.strftime("%Y-%m-%d") if order_created_at else "unknown"
+            if has_multi_variants and oi_variant:
+                sold_multi_variant_pids.add(oi.productId)
+                summary_key = f"{oi.productId}::{canon_resolved or oi_variant.lower()}"
+                if summary_key not in item_sales_summary:
+                    item_sales_summary[summary_key] = {
+                        "productId": oi.productId,
+                        "name": prod_name,
+                        "unit": resolved_unit,
+                        "categoryName": (base_prod.category.name if base_prod and base_prod.category else "General"),
+                        "barcode": (base_prod.barcode or "") if base_prod else "",
+                        "unitsSold": 0,
+                        "unitCostPrice": effective_cost,
+                        "costedUnits": 0,
+                        "costMissing": effective_cost <= 0,
+                        "variants": base_prod.variants if base_prod else None,
+                        "sellingPrice": float(oi.price or (base_prod.price if base_prod else 0.0) or 0.0),
+                        "totalPayable": 0.0,
+                        "currentStock": inv.stock if inv else (base_prod.stock if base_prod else 0),
+                        "imageUrl": (base_prod.imageUrl or "") if base_prod else "",
+                    }
+            else:
+                summary_key = oi.productId
+
+            if summary_key in item_sales_summary:
+                s_entry = item_sales_summary[summary_key]
+                s_entry["unitsSold"] += qty
+                s_entry["totalPayable"] += item_payable
+                if effective_cost > 0:
+                    s_entry["costedUnits"] = s_entry.get("costedUnits", 0) + qty
+                costed_u = s_entry.get("costedUnits", 0)
+                if costed_u > 0:
+                    s_entry["unitCostPrice"] = round(s_entry["totalPayable"] / costed_u, 2)
+                else:
+                    s_entry["unitCostPrice"] = 0.0
+                s_entry["costMissing"] = costed_u < s_entry["unitsSold"]
+
+            # Build daily breakdown in IST (UTC+5:30)
+            local_dt = (order_created_at + timedelta(hours=5, minutes=30)) if order_created_at else datetime.utcnow()
+            day_key = local_dt.strftime("%Y-%m-%d")
             if day_key not in daily_sales_map:
                 daily_sales_map[day_key] = {
                     "date": day_key,
@@ -466,25 +647,52 @@ async def get_vendor_details(
             day_entry["totalUnits"] += qty
             day_entry["totalPayable"] += item_payable
 
-            prod_name = base_prod.name if base_prod else oi.name
-            prod_unit = (base_prod.unit or "") if base_prod else ""
-            if oi.productId not in day_entry["items"]:
-                day_entry["items"][oi.productId] = {
+            day_item_key = f"{oi.productId}::{canon_resolved}" if canon_resolved else oi.productId
+            if day_item_key not in day_entry["items"]:
+                day_entry["items"][day_item_key] = {
                     "productId": oi.productId,
                     "name": prod_name,
-                    "unit": prod_unit,
+                    "unit": resolved_unit,
                     "unitCostPrice": effective_cost,
                     "unitsSold": 0,
+                    "costedUnits": 0,
+                    "costMissing": effective_cost <= 0,
                     "totalPayable": 0.0,
                 }
-            day_entry["items"][oi.productId]["unitsSold"] += qty
-            day_entry["items"][oi.productId]["totalPayable"] += item_payable
+            d_item = day_entry["items"][day_item_key]
+            d_item["unitsSold"] += qty
+            d_item["totalPayable"] += item_payable
+            if effective_cost > 0:
+                d_item["costedUnits"] += qty
+            d_costed = d_item["costedUnits"]
+            if d_costed > 0:
+                d_item["unitCostPrice"] = round(d_item["totalPayable"] / d_costed, 2)
+            else:
+                d_item["unitCostPrice"] = 0.0
+            d_item["costMissing"] = d_costed < d_item["unitsSold"]
+
+    # Remove unused base rows for multi-variant products that have variant-level sales
+    for pid in sold_multi_variant_pids:
+        base_row = item_sales_summary.get(pid)
+        if base_row and base_row.get("unitsSold", 0) == 0:
+            item_sales_summary.pop(pid, None)
+
+    for s_entry in item_sales_summary.values():
+        s_entry["totalPayable"] = round(s_entry["totalPayable"], 2)
+        if s_entry.get("unitsSold", 0) == 0:
+            s_entry["costMissing"] = (s_entry.get("unitCostPrice", 0.0) or 0.0) <= 0
+        s_entry.pop("costedUnits", None)
 
     # Flatten daily items from dict to sorted list, sort days descending
     daily_sales = []
     for day_key in sorted(daily_sales_map.keys(), reverse=True):
         day = daily_sales_map[day_key]
-        day["items"] = sorted(day["items"].values(), key=lambda x: x["totalPayable"], reverse=True)
+        cleaned_items = []
+        for it in day["items"].values():
+            it["totalPayable"] = round(it["totalPayable"], 2)
+            it.pop("costedUnits", None)
+            cleaned_items.append(it)
+        day["items"] = sorted(cleaned_items, key=lambda x: x["totalPayable"], reverse=True)
         day["totalPayable"] = round(day["totalPayable"], 2)
         daily_sales.append(day)
 
@@ -524,6 +732,7 @@ async def get_vendor_details(
         min_stock = p.minStock or 5
         curr_stock = store_stock_map.get(p.id, p.stock)
         if curr_stock <= min_stock:
+            low_cost = resolve_variant_cost_price(p, hub_inv=inv_map.get(p.id))
             low_stock_items.append({
                 "id": p.id,
                 "name": p.name,
@@ -531,7 +740,8 @@ async def get_vendor_details(
                 "barcode": p.barcode or "",
                 "stock": curr_stock,
                 "minStock": min_stock,
-                "costPrice": resolve_variant_cost_price(p),
+                "costPrice": low_cost,
+                "costMissing": low_cost <= 0,
                 "variants": p.variants,
                 "isLow": True,
                 "imageUrl": p.imageUrl or "",
@@ -574,9 +784,10 @@ async def get_vendor_details(
                 "name": p.name,
                 "unit": p.unit or "",
                 "barcode": p.barcode or "",
-                "price": float(p.price),
+                "price": float(inv_map[p.id].priceOverride if (p.id in inv_map and inv_map[p.id].priceOverride is not None) else p.price),
                 "mrp": float(p.mrp),
-                "costPrice": resolve_variant_cost_price(p),
+                "costPrice": resolve_variant_cost_price(p, hub_inv=inv_map.get(p.id)),
+                "costMissing": resolve_variant_cost_price(p, hub_inv=inv_map.get(p.id)) <= 0,
                 "variants": p.variants,
                 "stock": store_stock_map.get(p.id, p.stock),
                 "category": p.category.name if p.category else "General",
@@ -742,6 +953,15 @@ async def get_vendor_live_orders(
 
     vendor_prod_ids = [p.id for p in vendor_products]
     prod_map = {p.id: p for p in vendor_products}
+    inv_map = {}
+    if vendor.storeId and vendor_prod_ids:
+        inv_stmt = select(StoreInventory).where(
+            StoreInventory.storeId == vendor.storeId,
+            StoreInventory.productId.in_(vendor_prod_ids)
+        )
+        inv_res = await db.execute(inv_stmt)
+        for inv in inv_res.scalars().all():
+            inv_map[inv.productId] = inv
 
     # 3. Fetch active orders containing vendor's products (last 48h active queue)
     cutoff = datetime.utcnow() - timedelta(hours=48)
@@ -770,12 +990,22 @@ async def get_vendor_live_orders(
         total_vendor_val = 0.0
 
         for it in ord.items:
+            if getattr(it, "isRefunded", False):
+                continue
             if it.productId in prod_map:
                 prod = prod_map[it.productId]
                 qty = it.quantity or 1
-                cost = resolve_variant_cost_price(prod, selected_variant=getattr(it, "selectedVariant", None), fallback_name=it.name, current_cost=it.costPrice)
+                cost = resolve_variant_cost_price(
+                    prod,
+                    selected_variant=getattr(it, "selectedVariant", None),
+                    fallback_name=it.name,
+                    current_cost=it.costPrice,
+                    hub_inv=inv_map.get(it.productId),
+                    item_price=it.price,
+                    snapshot_variants=getattr(it, "variants", None),
+                )
                 price = float(it.price or prod.price or 0.0)
-                item_total = qty * cost
+                item_total = (qty * cost) if cost > 0 else 0.0
                 total_vendor_val += item_total
 
                 matching_items.append({
@@ -784,8 +1014,10 @@ async def get_vendor_live_orders(
                     "name": it.name or prod.name,
                     "quantity": qty,
                     "costPrice": cost,
+                    "costMissing": cost <= 0,
+                    "totalCost": round(item_total, 2),
                     "sellingPrice": price,
-                    "unit": prod.unit or "",
+                    "unit": getattr(it, "selectedVariant", None) or prod.unit or "",
                     "imageUrl": prod.imageUrl or "",
                     "selectedVariant": getattr(it, "selectedVariant", None),
                     "variants": prod.variants,
@@ -1013,48 +1245,55 @@ async def update_vendor_product_prices(
         await db.commit()
         await db.refresh(inv)
 
-    # Apply global updates if not store-specific or as base defaults
+    # Apply global updates when not store-specific, AND always update Product.variants / mrp / sync cost & price
+    if body.costPrice is not None and (not body.storeId or product.costPrice is None or float(product.costPrice or 0) <= 0):
+        product.costPrice = max(0.0, float(body.costPrice))
+    if body.price is not None and (not body.storeId or product.price is None or float(product.price or 0) <= 0):
+        product.price = max(0.0, float(body.price))
+    if body.mrp is not None:
+        product.mrp = max(0.0, float(body.mrp))
     if not body.storeId:
-        if body.costPrice is not None:
-            product.costPrice = max(0.0, float(body.costPrice))
-        if body.price is not None:
-            product.price = max(0.0, float(body.price))
-        if body.mrp is not None:
-            product.mrp = max(0.0, float(body.mrp))
         if body.stock is not None:
             product.stock = max(0, int(body.stock))
         if body.vendorId is not None:
             product.vendorId = body.vendorId if body.vendorId != "" else None
-        if body.variants is not None:
-            parsed_variants = body.variants
-            if isinstance(parsed_variants, str) and parsed_variants.strip():
-                try:
-                    import json
-                    parsed_variants = json.loads(parsed_variants)
-                except Exception:
-                    pass
-            if isinstance(parsed_variants, list):
-                # Ensure each variant retains fallback cost price
-                fb_cost = product.costPrice if product.costPrice and product.costPrice > 0 else 0.0
-                sanitized_vars = []
-                for v in parsed_variants:
-                    if isinstance(v, dict):
-                        v_copy = dict(v)
-                        v_cp = float(v_copy.get("costPrice") or v_copy.get("cp") or 0.0)
-                        if v_cp <= 0 and fb_cost > 0:
-                            v_copy["costPrice"] = fb_cost
-                        sanitized_vars.append(v_copy)
-                    else:
-                        sanitized_vars.append(v)
-                product.variants = sanitized_vars
+    if body.variants is not None:
+        parsed_variants = body.variants
+        if isinstance(parsed_variants, str) and parsed_variants.strip():
+            try:
+                parsed_variants = json.loads(parsed_variants)
+            except Exception:
+                pass
+        if isinstance(parsed_variants, list):
+            # Preserve per-variant costs without leaking parent base cost across distinct multi-variants
+            fb_cost = product.costPrice if (len(parsed_variants) == 1 and product.costPrice and product.costPrice > 0) else 0.0
+            sanitized_vars = []
+            for v in parsed_variants:
+                if isinstance(v, dict):
+                    v_copy = dict(v)
+                    v_cp = float(v_copy.get("costPrice") or v_copy.get("cp") or 0.0)
+                    if v_cp <= 0 and fb_cost > 0:
+                        v_copy["costPrice"] = fb_cost
+                    sanitized_vars.append(v_copy)
+                else:
+                    sanitized_vars.append(v)
+            product.variants = sanitized_vars
 
-        # Recalculate discount if MRP > price
-        if product.mrp > 0 and product.price <= product.mrp:
-            product.discount = round(((product.mrp - product.price) / product.mrp) * 100, 1)
+    # Recalculate discount if MRP > price
+    if product.mrp > 0 and product.price <= product.mrp:
+        product.discount = round(((product.mrp - product.price) / product.mrp) * 100, 1)
 
-        product.updatedAt = datetime.utcnow()
-        await db.commit()
-        await db.refresh(product)
+    product.updatedAt = datetime.utcnow()
+    await db.commit()
+    await db.refresh(product)
+
+    try:
+        from utils.cache import invalidate_catalog_cache
+        from routers.products import clear_products_cache
+        clear_products_cache()
+        await invalidate_catalog_cache()
+    except Exception:
+        pass
 
     profit = product.price - product.costPrice
     margin_pct = round((profit / product.price) * 100, 1) if product.price > 0 else 0.0
@@ -1191,6 +1430,14 @@ async def map_vendor_product_hub(
 
     await db.commit()
     await db.refresh(inv)
+
+    try:
+        from utils.cache import invalidate_catalog_cache
+        from routers.products import clear_products_cache
+        clear_products_cache()
+        await invalidate_catalog_cache()
+    except Exception:
+        pass
 
     return {
         "success": True,

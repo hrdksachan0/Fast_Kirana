@@ -226,7 +226,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       _mapController?.dispose();
     } catch (_) {}
     _mapController = null;
-    _audioPlayer.dispose();
+    try {
+      _audioPlayer.dispose().catchError((_) {});
+    } catch (_) {}
     try {
       _razorpay.clear();
     } catch (_) {}
@@ -714,25 +716,27 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  void _playStatusChime([String soundAsset = 'sounds/status_step_tick.wav']) {
+  bool _isAudioBusy = false;
+
+  Future<void> _playStatusChime([String soundAsset = 'sounds/status_step_tick.wav']) async {
+    if (!mounted || _isDisposed || _isAudioBusy) return;
+    _isAudioBusy = true;
     try {
-      _audioPlayer.stop().then((_) {
-        try {
-          _audioPlayer.play(
-            AssetSource(soundAsset),
-            volume: 0.85,
-            mode: PlayerMode.lowLatency,
-          ).catchError((_) {
-            SystemSound.play(SystemSoundType.alert);
-          });
-        } catch (_) {
-          SystemSound.play(SystemSoundType.alert);
-        }
-      }).catchError((_) {
-        SystemSound.play(SystemSoundType.alert);
-      });
+      if (_audioPlayer.state == PlayerState.playing) {
+        await _audioPlayer.stop();
+      }
+      if (!mounted || _isDisposed) return;
+      await _audioPlayer.play(
+        AssetSource(soundAsset),
+        volume: 0.85,
+        mode: PlayerMode.lowLatency,
+      );
     } catch (_) {
-      try { SystemSound.play(SystemSoundType.alert); } catch (_) {}
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (_) {}
+    } finally {
+      _isAudioBusy = false;
     }
   }
 

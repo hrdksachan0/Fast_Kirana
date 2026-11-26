@@ -697,15 +697,17 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
   }
 
   bool _isAudioBusy = false;
+  bool _isAudioDisposed = false;
 
   Future<void> _playChime() async {
-    if (_isAudioBusy || !mounted) return;
+    if (_isAudioBusy || _isAudioDisposed || !mounted) return;
     _isAudioBusy = true;
     try {
       HapticFeedback.heavyImpact();
       if (_audioPlayer.state == PlayerState.playing) {
         await _audioPlayer.stop();
       }
+      if (_isAudioDisposed || !mounted) return;
       await _audioPlayer.play(AssetSource('sounds/order_chime.mp3'), volume: 1.0);
     } catch (_) {
       try { await SystemSound.play(SystemSoundType.alert); } catch (_) {}
@@ -797,7 +799,10 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     WidgetsBinding.instance.removeObserver(this);
     _adminEventBusSub?.cancel();
     _stopPendingAlarm();
-    _audioPlayer.dispose();
+    _isAudioDisposed = true;
+    try {
+      _audioPlayer.dispose().catchError((_) {});
+    } catch (_) {}
     _liveSyncTimer?.cancel();
     _connectivitySubscription?.cancel();
     SupabaseService.unsubscribe(_realtimeOrdersChannel);

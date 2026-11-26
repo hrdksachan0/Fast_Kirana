@@ -516,15 +516,23 @@ async def get_sales_reports(
         orders = orders_res.scalars().all()
 
         # 2. Fetch order items with LEFT JOINs to avoid dropping items missing categories/products
+        # Live catalog/hub cost & variants are selected separately so catalog cost updates reflect immediately in reports.
         store_clause = 'AND o."storeId" = :store_id' if effective_store and effective_store.lower() != 'all' else ''
+        inv_store_id = effective_store if (effective_store and effective_store.lower() != 'all') else 'hub-209206'
         items_sql = f"""
             SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
-                   COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
+                   COALESCE(p."costPrice", 0) as "liveCostPrice",
+                   COALESCE(si."costPrice", 0) as "hubCostPrice",
+                   p."updatedAt" as "prodUpdatedAt",
+                   si."updatedAt" as "hubUpdatedAt",
+                   COALESCE(oi."costPrice", 0) as "snapshotCostPrice",
+                   COALESCE(p.price, 0) as "liveBasePrice",
                    COALESCE(p.vendor, 'Direct / FastMinute') as "vendor",
                    COALESCE(c.name, CASE WHEN p."restaurantId" IS NOT NULL THEN r.name ELSE 'General Grocery' END) as "categoryName",
                    COALESCE(c.slug, CASE WHEN p."restaurantId" IS NOT NULL THEN r.slug ELSE 'general-grocery' END) as "categorySlug",
                    p.tags as "productTags",
-                   COALESCE(oi.variants, p.variants) as "variants", 
+                   p.variants as "liveVariants",
+                   oi.variants as "snapshotVariants",
                    oi."selectedVariant",
                    o."shopName" as "shopName",
                    p."restaurantId" as "prodRestaurantId",
@@ -534,13 +542,18 @@ async def get_sales_reports(
                    o."orderType"::text as "orderType",
                    COALESCE(oi."refundAmount", 0)::float as "refundAmount",
                    COALESCE(oi."isRefunded", false) as "isRefunded",
-                   CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct",
+                   CASE
+                     WHEN (p.id IS NOT NULL AND p."restaurantId" IS NULL)
+                       OR (p.id IS NULL AND o."restaurantId" IS NULL AND COALESCE(o."orderType"::text, 'GROCERY') = 'GROCERY')
+                     THEN true ELSE false
+                   END as "isGroceryProduct",
                    p."readableId" as "readableId",
                    p.stock as "stock",
                    p.unit as "unit"
             FROM order_items oi
             JOIN orders o ON oi."orderId" = o.id
             LEFT JOIN products p ON oi."productId" = p.id
+            LEFT JOIN store_inventories si ON si."productId" = p.id AND si."storeId" = :inv_store_id
             LEFT JOIN categories c ON p."categoryId" = c.id
             LEFT JOIN restaurants r ON p."restaurantId" = r.id
             WHERE o.status::text = 'DELIVERED'
@@ -548,7 +561,7 @@ async def get_sales_reports(
               AND o."createdAt" <= :end
               {store_clause}
         """
-        params = {"start": start, "end": end}
+        params = {"start": start, "end": end, "inv_store_id": inv_store_id}
         if effective_store and effective_store.lower() != 'all':
             params["store_id"] = effective_store
         items_res = await db.execute(text(items_sql), params)
@@ -602,13 +615,87 @@ async def get_sales_reports(
 
         missing_cost_products_map = {}
 
+        def _parse_variants_list(raw_variants):
+            if not raw_variants:
+                return []
+            try:
+                parsed = json.loads(raw_variants) if isinstance(raw_variants, str) else raw_variants
+                if isinstance(parsed, list):
+                    return parsed
+                if isinstance(parsed, dict):
+                    if isinstance(parsed.get("productVariants"), list):
+                        return parsed["productVariants"]
+                    if isinstance(parsed.get("variants"), list):
+                        return parsed["variants"]
+            except Exception:
+                pass
+            return []
+
+        def _canonicalize_unit(s):
+            t = re.sub(r'[,;()\[\]]', ' ', str(s or '').lower())
+            t = re.sub(r'\s+', ' ', t).strip()
+            t = re.sub(r'\b(kilograms?|kgs)\b', 'kg', t)
+            t = re.sub(r'\b(grams?|gms|gm)\b', 'g', t)
+            t = re.sub(r'\b(millilitres?|milliliters?|mls)\b', 'ml', t)
+            t = re.sub(r'\b(litres?|liters?|ltrs|ltr)\b', 'l', t)
+            t = re.sub(r'\b(pieces?|pcs)\b', 'pc', t)
+            t = re.sub(r'\b(packets?|pkts)\b', 'pkt', t)
+            return re.sub(r'[^a-z0-9]', '', t)
+
+        def _extract_variant_from_name(name):
+            if not name:
+                return ""
+            matches = [c.strip() for c in re.findall(r'[\(\[]([^\)\]]+)[\)\]]', str(name)) if c and c.strip()]
+            if not matches:
+                return ""
+            for c in matches:
+                if re.search(r'\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b', c, re.IGNORECASE):
+                    return c
+            return matches[-1]
+
+        def _extract_variant_cost(variants_list, target_variant, item_price):
+            if not variants_list:
+                return 0.0
+            norm_target = re.sub(r'[^a-z0-9]', '', (target_variant or '').lower())
+            canon_target = _canonicalize_unit(target_variant)
+            if norm_target or canon_target:
+                for v in variants_list:
+                    if not isinstance(v, dict):
+                        continue
+                    v_name_raw = str(v.get("name") or '')
+                    v_unit_raw = str(v.get("unit") or '')
+                    v_name = re.sub(r'[^a-z0-9]', '', v_name_raw.lower())
+                    v_unit = re.sub(r'[^a-z0-9]', '', v_unit_raw.lower())
+                    if (
+                        (norm_target and (v_name == norm_target or v_unit == norm_target))
+                        or (canon_target and (_canonicalize_unit(v_name_raw) == canon_target or _canonicalize_unit(v_unit_raw) == canon_target))
+                    ):
+                        try:
+                            cp = float(v.get("costPrice") or v.get("cp") or v.get("cost") or 0.0)
+                            if cp > 0:
+                                return cp
+                        except (TypeError, ValueError):
+                            pass
+            if float(item_price or 0.0) > 0:
+                for v in variants_list:
+                    if not isinstance(v, dict):
+                        continue
+                    try:
+                        if float(v.get("price") or 0.0) > 0 and abs(float(v.get("price") or 0.0) - float(item_price or 0.0)) < 0.01:
+                            cp = float(v.get("costPrice") or v.get("cp") or v.get("cost") or 0.0)
+                            if cp > 0:
+                                return cp
+                    except (TypeError, ValueError):
+                        pass
+            return 0.0
+
         def get_item_metrics(item):
             gross_rev = float(item["price"] or 0.0) * float(item["quantity"] or 1)
             item_refund = float(item.get("refundAmount") or 0.0)
             item_rev = max(0.0, gross_rev - item_refund)
             
             if item.get("isRefunded") and item_rev == 0:
-                return 0.0, 0.0, 0.0, None
+                return 0.0, 0.0, 0.0, None, 0.0, True
 
             # Catalog grocery products (p.restaurantId IS NULL) are NEVER restaurant items
             if item.get("isGroceryProduct"):
@@ -629,36 +716,63 @@ async def get_sales_reports(
 
                 item_profit = item_rev * comm_rate
                 item_cost = item_rev * (1.0 - comm_rate)
-                return item_cost, item_rev, item_profit, matched_rest
+                qty_val = float(item.get("quantity") or 1)
+                unit_cost = (item_cost / qty_val) if qty_val > 0 else item_cost
+                return item_cost, item_rev, item_profit, matched_rest, unit_cost, True
 
-            cost_price = float(item.get("costPrice") or 0.0)
+            target_variant = (item.get("selectedVariant") or "").strip() or _extract_variant_from_name(item.get("name"))
 
-            if item.get("selectedVariant") and item.get("variants"):
-                try:
-                    variants_list = item["variants"]
-                    if isinstance(variants_list, str):
-                        variants_list = json.loads(variants_list)
-                    if isinstance(variants_list, list):
-                        mv = next((v for v in variants_list if v.get("name") == item["selectedVariant"]), None)
-                        if mv and "costPrice" in mv:
-                            cost_price = float(mv["costPrice"])
-                except Exception:
-                    pass
+            live_variants = _parse_variants_list(item.get("liveVariants"))
+            snapshot_variants = _parse_variants_list(item.get("snapshotVariants"))
+            hub_cost = float(item.get("hubCostPrice") or 0.0)
+            live_cost = float(item.get("liveCostPrice") or 0.0)
+            snapshot_cost = float(item.get("snapshotCostPrice") or 0.0)
+            live_base_price = float(item.get("liveBasePrice") or 0.0)
+            item_price = float(item.get("price") or 0.0)
+            prod_unit_canon = _canonicalize_unit(item.get("unit"))
+            target_var_canon = _canonicalize_unit(target_variant)
+
+            # 1. Always prefer live updated catalog variant cost first
+            cost_price = _extract_variant_cost(live_variants, target_variant, item_price)
+
+            # 2. Live hub / product base cost (when single/no multi-price variant mismatch)
+            is_base_match = (
+                len(live_variants) <= 1
+                or not target_var_canon
+                or (prod_unit_canon and target_var_canon == prod_unit_canon)
+                or (live_base_price > 0 and abs(live_base_price - item_price) < 0.01)
+            )
+            if cost_price <= 0 and is_base_match:
+                prod_updated = item.get("prodUpdatedAt")
+                hub_updated = item.get("hubUpdatedAt")
+                prefer_hub = bool(hub_cost > 0 and hub_updated and (not prod_updated or hub_updated >= prod_updated))
+                if prefer_hub:
+                    cost_price = hub_cost
+                elif live_cost > 0:
+                    cost_price = live_cost
+                elif hub_cost > 0:
+                    cost_price = hub_cost
+
+            # 3. Fallback to order-item snapshot only when live catalog has no cost set
+            if cost_price <= 0:
+                cost_price = _extract_variant_cost(snapshot_variants, target_variant, item_price)
+            if cost_price <= 0 and snapshot_cost > 0:
+                cost_price = snapshot_cost
 
             has_cost = cost_price > 0
-            cost_per_unit = cost_price if has_cost else (float(item["price"] or 0.0) * 0.75)
-            prod_key = item.get("productId") or f"manual_{re.sub(r'[^a-z0-9]', '_', (item.get('name') or 'item').lower())}"
             if not has_cost:
+                prod_key = item.get("productId") or f"manual_{re.sub(r'[^a-z0-9]', '_', (item.get('name') or 'item').lower())}"
                 missing_cost_products_map[prod_key] = {
                     "id": prod_key,
                     "name": item.get("name") or "Unnamed Product",
-                    "price": float(item.get("price") or 0.0)
+                    "price": item_price
                 }
+                return 0.0, item_rev, 0.0, None, 0.0, False
 
-            item_cost = cost_per_unit * float(item.get("quantity") or 1)
+            item_cost = cost_price * float(item.get("quantity") or 1)
             item_profit = item_rev - item_cost
 
-            return item_cost, item_rev, item_profit, None
+            return item_cost, item_rev, item_profit, None, cost_price, True
 
         # Aggregation metrics
         total_rev = 0.0
@@ -730,10 +844,13 @@ async def get_sales_reports(
 
             order_items_list = items_by_order.get(order.id, [])
             order_cost = 0.0
+            order_uncosted_rev = 0.0
 
             for item in order_items_list:
-                cost, rev, profit, matched_rest = get_item_metrics(item)
+                cost, rev, profit, matched_rest, unit_cost, has_cost = get_item_metrics(item)
                 order_cost += cost
+                if not has_cost:
+                    order_uncosted_rev += rev
 
                 if is_retail:
                     continue
@@ -777,18 +894,19 @@ async def get_sales_reports(
                 # Check if product name has a parenthetical unit/size (e.g., "500 g", "1 kg", "250 ml", "1 pc")
                 # Distinguish from Hindi/English descriptors like (Atta), (Sabun), (Toast), (Oil), (Cumin Seeds)
                 bracket_val = ""
-                m = re.search(r'[\(\[]([^\)\]]+)[\)\]]', item_name)
-                if m:
-                    candidate = m.group(1).strip()
-                    if re.search(r'\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b', candidate, re.IGNORECASE):
-                        bracket_val = candidate
+                for candidate in re.findall(r'[\(\[]([^\)\]]+)[\)\]]', item_name):
+                    cand_clean = candidate.strip()
+                    if re.search(r'\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b', cand_clean, re.IGNORECASE):
+                        bracket_val = cand_clean
+                        break
 
                 # Priority:
-                # 1. Explicit selectedVariant if it contains a measurable unit/pack size
+                # 1. Explicit selectedVariant if it contains a measurable unit/pack size (supports "250gram", "500ml", "1 kg")
                 # 2. bracket_val if it contains a measurable unit/pack size
                 # 3. prod_unit from product master database (e.g., "100 g", "500 g", "250 g", "1 kg")
                 # 4. Fallback to raw_variant or bracket_val
-                if raw_variant and re.search(r'\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b', raw_variant, re.IGNORECASE):
+                unit_pattern = r'(\d+\s*(?:kg|g|gm|gms|gram|grams|ml|l|ltr|pc|pcs|pack)?|\b(?:half|full|serving|pc|pcs|kg|g|gm|gms|gram|grams|ml|l|ltr|pack)\b)'
+                if raw_variant and re.search(unit_pattern, raw_variant, re.IGNORECASE):
                     resolved_variant = raw_variant
                 elif bracket_val:
                     resolved_variant = bracket_val
@@ -815,6 +933,9 @@ async def get_sales_reports(
                 else:
                     p_id = f"manual_{re.sub(r'[^a-z0-9]', '_', display_name.lower())}"
 
+                qty_int = int(item.get("quantity") or 1)
+                selling_rate = float(item.get("price") or 0.0)
+
                 if p_id not in product_data:
                     product_data[p_id] = {
                         "productId": p_id,
@@ -824,8 +945,10 @@ async def get_sales_reports(
                         "name": display_name,
                         "variantName": resolved_variant or None,
                         "mrp": float(item.get("mrp") or item.get("price") or 0.0),
-                        "price": float(item.get("price") or 0.0),
-                        "costPrice": float(item.get("costPrice") or 0.0),
+                        "price": selling_rate,
+                        "costPrice": unit_cost if has_cost else 0.0,
+                        "costMissing": not has_cost and target_type != "restaurant",
+                        "costedQty": 0,
                         "quantity": 0,
                         "sales": 0.0,
                         "totalCost": 0.0,
@@ -834,10 +957,12 @@ async def get_sales_reports(
                         "vendor": item.get("vendor") or "Direct / FastMinute",
                         "type": target_type
                     }
-                product_data[p_id]["quantity"] += int(item.get("quantity") or 1)
+                product_data[p_id]["quantity"] += qty_int
                 product_data[p_id]["sales"] += rev
                 product_data[p_id]["totalCost"] += cost
                 product_data[p_id]["profit"] += profit
+                if has_cost:
+                    product_data[p_id]["costedQty"] += qty_int
 
                 # Date-wise product tracking for ledger & Excel
                 daily_prod_key = f"{date_str}__{p_id}"
@@ -851,20 +976,24 @@ async def get_sales_reports(
                         "categoryName": target_category_name,
                         "vendor": item.get("vendor") or "Direct / FastMinute",
                         "type": target_type,
-                        "quantity": int(item.get("quantity") or 1),
-                        "price": float(item.get("price") or 0.0),
-                        "costPrice": float(item.get("costPrice") or 0.0),
+                        "quantity": qty_int,
+                        "price": selling_rate,
+                        "costPrice": unit_cost if has_cost else 0.0,
+                        "costMissing": not has_cost and target_type != "restaurant",
+                        "costedQty": qty_int if has_cost else 0,
                         "totalCost": cost,
                         "totalSales": rev,
                         "profit": profit
                     }
                 else:
-                    daily_product_data[daily_prod_key]["quantity"] += int(item.get("quantity") or 1)
+                    daily_product_data[daily_prod_key]["quantity"] += qty_int
                     daily_product_data[daily_prod_key]["totalSales"] += rev
                     daily_product_data[daily_prod_key]["totalCost"] += cost
                     daily_product_data[daily_prod_key]["profit"] += profit
+                    if has_cost:
+                        daily_product_data[daily_prod_key]["costedQty"] += qty_int
 
-            order_profit = float(order.total or 0.0) - order_cost
+            order_profit = float(order.total or 0.0) - order_cost - order_uncosted_rev
 
             if not is_retail:
                 daily_data[date_str]["profit"] += order_profit
@@ -889,6 +1018,27 @@ async def get_sales_reports(
                     delivery_orders_count += 1
                 delivery_sales += order_sales
                 delivery_profit += order_profit
+
+        # Compute accurate weighted unit cost and selling price without faking 25% on uncosted items
+        for p in product_data.values():
+            costed_qty = p.pop("costedQty", 0)
+            p["costMissing"] = (costed_qty == 0 and p.get("type") != "restaurant")
+            p["costPrice"] = round(p["totalCost"] / costed_qty, 2) if costed_qty > 0 else 0.0
+            if p["quantity"] > 0:
+                p["price"] = round(p["sales"] / p["quantity"], 2)
+            p["totalCost"] = round(p["totalCost"], 2)
+            p["sales"] = round(p["sales"], 2)
+            p["profit"] = round(p["profit"], 2)
+
+        for dp in daily_product_data.values():
+            costed_qty = dp.pop("costedQty", 0)
+            dp["costMissing"] = (costed_qty == 0 and dp.get("type") != "restaurant")
+            dp["costPrice"] = round(dp["totalCost"] / costed_qty, 2) if costed_qty > 0 else 0.0
+            if dp["quantity"] > 0:
+                dp["price"] = round(dp["totalSales"] / dp["quantity"], 2)
+            dp["totalCost"] = round(dp["totalCost"], 2)
+            dp["totalSales"] = round(dp["totalSales"], 2)
+            dp["profit"] = round(dp["profit"], 2)
 
         daily_list = sorted(list(daily_data.values()), key=lambda x: x["date"])
         category_list = sorted(list(category_data.values()), key=lambda x: x["sales"], reverse=True)

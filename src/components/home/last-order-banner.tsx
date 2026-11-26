@@ -174,7 +174,7 @@ export function LastOrderBanner() {
                 </span>
               </div>
               <p className="text-xs font-bold text-text-primary truncate">
-                {lastOrder.items.map(i => `${i.name} ×${i.quantity}`).join(', ')}
+                {(Array.isArray(lastOrder.items) ? lastOrder.items : []).map(i => `${i.name} ×${i.quantity}`).join(', ')}
               </p>
             </div>
 

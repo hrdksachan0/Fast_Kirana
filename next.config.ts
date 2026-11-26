@@ -446,7 +446,7 @@ const nextConfig: NextConfig = {
         source: '/api/sse',
         destination: `${apiDest}/api/sse`,
       },
-      // Geocoding, Telemetry & Diagnostics -> FastAPI
+      // Geocoding & Diagnostics -> FastAPI (telemetry stays on Next.js so vercel logs captures full stack traces)
       {
         source: '/api/geocode/:path*',
         destination: `${apiDest}/api/geocode/:path*`,
@@ -454,14 +454,6 @@ const nextConfig: NextConfig = {
       {
         source: '/api/geocode',
         destination: `${apiDest}/api/geocode`,
-      },
-      {
-        source: '/api/telemetry/:path*',
-        destination: `${apiDest}/api/telemetry/:path*`,
-      },
-      {
-        source: '/api/telemetry',
-        destination: `${apiDest}/api/telemetry`,
       },
       {
         source: '/api/diagnostics',

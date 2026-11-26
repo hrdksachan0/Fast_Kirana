@@ -862,7 +862,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
 
-          final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+          final serviceEnabled = await LocationService.isLocationServiceEnabledSafe();
 
 
 
@@ -1076,13 +1076,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && mounted) {
       ref.invalidate(storeSettingsProvider);
       ref.invalidate(navratriDataProvider);
       ref.invalidate(navratriLinkedProductsProvider);
       _checkAndRevalidateCatalog();
       // On resume, check if user enabled GPS in device settings
-      Geolocator.isLocationServiceEnabled().then((enabled) {
+      LocationService.isLocationServiceEnabledSafe().then((enabled) {
         if (enabled && mounted) {
           final currentAddr = ref.read(selectedAddressProvider);
           if (currentAddr == null) {

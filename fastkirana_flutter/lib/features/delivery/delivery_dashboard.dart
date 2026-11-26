@@ -94,6 +94,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
   }
 
   Map<String, dynamic>? _walletInfo;
+  bool _hasServerWallet = false;
   Timer? _autoRefreshTimer;
   final int _refreshCountdown = 30;
   String? _updatingOrderId;
@@ -130,6 +131,7 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
 
     _initDashboard();
     SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
       final userRole = (prefs.getString('user_role') ?? '').toUpperCase().trim();
       if (userRole != 'ADMIN' && userRole != 'SUPER_ADMIN') {
         NotificationService().registerDeviceToken(ref.read(dioProvider), role: 'DELIVERY');
@@ -542,7 +544,9 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     _connectivitySubscription?.cancel();
     _autoRefreshTimer?.cancel();
     _confettiController.dispose();
-    _audioPlayer.dispose();
+    try {
+      _audioPlayer.dispose().catchError((_) {});
+    } catch (_) {}
     if (_ordersRealtimeChannel != null) {
       SupabaseService.unsubscribe(_ordersRealtimeChannel);
     }
@@ -1090,8 +1094,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       // Order should either be delivered or marked paid today
       final deliveredStr = o['deliveredAt']?.toString() ?? o['updatedAt']?.toString();
       final createdStr = o['createdAt']?.toString();
-      final deliveredTime = deliveredStr != null ? DateTime.tryParse(deliveredStr) : null;
-      final createdTime = createdStr != null ? DateTime.tryParse(createdStr) : null;
+      final deliveredTime = deliveredStr != null ? DateTime.tryParse(deliveredStr)?.toLocal() : null;
+      final createdTime = createdStr != null ? DateTime.tryParse(createdStr)?.toLocal() : null;
 
       final isActionToday = (deliveredTime != null && deliveredTime.isAfter(todayStart)) ||
           (createdTime != null && createdTime.isAfter(todayStart));
@@ -1125,18 +1129,26 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       return sum + ((o['total'] as num?)?.toDouble() ?? 0.0);
     });
 
-    final existingWallet = _walletInfo?['wallet'] is Map ? Map<String, dynamic>.from(_walletInfo!['wallet']) : <String, dynamic>{};
-    final cashLimit = (existingWallet['cashLimit'] as num?)?.toDouble() ?? 10000.0;
+    final existingWallet = _walletInfo?['wallet'] is Map
+        ? Map<String, dynamic>.from(_walletInfo!['wallet'])
+        : <String, dynamic>{};
+    final cashLimit = (existingWallet['cashLimit'] as num?)?.toDouble() ?? 2000.0;
+    // Preserve authoritative server RiderWallet.cashInHand once fetched so
+    // background order refreshes never overwrite cumulative/settled balance
+    // with today-only COD totals and cause the wallet balance to fluctuate.
+    final authoritativeCashInHand = _hasServerWallet
+        ? ((existingWallet['cashInHand'] as num?)?.toDouble() ?? totalCashAmount)
+        : totalCashAmount;
 
     setState(() {
       _walletInfo = {
         ...?_walletInfo,
         'wallet': {
           ...existingWallet,
-          'cashInHand': totalCashAmount,
+          'cashInHand': authoritativeCashInHand,
           'cashLimit': cashLimit,
-          'isLocked': totalCashAmount >= cashLimit,
-          'isWarning': totalCashAmount >= (cashLimit * 0.75),
+          'isLocked': authoritativeCashInHand >= cashLimit,
+          'isWarning': authoritativeCashInHand >= (cashLimit * 0.75),
           'totalOrdersCount': todayDeliveredOrders.length,
           'totalOrdersAmount': totalOrderAmount,
           'onlineCount': todayOnlineOrders.length,
@@ -1175,8 +1187,43 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       );
       if (response.statusCode == 200 && response.data != null) {
         if (mounted) {
+          final serverData = Map<String, dynamic>.from(response.data as Map);
+          final serverWallet = serverData['wallet'] is Map
+              ? Map<String, dynamic>.from(serverData['wallet'] as Map)
+              : <String, dynamic>{};
+          final existingSummary = _walletInfo?['summary'];
+          final existingTodayOrders = _walletInfo?['todayOrders'];
+          final existingTodayCodOrders = _walletInfo?['todayCodOrders'];
+          final existingTodayOnlineOrders = _walletInfo?['todayOnlineOrders'];
+
           setState(() {
-            _walletInfo = Map<String, dynamic>.from(response.data);
+            _hasServerWallet = true;
+            _walletInfo = {
+              ...?_walletInfo,
+              ...serverData,
+              'wallet': {
+                if (_walletInfo?['wallet'] is Map)
+                  ...Map<String, dynamic>.from(_walletInfo!['wallet'] as Map),
+                ...serverWallet,
+              },
+              if (serverData['summary'] == null && existingSummary != null)
+                'summary': existingSummary,
+              if ((serverData['todayOrders'] == null ||
+                      (serverData['todayOrders'] is List &&
+                          (serverData['todayOrders'] as List).isEmpty)) &&
+                  existingTodayOrders is List &&
+                  existingTodayOrders.isNotEmpty)
+                'todayOrders': existingTodayOrders,
+              if ((serverData['todayCodOrders'] == null ||
+                      (serverData['todayCodOrders'] is List &&
+                          (serverData['todayCodOrders'] as List).isEmpty)) &&
+                  existingTodayCodOrders is List &&
+                  existingTodayCodOrders.isNotEmpty)
+                'todayCodOrders': existingTodayCodOrders,
+              if (serverData['todayOnlineOrders'] == null &&
+                  existingTodayOnlineOrders != null)
+                'todayOnlineOrders': existingTodayOnlineOrders,
+            };
             final rider = response.data['rider'];
             if (rider is Map && rider['name'] != null) {
               final rName = rider['name'].toString().trim();

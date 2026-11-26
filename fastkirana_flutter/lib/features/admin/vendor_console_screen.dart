@@ -66,6 +66,8 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
   bool _isLoadingLiveOrders = false;
   Timer? _liveOrdersPollingTimer;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isAudioBusy = false;
+  bool _isAudioDisposed = false;
   final Set<String> _knownOrderIds = <String>{};
   final bool _isAlarmEnabled = true;
 
@@ -126,17 +128,24 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
   @override
   void dispose() {
     _liveOrdersPollingTimer?.cancel();
-    _audioPlayer.dispose();
+    _isAudioDisposed = true;
+    try {
+      _audioPlayer.dispose().catchError((_) {});
+    } catch (_) {}
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _triggerOrderAlertSound() async {
-    if (!_isAlarmEnabled) return;
+    if (!_isAlarmEnabled || _isAudioBusy || _isAudioDisposed || !mounted) return;
+    _isAudioBusy = true;
     try {
       HapticFeedback.heavyImpact();
-      await _audioPlayer.stop();
+      if (_audioPlayer.state == PlayerState.playing) {
+        await _audioPlayer.stop();
+      }
+      if (_isAudioDisposed || !mounted) return;
       await _audioPlayer.play(
         AssetSource('sounds/order_chime.mp3'),
         volume: 1.0,
@@ -145,6 +154,8 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       try {
         await SystemSound.play(SystemSoundType.alert);
       } catch (_) {}
+    } finally {
+      _isAudioBusy = false;
     }
   }
 
@@ -678,10 +689,10 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       } catch (_) {}
     }
 
-    // Ensure all variants have non-zero costPrice inherited from parent if available
+    // Preserve each variant's own costPrice; only inherit parent base cost for single-variant items
     for (final v in workingVariants) {
       final vCostRaw = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble();
-      if ((vCostRaw == null || vCostRaw <= 0) && initialCost > 0) {
+      if ((vCostRaw == null || vCostRaw <= 0) && workingVariants.length == 1 && initialCost > 0) {
         v['costPrice'] = initialCost;
       } else if (vCostRaw != null && vCostRaw > 0) {
         v['costPrice'] = vCostRaw;
@@ -698,7 +709,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
     if (workingVariants.isNotEmpty) {
       final v0 = workingVariants[0];
       final rawCost0 = (v0['costPrice'] ?? v0['cost_price'] ?? v0['cp'] ?? v0['cost'] as num?)?.toDouble();
-      final vCost = (rawCost0 != null && rawCost0 > 0) ? rawCost0 : initialCost;
+      final vCost = (rawCost0 != null && rawCost0 > 0) ? rawCost0 : (workingVariants.length == 1 ? initialCost : 0.0);
       final rawPrice0 = (v0['price'] as num?)?.toDouble();
       final vPrice = (rawPrice0 != null && rawPrice0 > 0) ? rawPrice0 : initialPrice;
       final rawMrp0 = (v0['mrp'] as num?)?.toDouble();
@@ -738,7 +749,7 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
             if (workingVariants.isNotEmpty && idx < workingVariants.length) {
               final v = workingVariants[idx];
               final rawCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble();
-              final vCost = (rawCost != null && rawCost > 0) ? rawCost : initialCost;
+              final vCost = (rawCost != null && rawCost > 0) ? rawCost : (workingVariants.length == 1 ? initialCost : 0.0);
               final rawPrice = (v['price'] as num?)?.toDouble();
               final vPrice = (rawPrice != null && rawPrice > 0) ? rawPrice : initialPrice;
               final rawMrp = (v['mrp'] as num?)?.toDouble();
@@ -2527,22 +2538,40 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              '₹${payable.toStringAsFixed(0)}',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: slateDark,
+                            if (cost <= 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '$sold pcs · Not Mentioned',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9.5,
+                                    color: const Color(0xFFB45309),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              )
+                            else ...[
+                              Text(
+                                '₹${payable.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: slateDark,
+                                ),
                               ),
-                            ),
-                            Text(
-                              '$sold pcs @ ₹${cost.toStringAsFixed(0)}',
-                              style: GoogleFonts.inter(
-                                fontSize: 9.5,
-                                color: slateMuted,
-                                fontWeight: FontWeight.w600,
+                              Text(
+                                '$sold pcs @ ₹${cost.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9.5,
+                                  color: slateMuted,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ],
@@ -2677,14 +2706,32 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    '₹${total.toStringAsFixed(0)}',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: slateDark),
-                  ),
-                  Text(
-                    '@ ₹${cost.toStringAsFixed(0)}/unit',
-                    style: GoogleFonts.inter(fontSize: 9.5, color: slateMuted),
-                  ),
+                  if (cost <= 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        'Not Mentioned',
+                        style: GoogleFonts.inter(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFB45309),
+                        ),
+                      ),
+                    )
+                  else ...[
+                    Text(
+                      '₹${total.toStringAsFixed(0)}',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: slateDark),
+                    ),
+                    Text(
+                      '@ ₹${cost.toStringAsFixed(0)}/unit',
+                      style: GoogleFonts.inter(fontSize: 9.5, color: slateMuted),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -2856,11 +2903,13 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                 border: Border.all(color: const Color(0xFFBFDBFE)),
                               ),
                               child: Text(
-                                '$vName: ₹${vCost > 0 ? vCost.toStringAsFixed(0) : '-'}/₹${vSell.toStringAsFixed(0)}',
+                                vCost > 0
+                                    ? '$vName: ₹${vCost.toStringAsFixed(0)}/₹${vSell.toStringAsFixed(0)}'
+                                    : '$vName: Not Mentioned / ₹${vSell.toStringAsFixed(0)}',
                                 style: GoogleFonts.inter(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1D4ED8),
+                                  color: vCost > 0 ? const Color(0xFF1D4ED8) : const Color(0xFFB45309),
                                 ),
                               ),
                             );
@@ -2873,7 +2922,19 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                         runSpacing: 3,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text('Cost: ₹${cost.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.blue.shade700)),
+                          cost > 0
+                              ? Text('Cost: ₹${cost.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.blue.shade700))
+                              : Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Cost: Not Mentioned',
+                                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFFB45309)),
+                                  ),
+                                ),
                           Text('Sell: ₹${price.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: slateDark)),
                           if (mrp > price)
                             Text('₹${mrp.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 9.5, color: slateMuted, decoration: TextDecoration.lineThrough)),
@@ -3068,7 +3129,19 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                               ],
                               Text('Stock: $stock left', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.red)),
                               const SizedBox(width: 8),
-                              Text('@ ₹${cost.toStringAsFixed(0)} cost', style: GoogleFonts.inter(fontSize: 10, color: slateMuted)),
+                              cost > 0
+                                  ? Text('@ ₹${cost.toStringAsFixed(0)} cost', style: GoogleFonts.inter(fontSize: 10, color: slateMuted))
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Not Mentioned',
+                                        style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: const Color(0xFFB45309)),
+                                      ),
+                                    ),
                             ],
                           ),
                         ],
@@ -3248,7 +3321,8 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
       final weightLabel = weight.isNotEmpty ? ' [$weight]' : '';
       final cost = OrderItemHelper.resolveCostPrice(it);
       final itemTotal = (it['totalCost'] as num?)?.toDouble() ?? (cost * qty);
-      buffer.writeln('$idx. *$name$weightLabel* x *$qty* (@ ₹${cost.toStringAsFixed(0)} = ₹${itemTotal.toStringAsFixed(0)})');
+      final rateStr = cost > 0 ? '@ ₹${cost.toStringAsFixed(0)} = ₹${itemTotal.toStringAsFixed(0)}' : '@ Cost Not Mentioned';
+      buffer.writeln('$idx. *$name$weightLabel* x *$qty* ($rateStr)');
       idx++;
     }
 
@@ -3610,31 +3684,52 @@ class _VendorConsoleScreenState extends ConsumerState<VendorConsoleScreen> with 
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                   const SizedBox(height: 3),
-                                                  Row(
-                                                    children: [
-                                                      if (weightVariant.isNotEmpty) ...[
-                                                        OrderItemHelper.buildWeightBadge(context, weightVariant),
-                                                        const SizedBox(width: 6),
+                                                    Row(
+                                                      children: [
+                                                        if (weightVariant.isNotEmpty) ...[
+                                                          OrderItemHelper.buildWeightBadge(context, weightVariant),
+                                                          const SizedBox(width: 6),
+                                                        ],
+                                                        cost > 0
+                                                            ? Text(
+                                                                '@ ₹${cost.toStringAsFixed(0)}',
+                                                                style: GoogleFonts.inter(fontSize: 11, color: slateMuted, fontWeight: FontWeight.w600),
+                                                              )
+                                                            : Container(
+                                                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                                decoration: BoxDecoration(
+                                                                  color: const Color(0xFFFEF3C7),
+                                                                  borderRadius: BorderRadius.circular(4),
+                                                                ),
+                                                                child: Text(
+                                                                  'Not Mentioned',
+                                                                  style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: const Color(0xFFB45309)),
+                                                                ),
+                                                              ),
                                                       ],
-                                                      Text(
-                                                        '@ ₹${cost.toStringAsFixed(0)}',
-                                                        style: GoogleFonts.inter(fontSize: 11, color: slateMuted, fontWeight: FontWeight.w600),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                            ),
 
-                                            // Total Cost
-                                            Text(
-                                              '₹${itemTotal.toStringAsFixed(0)}',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w900,
-                                                color: slateDark,
-                                              ),
-                                            ),
+                                              // Total Cost
+                                              cost > 0
+                                                  ? Text(
+                                                      '₹${itemTotal.toStringAsFixed(0)}',
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w900,
+                                                        color: slateDark,
+                                                      ),
+                                                    )
+                                                  : Text(
+                                                      'Not Mentioned',
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w800,
+                                                        color: const Color(0xFFB45309),
+                                                      ),
+                                                    ),
                                           ],
                                         ),
                                       );

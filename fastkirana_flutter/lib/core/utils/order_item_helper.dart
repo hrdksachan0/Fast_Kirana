@@ -5,21 +5,43 @@ import '../theme/design_system.dart';
 import 'restaurant_utils.dart';
 
 class OrderItemHelper {
+  static String _canonicalizeUnit(String raw) {
+    var t = raw.toLowerCase().replaceAll(RegExp(r'[,;()\[\]]'), ' ');
+    t = t.replaceAll(RegExp(r'\s+'), ' ').trim();
+    t = t.replaceAll(RegExp(r'\b(kilograms?|kgs)\b'), 'kg');
+    t = t.replaceAll(RegExp(r'\b(grams?|gms|gm)\b'), 'g');
+    t = t.replaceAll(RegExp(r'\b(millilitres?|milliliters?|mls)\b'), 'ml');
+    t = t.replaceAll(RegExp(r'\b(litres?|liters?|ltrs|ltr)\b'), 'l');
+    t = t.replaceAll(RegExp(r'\b(pieces?|pcs)\b'), 'pc');
+    t = t.replaceAll(RegExp(r'\b(packets?|pkts)\b'), 'pkt');
+    return t.replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
   /// Resolves the unit cost price from an order item or product dictionary,
-  /// accounting for selected variants, variant arrays, and product cost price.
+  /// accounting for selected variants, canonical units, and explicit costMissing flags.
+  /// Returns 0.0 when cost is not set (never falls back to selling price or 25% guesses).
   static double resolveCostPrice(dynamic item, [dynamic product]) {
     if (item == null && product == null) return 0.0;
 
     double directCost = 0.0;
+    bool costMissing = false;
+    double itemPrice = 0.0;
+    String itemName = '';
     if (item is Map) {
       directCost = (item['cost'] as num?)?.toDouble()
           ?? (item['costPrice'] as num?)?.toDouble()
           ?? (item['cost_price'] as num?)?.toDouble()
           ?? (item['unitCostPrice'] as num?)?.toDouble()
           ?? 0.0;
+      costMissing = item['costMissing'] == true;
+      itemPrice = (item['sellingPrice'] as num?)?.toDouble()
+          ?? (item['price'] as num?)?.toDouble()
+          ?? 0.0;
+      itemName = (item['name'] ?? item['title'] ?? '').toString();
     }
 
     if (directCost > 0.0) return directCost;
+    if (costMissing && directCost <= 0.0) return 0.0;
 
     // Check if variant info is present
     dynamic rawVariants;
@@ -27,17 +49,31 @@ class OrderItemHelper {
 
     if (item is Map) {
       rawVariants = item['variants'];
-      selectedVariant = (item['selectedVariant'] ?? item['selected_variant'] ?? '').toString();
+      selectedVariant = (item['selectedVariant'] ?? item['selected_variant'] ?? '').toString().trim();
       if (rawVariants == null && item['product'] is Map) {
         rawVariants = item['product']['variants'];
         selectedVariant = selectedVariant.isEmpty
-            ? (item['product']['selectedVariant'] ?? item['product']['selected_variant'] ?? '').toString()
+            ? (item['product']['selectedVariant'] ?? item['product']['selected_variant'] ?? '').toString().trim()
             : selectedVariant;
+      }
+    }
+
+    if (selectedVariant.isEmpty && itemName.isNotEmpty) {
+      final matches = RegExp(r'[\(\[]([^\)\]]+)[\)\]]').allMatches(itemName).toList();
+      for (final m in matches) {
+        final c = (m.group(1) ?? '').trim();
+        if (RegExp(r'\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b', caseSensitive: false).hasMatch(c)) {
+          selectedVariant = c;
+          break;
+        }
       }
     }
 
     if (rawVariants == null && product is Map) {
       rawVariants = product['variants'];
+      if (selectedVariant.isEmpty) {
+        selectedVariant = (product['unit'] ?? '').toString().trim();
+      }
     }
 
     if (rawVariants != null) {
@@ -50,26 +86,40 @@ class OrderItemHelper {
         } catch (_) {}
       }
 
-      final selNorm = selectedVariant.trim().toLowerCase().replaceAll(' ', '');
+      final selNorm = selectedVariant.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final selCanon = _canonicalizeUnit(selectedVariant);
       double firstValidCost = 0.0;
+      double priceMatchedCost = 0.0;
 
       for (final v in listVars) {
         if (v is Map) {
           final vCost = (v['costPrice'] ?? v['cost_price'] ?? v['cp'] ?? v['cost'] as num?)?.toDouble() ?? 0.0;
           if (vCost > 0) {
             if (firstValidCost == 0.0) firstValidCost = vCost;
-            final vName = (v['name'] ?? v['unit'] ?? '').toString().trim().toLowerCase().replaceAll(' ', '');
-            if (selNorm.isNotEmpty && (vName == selNorm || vName.contains(selNorm) || selNorm.contains(vName))) {
+            final vNameRaw = (v['name'] ?? '').toString();
+            final vUnitRaw = (v['unit'] ?? '').toString();
+            final vName = vNameRaw.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            final vUnit = vUnitRaw.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            if (selNorm.isNotEmpty &&
+                (vName == selNorm ||
+                    vUnit == selNorm ||
+                    (selCanon.isNotEmpty && (_canonicalizeUnit(vNameRaw) == selCanon || _canonicalizeUnit(vUnitRaw) == selCanon)))) {
               return vCost;
+            }
+            final vPrice = (v['price'] as num?)?.toDouble() ?? 0.0;
+            if (itemPrice > 0 && vPrice > 0 && (vPrice - itemPrice).abs() < 0.01 && priceMatchedCost == 0.0) {
+              priceMatchedCost = vCost;
             }
           }
         }
       }
 
-      if (firstValidCost > 0) return firstValidCost;
+      if (priceMatchedCost > 0) return priceMatchedCost;
+      if (selNorm.isEmpty && listVars.length <= 1 && firstValidCost > 0) return firstValidCost;
+      if (selNorm.isNotEmpty && listVars.length > 1) return 0.0;
     }
 
-    // Fallback to base product costPrice or directCost if available
+    // Fallback to base product costPrice if available
     if (product is Map) {
       final pCost = (product['costPrice'] as num?)?.toDouble()
           ?? (product['cost_price'] as num?)?.toDouble()
@@ -77,8 +127,6 @@ class OrderItemHelper {
           ?? 0.0;
       if (pCost > 0) return pCost;
     }
-
-    if (directCost > 0.0) return directCost;
 
     return directCost;
   }

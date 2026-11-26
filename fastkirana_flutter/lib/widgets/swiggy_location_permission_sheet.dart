@@ -68,7 +68,7 @@ class _SwiggyLocationPermissionSheetState
 
   Future<void> _checkAndAutoDetectOnResume() async {
     if (_isLocating || !mounted) return;
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final serviceEnabled = await LocationService.isLocationServiceEnabledSafe();
     if (!mounted) return;
     if (serviceEnabled) {
       // Frictionless: User turned on GPS in Settings and returned to the app!
@@ -81,7 +81,7 @@ class _SwiggyLocationPermissionSheetState
     if (_isLocating) return;
     HapticFeedback.mediumImpact();
 
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final serviceEnabled = await LocationService.isLocationServiceEnabledSafe();
     if (!mounted) return;
     if (!serviceEnabled) {
       // 1-Tap directly opens Android/iOS Location Settings, exactly like Zepto

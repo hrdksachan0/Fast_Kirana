@@ -50,6 +50,7 @@ interface TopProduct {
   mrp?: number
   price?: number
   costPrice?: number
+  costMissing?: boolean
   totalCost?: number
   quantity: number
   sales: number
@@ -81,6 +82,7 @@ export interface DailyProductSale {
   quantity: number
   price: number
   costPrice: number
+  costMissing?: boolean
   totalCost: number
   totalSales: number
   profit: number
@@ -387,6 +389,9 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
     return { salesPath, profitPath, salesArea, profitArea, points, maxValue }
   }, [rawDailySales])
 
+  const isCostMissing = (item: { type?: string; costMissing?: boolean; costPrice?: number }) =>
+    item.type !== 'restaurant' && (Boolean(item.costMissing) || !(Number(item.costPrice) > 0))
+
   // Real Excel (.xlsx) Exporter with SheetJS
   const handleDownloadXLSX = (scope: 'all' | 'grocery' | 'restaurant' = 'all') => {
     try {
@@ -495,13 +500,13 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
           stockVal,
           prod.price || 0,
           sellingRange,
-          prod.costPrice || 0,
+          isCostMissing(prod) ? 'Not Mentioned' : (prod.costPrice || 0),
           costRange,
           prod.quantity,
           prod.sales,
           vendorPayable,
-          prod.profit,
-          `${margin.toFixed(1)}%`
+          isCostMissing(prod) ? '-' : prod.profit,
+          isCostMissing(prod) ? 'Not Mentioned' : `${margin.toFixed(1)}%`
         ]
       })
 
@@ -600,12 +605,12 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
           prod.vendor || 'Direct / FastMinute',
           stockVal,
           prod.price || 0,
-          prod.costPrice || 0,
+          isCostMissing(prod) ? 'Not Mentioned' : (prod.costPrice || 0),
           prod.quantity,
           Math.round(prod.sales * 100) / 100,
           Math.round(totalCostVal * 100) / 100,
-          Math.round(prod.profit * 100) / 100,
-          `${margin.toFixed(1)}%`
+          isCostMissing(prod) ? '-' : Math.round(prod.profit * 100) / 100,
+          isCostMissing(prod) ? 'Not Mentioned' : `${margin.toFixed(1)}%`
         ]
       })
 
@@ -666,12 +671,12 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
           item.vendor || 'Direct / FastMinute',
           item.type === 'restaurant' ? 'Restaurant' : 'Grocery',
           item.quantity,
-          item.costPrice,
+          isCostMissing(item) ? 'Not Mentioned' : item.costPrice,
           item.totalCost,
           item.price,
           item.totalSales,
-          item.profit,
-          `${margin.toFixed(1)}%`
+          isCostMissing(item) ? '-' : item.profit,
+          isCostMissing(item) ? 'Not Mentioned' : `${margin.toFixed(1)}%`
         ]
       })
       const totalDatewiseUnits = targetDatewiseItems.reduce((sum, i) => sum + i.quantity, 0)
@@ -756,12 +761,12 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
           item.vendor || 'Direct / FastMinute',
           item.type === 'restaurant' ? 'Restaurant' : 'Grocery',
           item.quantity,
-          item.costPrice,
+          isCostMissing(item) ? 'Not Mentioned' : item.costPrice,
           item.totalCost,
           item.price,
           item.totalSales,
-          item.profit,
-          `${margin.toFixed(1)}%`
+          isCostMissing(item) ? '-' : item.profit,
+          isCostMissing(item) ? 'Not Mentioned' : `${margin.toFixed(1)}%`
         ]
       })
       const totalUnits = targetItems.reduce((s, i) => s + i.quantity, 0)
@@ -1100,7 +1105,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
         const margin = prod.sales > 0 ? ((prod.profit / prod.sales) * 100).toFixed(1) : '0'
         const itemId = prod.readableId ? `#${prod.readableId}` : prod.productId
         const stockVal = prod.stock !== undefined ? prod.stock : '-'
-        csv += `"${itemId}","${prod.name}","${prod.categoryName || '-'}",${stockVal},₹${(prod.price || 0).toFixed(2)},₹${(prod.costPrice || 0).toFixed(2)},${prod.quantity},₹${prod.sales.toFixed(2)},₹${prod.profit.toFixed(2)},${margin}%\n`
+        csv += `"${itemId}","${prod.name}","${prod.categoryName || '-'}",${stockVal},₹${(prod.price || 0).toFixed(2)},${isCostMissing(prod) ? 'Not Mentioned' : `₹${(prod.costPrice || 0).toFixed(2)}`},${prod.quantity},₹${prod.sales.toFixed(2)},${isCostMissing(prod) ? '-' : `₹${prod.profit.toFixed(2)}`},${isCostMissing(prod) ? 'Not Mentioned' : `${margin}%`}\n`
       })
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -1775,6 +1780,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                     {filteredDailyProductSales.map((item, idx) => {
                       const margin = item.totalSales > 0 ? Math.round((item.profit / item.totalSales) * 100) : 0
                       const meta = getCategoryMeta(item.categoryName || '')
+                      const missingCost = isCostMissing(item)
 
                       return (
                         <tr key={`${item.date}_${item.productId}_${idx}`} className="hover:bg-muted/15 transition-colors">
@@ -1808,13 +1814,23 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                           </td>
 
                           <td className="py-2.5 text-right font-semibold text-blue-600 dark:text-blue-400">
-                            {formatPrice(item.costPrice)}
+                            {missingCost ? (
+                              <span className="inline-block px-1.5 py-0.5 rounded-md text-[9.5px] font-black bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap">
+                                Not Mentioned
+                              </span>
+                            ) : (
+                              formatPrice(item.costPrice)
+                            )}
                           </td>
 
                           <td className="py-2.5 text-right">
-                            <span className="inline-block px-2 py-0.5 rounded-lg text-xs font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                              {formatPrice(item.totalCost)}
-                            </span>
+                            {missingCost ? (
+                              <span className="text-[10px] font-bold text-text-muted">Not Mentioned</span>
+                            ) : (
+                              <span className="inline-block px-2 py-0.5 rounded-lg text-xs font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                {formatPrice(item.totalCost)}
+                              </span>
+                            )}
                           </td>
 
                           <td className="py-2.5 text-right font-black text-text-primary">
@@ -1826,17 +1842,21 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                           </td>
 
                           <td className="py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
-                            {formatPrice(item.profit)}
+                            {missingCost ? <span className="text-text-muted font-bold">-</span> : formatPrice(item.profit)}
                           </td>
 
                           <td className="py-2.5 text-center pr-2">
-                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                              margin >= 30 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' :
-                              margin >= 15 ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10' :
-                              'text-amber-600 dark:text-amber-400 bg-amber-500/10'
-                            }`}>
-                              {margin}%
-                            </span>
+                            {missingCost ? (
+                              <span className="text-[10px] font-bold text-text-muted">-</span>
+                            ) : (
+                              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                                margin >= 30 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' :
+                                margin >= 15 ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10' :
+                                'text-amber-600 dark:text-amber-400 bg-amber-500/10'
+                              }`}>
+                                {margin}%
+                              </span>
+                            )}
                           </td>
                         </tr>
                       )
@@ -1872,7 +1892,8 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                     {filteredProducts.map((prod) => {
                       const margin = prod.sales > 0 ? Math.round((prod.profit / prod.sales) * 100) : 0
                       const meta = getCategoryMeta(prod.categoryName || '')
-                      const effectiveCost = prod.totalCost !== undefined ? prod.totalCost : ((prod.costPrice || 0) * prod.quantity)
+                      const missingCost = isCostMissing(prod)
+                      const effectiveCost = missingCost ? 0 : (prod.totalCost !== undefined ? prod.totalCost : ((prod.costPrice || 0) * prod.quantity))
 
                       return (
                         <tr key={prod.productId} className="hover:bg-muted/15 transition-colors">
@@ -1906,13 +1927,21 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                           </td>
 
                           <td className="py-2.5 text-right">
-                            <span className="font-semibold text-blue-600 dark:text-blue-400 block">
-                              {formatPrice(prod.costPrice || 0)}
-                            </span>
-                            {prod.hasPriceVaried && prod.minCost !== undefined && prod.maxCost !== undefined && prod.minCost !== prod.maxCost && (
-                              <span className="text-[9px] text-blue-500/80 dark:text-blue-400/80 font-bold block" title="Purchase cost changed during this period">
-                                ₹{prod.minCost} - ₹{prod.maxCost}
+                            {missingCost ? (
+                              <span className="inline-block px-1.5 py-0.5 rounded-md text-[9.5px] font-black bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap">
+                                Not Mentioned
                               </span>
+                            ) : (
+                              <>
+                                <span className="font-semibold text-blue-600 dark:text-blue-400 block">
+                                  {formatPrice(prod.costPrice || 0)}
+                                </span>
+                                {prod.hasPriceVaried && prod.minCost !== undefined && prod.maxCost !== undefined && prod.minCost !== prod.maxCost && (
+                                  <span className="text-[9px] text-blue-500/80 dark:text-blue-400/80 font-bold block" title="Purchase cost changed during this period">
+                                    ₹{prod.minCost} - ₹{prod.maxCost}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </td>
 
@@ -1925,21 +1954,25 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                           </td>
 
                           <td className="py-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
-                            {formatPrice(effectiveCost)}
+                            {missingCost ? <span className="text-[10px] font-bold text-text-muted">Not Mentioned</span> : formatPrice(effectiveCost)}
                           </td>
 
                           <td className="py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
-                            {formatPrice(prod.profit)}
+                            {missingCost ? <span className="text-text-muted font-bold">-</span> : formatPrice(prod.profit)}
                           </td>
 
                           <td className="py-2.5 text-center pr-2">
-                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                              margin >= 30 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' :
-                              margin >= 15 ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10' :
-                              'text-amber-600 dark:text-amber-400 bg-amber-500/10'
-                            }`}>
-                              {margin}%
-                            </span>
+                            {missingCost ? (
+                              <span className="text-[10px] font-bold text-text-muted">-</span>
+                            ) : (
+                              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                                margin >= 30 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' :
+                                margin >= 15 ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10' :
+                                'text-amber-600 dark:text-amber-400 bg-amber-500/10'
+                              }`}>
+                                {margin}%
+                              </span>
+                            )}
                           </td>
                         </tr>
                       )
@@ -2024,7 +2057,7 @@ export function AdminReports({ storeId }: AdminReportsProps = {}) {
                         <AlertTriangle className="h-3.5 w-3.5" /> {summary.missingCostCount} Items Missing Cost Price
                       </h5>
                       <p className="text-[10.5px] leading-relaxed font-semibold text-rose-700 dark:text-rose-400">
-                        Some items sold in this period have no Cost Price set. Profit is estimated using a 25% fallback margin. Update Cost Price in the <strong>Inventory</strong> tab.
+                        Some items sold in this period have no Cost Price set. They are marked as <strong>Not Mentioned</strong> (no default 25% estimate applied). Update Cost Price in the <strong>Inventory</strong> tab.
                       </p>
                     </div>
                   ) : (

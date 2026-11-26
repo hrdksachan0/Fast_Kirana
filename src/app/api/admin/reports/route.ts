@@ -89,6 +89,10 @@ export async function GET(request: NextRequest) {
         quantity: number
         name: string
         costPrice: number
+        liveCostPrice?: number
+        snapshotCostPrice?: number
+        liveBasePrice?: number
+        unit?: string | null
         vendor: string | null
         categoryName: string
         categorySlug: string
@@ -96,6 +100,8 @@ export async function GET(request: NextRequest) {
         parentCategorySlug?: string | null
         productTags: string[] | null
         variants: any
+        liveVariants?: any
+        snapshotVariants?: any
         selectedVariant: string | null
         shopName: string | null
         prodRestaurantId?: string | null
@@ -110,14 +116,20 @@ export async function GET(request: NextRequest) {
       }>
     >`
       SELECT oi."orderId", oi."productId", oi.price, COALESCE(p.mrp, oi.price) as mrp, oi.quantity, oi.name, 
-             COALESCE(NULLIF(oi."costPrice", 0), p."costPrice", 0) as "costPrice", 
+             COALESCE(NULLIF(p."costPrice", 0), oi."costPrice", 0) as "costPrice",
+             COALESCE(p."costPrice", 0) as "liveCostPrice",
+             COALESCE(oi."costPrice", 0) as "snapshotCostPrice",
+             COALESCE(p.price, 0) as "liveBasePrice",
+             p.unit as "unit",
              COALESCE(p.vendor, 'Direct / FastKirana') as "vendor",
              COALESCE(c.name, CASE WHEN p."restaurantId" IS NOT NULL THEN r.name ELSE 'General Grocery' END) as "categoryName",
              COALESCE(c.slug, CASE WHEN p."restaurantId" IS NOT NULL THEN r.slug ELSE 'general-grocery' END) as "categorySlug",
              parent_c.name as "parentCategoryName",
              parent_c.slug as "parentCategorySlug",
              p.tags as "productTags",
-             COALESCE(oi.variants, p.variants) as "variants", 
+             COALESCE(p.variants, oi.variants) as "variants",
+             p.variants as "liveVariants",
+             oi.variants as "snapshotVariants",
              oi."selectedVariant",
              o."shopName" as "shopName",
              p."restaurantId" as "prodRestaurantId",
@@ -127,7 +139,11 @@ export async function GET(request: NextRequest) {
              o."orderType"::text as "orderType",
              COALESCE(oi."refundAmount", 0)::float as "refundAmount",
              COALESCE(oi."isRefunded", false) as "isRefunded",
-             CASE WHEN p.id IS NOT NULL AND p."restaurantId" IS NULL THEN true ELSE false END as "isGroceryProduct"
+             CASE
+               WHEN (p.id IS NOT NULL AND p."restaurantId" IS NULL)
+                 OR (p.id IS NULL AND o."restaurantId" IS NULL AND COALESCE(o."orderType"::text, 'GROCERY') = 'GROCERY')
+               THEN true ELSE false
+             END as "isGroceryProduct"
       FROM order_items oi
       JOIN orders o ON oi."orderId" = o.id
       LEFT JOIN products p ON oi."productId" = p.id
@@ -191,87 +207,109 @@ export async function GET(request: NextRequest) {
       return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
     }
 
-    const resolveItemCostPrice = (item: typeof orderItems[0]): { costPerUnit: number; isEstimated: boolean } => {
-      // 1. Explicit costPrice on order item if > 0
-      if (item.costPrice && Number(item.costPrice) > 0) {
-        return { costPerUnit: Number(item.costPrice), isEstimated: false }
-      }
+    const canonicalizeUnit = (s: string | null | undefined): string => {
+      let t = (s || '').toLowerCase().replace(/[,;()\[\]]/g, ' ').replace(/\s+/g, ' ').trim()
+      t = t.replace(/\b(kilograms?|kgs)\b/g, 'kg')
+      t = t.replace(/\b(grams?|gms|gm)\b/g, 'g')
+      t = t.replace(/\b(millilitres?|milliliters?|mls)\b/g, 'ml')
+      t = t.replace(/\b(litres?|liters?|ltrs|ltr)\b/g, 'l')
+      t = t.replace(/\b(pieces?|pcs)\b/g, 'pc')
+      t = t.replace(/\b(packets?|pkts)\b/g, 'pkt')
+      return t.replace(/[^a-z0-9]/g, '')
+    }
 
-      // 2. Parse variants (supports both array and { productVariants: [...] } with addons)
-      const rawVariants = item.variants
-      let variantsList: any[] = []
-      if (rawVariants) {
-        try {
-          const parsed = typeof rawVariants === 'string' ? JSON.parse(rawVariants) : rawVariants
-          if (Array.isArray(parsed)) {
-            variantsList = parsed
-          } else if (parsed && typeof parsed === 'object') {
-            if (Array.isArray(parsed.productVariants)) {
-              variantsList = parsed.productVariants
-            } else if (Array.isArray(parsed.variants)) {
-              variantsList = parsed.variants
-            }
-          }
-        } catch {}
-      }
+    const extractVariantFromName = (name: string | null | undefined): string => {
+      if (!name) return ''
+      const matches = [...name.matchAll(/[\(\[]([^\)\]]+)[\)\]]/g)].map(m => m[1].trim()).filter(Boolean)
+      if (matches.length === 0) return ''
+      const withUnit = matches.find(c => /\b(\d+|half|full|serving|pc|pcs|kg|g|gm|gms|ml|l|ltr|pack)\b/i.test(c))
+      return withUnit || matches[matches.length - 1]
+    }
 
-      let targetVariant = (item.selectedVariant || '').trim()
-      if (!targetVariant && item.name) {
-        const match = item.name.match(/[\(\[]([^\)\]]+)[\)\]]/)
-        if (match) targetVariant = match[1].trim()
-      }
-
-      if (Array.isArray(variantsList) && variantsList.length > 0) {
-        if (targetVariant) {
-          const normTarget = normalizeText(targetVariant)
-          const matched = variantsList.find((v: any) => {
-            if (!v) return false
-            const vName = normalizeText(v.name)
-            const vUnit = normalizeText(v.unit)
-            return vName === normTarget || vUnit === normTarget || normTarget.includes(vName) || vName.includes(normTarget)
-          })
-          const matchedCp = matched?.costPrice ?? matched?.cp ?? matched?.cost
-          if (matchedCp !== undefined && matchedCp !== null && Number(matchedCp) > 0) {
-            return { costPerUnit: Number(matchedCp), isEstimated: false }
-          }
+    const parseVariantsList = (rawVariants: any): any[] => {
+      if (!rawVariants) return []
+      try {
+        const parsed = typeof rawVariants === 'string' ? JSON.parse(rawVariants) : rawVariants
+        if (Array.isArray(parsed)) return parsed
+        if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed.productVariants)) return parsed.productVariants
+          if (Array.isArray(parsed.variants)) return parsed.variants
         }
+      } catch {}
+      return []
+    }
 
-        // Try price match fallback against variants
-        const priceMatched = variantsList.find((v: any) => v && Number(v.price) === Number(item.price))
-        const priceCp = priceMatched?.costPrice ?? priceMatched?.cp ?? priceMatched?.cost
-        if (priceCp !== undefined && priceCp !== null && Number(priceCp) > 0) {
-          return { costPerUnit: Number(priceCp), isEstimated: false }
-        }
-
-        // Check if any variant has costPrice
-        const anyWithCost = variantsList.find((v: any) => {
-          const cp = v?.costPrice ?? v?.cp ?? v?.cost
-          return cp !== undefined && cp !== null && Number(cp) > 0 && Number(v?.price) > 0
+    const extractVariantCost = (variantsList: any[], targetVariant: string, itemPrice: number): number => {
+      if (!Array.isArray(variantsList) || variantsList.length === 0) return 0
+      if (targetVariant) {
+        const normTarget = normalizeText(targetVariant)
+        const canonTarget = canonicalizeUnit(targetVariant)
+        // 1. Exact or unit-canonical match (never substring-match "50g" inside "250g")
+        const matched = variantsList.find((v: any) => {
+          if (!v) return false
+          const vNameRaw = String(v.name || '')
+          const vUnitRaw = String(v.unit || '')
+          return (
+            normalizeText(vNameRaw) === normTarget ||
+            normalizeText(vUnitRaw) === normTarget ||
+            (canonTarget && (canonicalizeUnit(vNameRaw) === canonTarget || canonicalizeUnit(vUnitRaw) === canonTarget))
+          )
         })
-        if (anyWithCost && Number(item.price) > 0) {
-          const anyCp = Number(anyWithCost.costPrice ?? anyWithCost.cp ?? anyWithCost.cost)
-          const marginRatio = anyCp / Number(anyWithCost.price)
-          if (marginRatio > 0 && marginRatio < 1) {
-            return { costPerUnit: Math.round(Number(item.price) * marginRatio * 100) / 100, isEstimated: false }
-          }
-        }
+        const matchedCp = Number(matched?.costPrice ?? matched?.cp ?? matched?.cost ?? 0)
+        if (matchedCp > 0) return matchedCp
+      }
+      // 2. Fallback to exact selling price match against variants
+      if (itemPrice > 0) {
+        const priceMatched = variantsList.find((v: any) => v && Number(v.price) > 0 && Math.abs(Number(v.price) - itemPrice) < 0.01)
+        const priceCp = Number(priceMatched?.costPrice ?? priceMatched?.cp ?? priceMatched?.cost ?? 0)
+        if (priceCp > 0) return priceCp
+      }
+      return 0
+    }
+
+    const resolveItemCostPrice = (item: typeof orderItems[0]): { costPerUnit: number; isMissing: boolean } => {
+      const targetVariant = (item.selectedVariant || '').trim() || extractVariantFromName(item.name)
+      const liveVariants = parseVariantsList(item.liveVariants)
+      const snapshotVariants = parseVariantsList(item.snapshotVariants)
+      const itemPrice = Number(item.price || 0)
+      const liveCost = Number(item.liveCostPrice || 0)
+      const snapshotCost = Number(item.snapshotCostPrice || 0)
+      const liveBasePrice = Number(item.liveBasePrice || 0)
+      const prodUnitCanon = canonicalizeUnit(item.unit)
+      const targetVarCanon = canonicalizeUnit(targetVariant)
+
+      // 1. Always prefer live updated catalog variant cost first
+      let resolved = extractVariantCost(liveVariants, targetVariant, itemPrice)
+
+      // 2. Live base product cost (when single/no variants, or matches base unit/price)
+      const isBaseMatch =
+        liveVariants.length <= 1 ||
+        !targetVarCanon ||
+        (prodUnitCanon && targetVarCanon === prodUnitCanon) ||
+        (liveBasePrice > 0 && Math.abs(liveBasePrice - itemPrice) < 0.01)
+      if (resolved <= 0 && isBaseMatch && liveCost > 0) {
+        resolved = liveCost
       }
 
-      // 3. Fallback to base product costPrice if > 0
-      if (item.costPrice && Number(item.costPrice) > 0) {
-        return { costPerUnit: Number(item.costPrice), isEstimated: false }
+      // 3. Fallback to order-item snapshot only when live catalog has no cost set
+      if (resolved <= 0) {
+        resolved = extractVariantCost(snapshotVariants, targetVariant, itemPrice)
+      }
+      if (resolved <= 0 && snapshotCost > 0) {
+        resolved = snapshotCost
       }
 
-      // 4. Default 25% margin estimate (75% cost)
-      const estimatedCost = Math.round(Number(item.price || 0) * 0.75 * 100) / 100
-      return { costPerUnit: estimatedCost, isEstimated: true }
+      if (resolved > 0) {
+        return { costPerUnit: resolved, isMissing: false }
+      }
+      return { costPerUnit: 0, isMissing: true }
     }
 
     const getItemMetrics = (item: typeof orderItems[0]) => {
       const grossRevenue = (item.price || 0) * (item.quantity || 1)
       const itemRevenue = Math.max(0, grossRevenue - (item.refundAmount || 0))
       if (item.isRefunded && itemRevenue === 0) {
-        return { cost: 0, revenue: 0, profit: 0, matchedRest: null, unitCost: 0 }
+        return { cost: 0, revenue: 0, profit: 0, matchedRest: null, unitCost: 0, hasCost: true }
       }
       const isGrocery = Boolean(item.isGroceryProduct)
       const matchedRest = !isGrocery ? resolveRestaurantForItem(item) : null
@@ -291,23 +329,24 @@ export async function GET(request: NextRequest) {
         const itemProfit = itemRevenue * commRate
         const itemCost = itemRevenue * (1 - commRate)
         const unitCost = (item.quantity || 1) > 0 ? (itemCost / (item.quantity || 1)) : itemCost
-        return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest, unitCost }
+        return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest, unitCost, hasCost: true }
       }
 
-      const { costPerUnit, isEstimated } = resolveItemCostPrice(item)
-      if (isEstimated) {
+      const { costPerUnit, isMissing } = resolveItemCostPrice(item)
+      if (isMissing) {
         const prodKey = item.productId || `manual_${(item.name || 'item').toLowerCase().replace(/[^a-z0-9]/g, '_')}`
         missingCostProductsMap[prodKey] = {
           id: prodKey,
           name: item.name || 'Unnamed Product',
           price: item.price || 0
         }
+        return { cost: 0, revenue: itemRevenue, profit: 0, matchedRest: null, unitCost: 0, hasCost: false }
       }
 
       const itemCost = costPerUnit * (item.quantity || 1)
       const itemProfit = itemRevenue - itemCost
       
-      return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest: null, unitCost: costPerUnit }
+      return { cost: itemCost, revenue: itemRevenue, profit: itemProfit, matchedRest: null, unitCost: costPerUnit, hasCost: true }
     }
 
     // Calculate aggregated metrics
@@ -369,6 +408,8 @@ export async function GET(request: NextRequest) {
         minCost?: number;
         maxCost?: number;
         hasPriceVaried?: boolean;
+        costedQty?: number;
+        costMissing?: boolean;
       }
     > = {}
 
@@ -390,6 +431,8 @@ export async function GET(request: NextRequest) {
       totalSales: number
       profit: number
       sales?: number
+      costedQty?: number
+      costMissing?: boolean
     }
     const dailyProductData: Record<string, DailyProductSale> = {}
 
@@ -439,10 +482,14 @@ export async function GET(request: NextRequest) {
       // Process items for profit calculation
       const items = itemsByOrder[order.id] || []
       let orderCost = 0
+      let orderUncostedRev = 0
 
       for (const item of items) {
-        const { cost, revenue: itemRev, profit: itemProf, matchedRest, unitCost } = getItemMetrics(item)
+        const { cost, revenue: itemRev, profit: itemProf, matchedRest, unitCost, hasCost } = getItemMetrics(item)
         orderCost += cost
+        if (!hasCost) {
+          orderUncostedRev += itemRev
+        }
 
         if (isRetail) continue // Skip adding retail items to category and product breakdown
         if (item.isRefunded && itemRev === 0) continue // Skip fully refunded items from sold breakdown
@@ -514,7 +561,9 @@ export async function GET(request: NextRequest) {
             name: displayName,
             mrp: item.mrp || item.price || 0,
             price: itemSellingPrice,
-            costPrice: itemUnitCost,
+            costPrice: hasCost ? itemUnitCost : 0,
+            costedQty: 0,
+            costMissing: false,
             totalCost: 0,
             quantity: 0,
             sales: 0,
@@ -526,8 +575,8 @@ export async function GET(request: NextRequest) {
             variantName: resolvedVariant || undefined,
             minPrice: itemSellingPrice,
             maxPrice: itemSellingPrice,
-            minCost: itemUnitCost,
-            maxCost: itemUnitCost,
+            minCost: hasCost ? itemUnitCost : 0,
+            maxCost: hasCost ? itemUnitCost : 0,
             hasPriceVaried: false,
           }
         } else {
@@ -539,7 +588,7 @@ export async function GET(request: NextRequest) {
               productData[prodKey].maxPrice = itemSellingPrice
             }
           }
-          if (itemUnitCost > 0) {
+          if (hasCost && itemUnitCost > 0) {
             if ((productData[prodKey].minCost ?? 0) === 0 || itemUnitCost < (productData[prodKey].minCost ?? itemUnitCost)) {
               productData[prodKey].minCost = itemUnitCost
             }
@@ -548,7 +597,11 @@ export async function GET(request: NextRequest) {
             }
           }
         }
-        productData[prodKey].quantity += (item.quantity || 1)
+        const qtyInt = item.quantity || 1
+        productData[prodKey].quantity += qtyInt
+        if (hasCost) {
+          productData[prodKey].costedQty = (productData[prodKey].costedQty || 0) + qtyInt
+        }
         productData[prodKey].sales += itemRev
         productData[prodKey].totalCost += cost
         productData[prodKey].profit += itemProf
@@ -566,26 +619,31 @@ export async function GET(request: NextRequest) {
             parentCategoryName: (item.parentCategoryName || '').trim(),
             vendor: (item.vendor || 'Direct / FastKirana').trim(),
             type: targetType,
-            quantity: item.quantity || 1,
+            quantity: qtyInt,
             price: itemSellingPrice,
-            costPrice: itemUnitCost,
+            costPrice: hasCost ? itemUnitCost : 0,
+            costedQty: hasCost ? qtyInt : 0,
+            costMissing: false,
             totalCost: cost,
             totalSales: itemRev,
             profit: itemProf,
           }
         } else {
-          dailyProductData[dailyProdKey].quantity += (item.quantity || 1)
+          dailyProductData[dailyProdKey].quantity += qtyInt
+          if (hasCost) {
+            dailyProductData[dailyProdKey].costedQty = (dailyProductData[dailyProdKey].costedQty || 0) + qtyInt
+          }
           dailyProductData[dailyProdKey].totalSales += itemRev
           dailyProductData[dailyProdKey].totalCost += cost
           dailyProductData[dailyProdKey].profit += itemProf
-          if (dailyProductData[dailyProdKey].costPrice === 0 && itemUnitCost > 0) {
+          if (hasCost && dailyProductData[dailyProdKey].costPrice === 0 && itemUnitCost > 0) {
             dailyProductData[dailyProdKey].costPrice = itemUnitCost
           }
         }
       }
 
-      // Order profit = order.total - orderCost
-      const orderProfit = (order.total || 0) - orderCost
+      // Order profit = order.total - orderCost - uncosted revenue
+      const orderProfit = (order.total || 0) - orderCost - orderUncostedRev
       
       if (!isRetail) {
         dailyData[dateString].profit += orderProfit
@@ -620,8 +678,10 @@ export async function GET(request: NextRequest) {
     // Compute accurate weighted unit cost and unit selling price for sold products
     for (const prodKey in productData) {
       const p = productData[prodKey]
+      const costedQty = p.costedQty || 0
+      p.costMissing = costedQty === 0 && p.type !== 'restaurant'
       if (p.quantity > 0) {
-        p.costPrice = Math.round((p.totalCost / p.quantity) * 100) / 100
+        p.costPrice = costedQty > 0 ? Math.round((p.totalCost / costedQty) * 100) / 100 : 0
         p.price = Math.round((p.sales / p.quantity) * 100) / 100
         if (p.minPrice !== undefined && p.maxPrice !== undefined && p.minPrice !== p.maxPrice) {
           p.hasPriceVaried = true
@@ -674,9 +734,6 @@ export async function GET(request: NextRequest) {
             }
           } catch {}
         }
-        if (!resolvedCatalogCost && gp.price > 0) {
-          resolvedCatalogCost = Math.round(gp.price * 0.75 * 100) / 100
-        }
 
         // Check if any variant or base entry of this product was sold
         const matchingKeys = Object.keys(productData).filter(k => 
@@ -699,6 +756,7 @@ export async function GET(request: NextRequest) {
             mrp: gp.mrp || gp.price || 0,
             price: gp.price || 0,
             costPrice: resolvedCatalogCost,
+            costMissing: !(resolvedCatalogCost > 0),
             totalCost: 0,
             quantity: 0,
             sales: 0,
@@ -727,9 +785,12 @@ export async function GET(request: NextRequest) {
     const dailyProductList = Object.values(dailyProductData)
       .map(p => {
         const qty = p.quantity || 1
+        const costedQty = p.costedQty || 0
+        const costMissing = costedQty === 0 && p.type !== 'restaurant'
         return {
           ...p,
-          costPrice: Math.round((p.totalCost / qty) * 100) / 100,
+          costMissing,
+          costPrice: costedQty > 0 ? Math.round((p.totalCost / costedQty) * 100) / 100 : 0,
           price: Math.round((p.totalSales / qty) * 100) / 100,
           totalCost: Math.round(p.totalCost * 100) / 100,
           totalSales: Math.round(p.totalSales * 100) / 100,

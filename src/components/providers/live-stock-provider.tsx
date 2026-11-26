@@ -39,7 +39,10 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
         .map(([id]) => id)
 
       // Get all product IDs currently in the cart
-      const cartProductIds = useCartStore.getState().items.map((item) => item.product.id)
+      const rawCartItems = useCartStore.getState().items
+      const cartProductIds = (Array.isArray(rawCartItems) ? rawCartItems : [])
+        .map((item) => item?.product?.id)
+        .filter(Boolean) as string[]
 
       // Combine registry IDs and cart IDs, and remove duplicates
       const activeIds = Array.from(new Set([...onScreenIds, ...cartProductIds]))
@@ -74,8 +77,9 @@ export function LiveStockProvider({ children }: { children: React.ReactNode }) {
 
           // Sync the updated live values back to the Cart Store
           const cartState = useCartStore.getState()
+          const safeCartItems = Array.isArray(cartState.items) ? cartState.items : []
           Object.entries(data).forEach(([id, updates]: [string, any]) => {
-            const cartItem = cartState.items.find((item) => item.product.id === id)
+            const cartItem = safeCartItems.find((item) => item?.product?.id === id)
             if (cartItem) {
               const p = cartItem.product
               if (

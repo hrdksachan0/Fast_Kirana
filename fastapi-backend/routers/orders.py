@@ -2265,7 +2265,7 @@ async def create_order(
                                         "items": []
                                     }
                                 qty = int(it.get("quantity", 1))
-                                unit_cost = float(db_p.costPrice or db_p.price or 0.0)
+                                unit_cost = float(db_p.costPrice or 0.0)
                                 weight_variant = str(it.get("selectedVariant") or getattr(db_p, "unit", "") or "")
                                 vendor_groups[matched_v.id]["items"].append({
                                     "name": db_p.name,

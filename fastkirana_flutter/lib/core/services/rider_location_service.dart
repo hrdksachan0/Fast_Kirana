@@ -2,11 +2,11 @@ import 'package:fastminute_flutter/core/services/logger_service.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show Color;
 import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
+import 'location_service.dart';
 import 'supabase_service.dart';
 
 /// Operational modes for Rider GPS tracking
@@ -46,7 +46,7 @@ class RiderLocationService {
   /// Request permissions for location tracking
   static Future<bool> requestPermissions() async {
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      bool serviceEnabled = await LocationService.isLocationServiceEnabledSafe();
       if (!serviceEnabled) {
         debugPrint('[RiderLocation] Location services are disabled.');
         return false;
@@ -123,22 +123,13 @@ class RiderLocationService {
 
     late LocationSettings locationSettings;
     if (defaultTargetPlatform == TargetPlatform.android) {
+      // NOTE: Do NOT attach foregroundNotificationConfig here because
+      // AndroidManifest.xml explicitly strips FOREGROUND_SERVICE_LOCATION
+      // and GeolocatorLocationService for Play Store Customer release compliance.
       locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 6, // 6 meters threshold for active route tracking
         intervalDuration: const Duration(seconds: 5), // 5 seconds hardware interval
-        foregroundNotificationConfig: ForegroundNotificationConfig(
-          notificationTitle: 'FastMinute Delivery Partner 🛵',
-          notificationText: 'Live GPS Active: Delivering Order #${readableId ?? orderId}',
-          notificationChannelName: 'Live Delivery Tracking',
-          notificationIcon: const AndroidResource(
-            name: 'ic_launcher',
-            defType: 'mipmap',
-          ),
-          enableWakeLock: true,
-          setOngoing: true,
-          color: const Color(0xFFE20A22),
-        ),
       );
     } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
       locationSettings = AppleSettings(
@@ -155,15 +146,19 @@ class RiderLocationService {
       );
     }
 
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    ).listen(
-      (Position position) => _handleNewPosition(position),
-      onError: (error) {
-        debugPrint('[RiderLocation] Active location stream error: $error');
-      },
-      cancelOnError: false,
-    );
+    runZonedGuarded(() {
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: locationSettings,
+      ).listen(
+        (Position position) => _handleNewPosition(position),
+        onError: (error) {
+          debugPrint('[RiderLocation] Active location stream error: $error');
+        },
+        cancelOnError: false,
+      );
+    }, (error, stack) {
+      debugPrint('[RiderLocation] Active stream zone error: $error');
+    });
 
     return true;
   }
@@ -202,22 +197,13 @@ class RiderLocationService {
 
     late LocationSettings locationSettings;
     if (defaultTargetPlatform == TargetPlatform.android) {
+      // NOTE: Do NOT attach foregroundNotificationConfig here because
+      // AndroidManifest.xml strips FOREGROUND_SERVICE_LOCATION and
+      // GeolocatorLocationService for Play Store Customer release compliance.
       locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.medium, // Cell/WiFi + coarse GPS (drastically lowers power)
         distanceFilter: 100, // Trigger only after 100 meters of actual movement
         intervalDuration: const Duration(seconds: 60), // Check at most once a minute
-        foregroundNotificationConfig: const ForegroundNotificationConfig(
-          notificationTitle: 'FastMinute Delivery Partner 🛵',
-          notificationText: 'Online & Waiting for orders (Battery Saver Active)',
-          notificationChannelName: 'Live Delivery Tracking',
-          notificationIcon: AndroidResource(
-            name: 'ic_launcher',
-            defType: 'mipmap',
-          ),
-          enableWakeLock: false, // Allow device CPU deep sleep
-          setOngoing: true,
-          color: Color(0xFF16A34A),
-        ),
       );
     } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
       locationSettings = AppleSettings(
@@ -234,15 +220,19 @@ class RiderLocationService {
       );
     }
 
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    ).listen(
-      (Position position) => _handleNewPosition(position),
-      onError: (error) {
-        debugPrint('[RiderLocation] Idle location stream error: $error');
-      },
-      cancelOnError: false,
-    );
+    runZonedGuarded(() {
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: locationSettings,
+      ).listen(
+        (Position position) => _handleNewPosition(position),
+        onError: (error) {
+          debugPrint('[RiderLocation] Idle location stream error: $error');
+        },
+        cancelOnError: false,
+      );
+    }, (error, stack) {
+      debugPrint('[RiderLocation] Idle stream zone error: $error');
+    });
 
     return true;
   }

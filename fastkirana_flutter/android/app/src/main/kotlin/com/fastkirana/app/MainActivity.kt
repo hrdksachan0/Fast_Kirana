@@ -2,6 +2,7 @@ package com.fastkirana.app
 
 import android.content.Context
 import android.content.Intent
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
@@ -10,6 +11,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.activity.enableEdgeToEdge
+import androidx.core.location.LocationManagerCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -88,6 +90,21 @@ class MainActivity : FlutterFragmentActivity() {
                 "getInitialLink" -> {
                     result.success(initialDeepLink)
                     initialDeepLink = null
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Direct LocationManager check (bypasses GMS SettingsClient/FusedLocationClient ApiException: 20 bug in geolocator_android)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.fastkirana.app/device_location").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isLocationServiceEnabled" -> {
+                    try {
+                        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                        result.success(LocationManagerCompat.isLocationEnabled(lm))
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
                 }
                 else -> result.notImplemented()
             }

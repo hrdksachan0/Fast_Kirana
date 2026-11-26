@@ -45,6 +45,7 @@ class _MainShellState extends ConsumerState<MainShell>
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (!kIsWeb) {
         try {
           NotificationService().registerDeviceToken(ref.read(dioProvider));
@@ -94,7 +95,7 @@ class _MainShellState extends ConsumerState<MainShell>
       if (pending == null || pending.isEmpty) return;
 
       final authToken = await SecureStorage.read('auth_token');
-      if (authToken == null) return;
+      if (authToken == null || !mounted) return;
 
       final dio = ref.read(dioProvider);
       final deviceType =

@@ -95,6 +95,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final existingNotes = ref.read(checkoutControllerProvider.notifier).customDeliveryNotes;
       if (existingNotes.isNotEmpty) {
         _deliveryNotesController.text = existingNotes;
