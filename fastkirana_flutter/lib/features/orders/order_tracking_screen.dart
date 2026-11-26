@@ -78,6 +78,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   // Google Maps state
   GoogleMapController? _mapController;
+  bool _isMapReady = false;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   final Set<Circle> _circles = {};
@@ -179,8 +180,15 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     _initSupabaseRealtime();
     _initEventBusListener();
 
-    // Active order polling: 3s fallback so customer screen syncs within 3 seconds whenever admin changes status
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    // Blinkit/Swiggy-style Lazy Map Mount: let route transition finish at 60fps before mounting native GoogleMap
+    Future.delayed(const Duration(milliseconds: 220), () {
+      if (mounted && !_isDisposed && !_isMapReady) {
+        setState(() => _isMapReady = true);
+      }
+    });
+
+    // Active order polling: 8s lightweight /live fallback (Supabase Realtime handles instant 0ms updates)
+    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       if (!mounted) return;
       final st = _order?.status;
       if (st != OrderStatus.delivered && st != OrderStatus.cancelled) {
@@ -950,54 +958,84 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
   }
 
-  /// High-reliability multi-channel GPS sync from /api/delivery/location
+  /// Single fast GPS sync from /api/delivery/location (no 6x sequential fallback loop)
   Future<void> _syncRiderLocationFromEndpoint(Order order) async {
     if (order.status != OrderStatus.shipped && order.status != OrderStatus.packed) return;
     try {
       final dio = ref.read(dioProvider);
-      var cleanId = widget.orderId.trim().replaceAll('#', '');
-      final candidateIds = <String>{
-        cleanId,
-        order.id,
-        if (order.readableId != null && order.readableId!.isNotEmpty)
-          order.readableId!.replaceAll('#', '').trim(),
-        if (order.combinedId != null && order.combinedId!.isNotEmpty)
-          order.combinedId!.replaceAll('#', '').trim(),
-        if (cleanId.startsWith('FK-')) cleanId.substring(3),
-        if (RegExp(r'^\d+$').hasMatch(cleanId)) 'FK-$cleanId',
-      };
-
-      for (final qId in candidateIds) {
-        try {
-          final locRes = await dio.get('/api/delivery/location', queryParameters: {'orderId': qId});
-          if (locRes.data is Map<String, dynamic>) {
-            final locData = locRes.data as Map<String, dynamic>;
-            final riderMap = locData['rider'] is Map<String, dynamic>
-                ? locData['rider'] as Map<String, dynamic>
-                : null;
-            final rLat = (riderMap?['lat'] as num?)?.toDouble() ??
-                (locData['deliveryLat'] as num?)?.toDouble() ??
-                (locData['lat'] as num?)?.toDouble() ??
-                (locData['latitude'] as num?)?.toDouble();
-            final rLng = (riderMap?['lng'] as num?)?.toDouble() ??
-                (locData['deliveryLng'] as num?)?.toDouble() ??
-                (locData['lng'] as num?)?.toDouble() ??
-                (locData['longitude'] as num?)?.toDouble();
-            final heading = ((riderMap?['heading'] ?? locData['heading'] ?? locData['bearing']) as num?)?.toDouble() ?? 0.0;
-            if (rLat != null && rLng != null && rLat != 0.0 && rLng != 0.0) {
-              _updateRiderLocation(LatLng(rLat, rLng), heading);
-              break;
-            }
-          }
-        } catch (_) {}
+      final qId = order.id.isNotEmpty
+          ? order.id
+          : widget.orderId.trim().replaceAll('#', '');
+      final locRes = await dio.get(
+        '/api/delivery/location',
+        queryParameters: {'orderId': qId},
+        options: Options(
+          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
+        ),
+      );
+      if (locRes.data is Map<String, dynamic>) {
+        final locData = locRes.data as Map<String, dynamic>;
+        final riderMap = locData['rider'] is Map<String, dynamic>
+            ? locData['rider'] as Map<String, dynamic>
+            : null;
+        final rLat = (riderMap?['lat'] as num?)?.toDouble() ??
+            (locData['deliveryLat'] as num?)?.toDouble() ??
+            (locData['lat'] as num?)?.toDouble() ??
+            (locData['latitude'] as num?)?.toDouble();
+        final rLng = (riderMap?['lng'] as num?)?.toDouble() ??
+            (locData['deliveryLng'] as num?)?.toDouble() ??
+            (locData['lng'] as num?)?.toDouble() ??
+            (locData['longitude'] as num?)?.toDouble();
+        final heading = ((riderMap?['heading'] ?? locData['heading'] ?? locData['bearing']) as num?)?.toDouble() ?? 0.0;
+        if (rLat != null && rLng != null && rLat != 0.0 && rLng != 0.0) {
+          _updateRiderLocation(LatLng(rLat, rLng), heading);
+        }
       }
     } catch (_) {}
   }
 
+  bool _isPolling = false;
+
   Future<void> _silentPollOrder() async {
-    if (!mounted || _isDisposed) return;
+    if (!mounted || _isDisposed || _isPolling) return;
+    _isPolling = true;
     try {
-      final repo = OrderRepository(ref.read(dioProvider));
+      final dio = ref.read(dioProvider);
+
+      // Blinkit/Swiggy lightweight poll: check ~200B /live status first; only fetch full order if status/payment changed
+      if (_order != null && _order!.id.isNotEmpty) {
+        try {
+          final liveRes = await dio.get(
+            '/api/orders/${_order!.id}/live',
+            options: Options(
+              sendTimeout: const Duration(seconds: 4),
+              receiveTimeout: const Duration(seconds: 4),
+            ),
+          );
+          if (liveRes.data is Map<String, dynamic>) {
+            final live = liveRes.data as Map<String, dynamic>;
+            final liveStatus = (live['status'] ?? '').toString().toUpperCase();
+            final livePayStatus = (live['paymentStatus'] ?? '').toString().toUpperCase();
+            final curStatus = _order!.status.name.toUpperCase();
+            final curPayStatus = _order!.paymentStatus.toUpperCase();
+            final statusUnchanged = liveStatus.isNotEmpty &&
+                (liveStatus == curStatus ||
+                    (liveStatus == 'OUT_FOR_DELIVERY' && curStatus == 'SHIPPED') ||
+                    (liveStatus == 'ADMIN_PENDING' && curStatus == 'ADMINPENDING'));
+            final payUnchanged = livePayStatus.isEmpty || livePayStatus == curPayStatus;
+
+            if (statusUnchanged && payUnchanged) {
+              await _syncRiderLocationFromEndpoint(_order!);
+              return;
+            }
+          }
+        } catch (_) {
+          // Fall through to full order fetch if /live endpoint fails
+        }
+      }
+
+      final repo = OrderRepository(dio);
       var cleanId = widget.orderId.trim();
       if (cleanId.startsWith('#')) cleanId = cleanId.substring(1);
 
@@ -1026,7 +1064,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         // 🛵 Active Delivery GPS sync directly from delivery location endpoint
         await _syncRiderLocationFromEndpoint(order);
       }
-    } catch (e) { LoggerService.error("Bare catch", e); }
+    } catch (e) {
+      LoggerService.error("Bare catch", e);
+    } finally {
+      _isPolling = false;
+    }
   }
 
   void _setupCoordinatesFromOrder(Order order) {
@@ -2030,7 +2072,21 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
                           height: _isMapExpanded
                               ? (MediaQuery.sizeOf(context).height - MediaQuery.paddingOf(context).top - kToolbarHeight)
                               : (MediaQuery.sizeOf(context).height * 0.44).clamp(280.0, 420.0),
-                          child: TrackingMapView(
+                          child: !_isMapReady
+                              ? Container(
+                                  color: const Color(0xFFF1F5F9),
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.2,
+                                        color: AppDesignSystem.primary,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : TrackingMapView(
                             initialTarget: initialTarget,
                             isDelivered: isDelivered,
                             order: _order,

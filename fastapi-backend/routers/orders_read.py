@@ -391,24 +391,34 @@ async def get_order_details(
         return _order_details_cache[cache_key]
 
     clean_id = id.strip().lstrip("#")
-    order_conditions = [
-        Order.id == id,
-        Order.readableId == id,
-        Order.id == clean_id,
-        Order.readableId == clean_id,
-        Order.cfOrderId == id,
-        Order.cfOrderId == clean_id,
-        Order.readableId.like(f"{clean_id}-%"),
-    ]
-    if len(clean_id) >= 15:
-        order_conditions.append(Order.id.like(f"{clean_id}%"))
-    stmt = select(Order).options(
+    # Fast-path primary key lookup (uses PK index directly — avoids full-table OR+LIKE scan)
+    pk_stmt = select(Order).options(
         selectinload(Order.items),
         selectinload(Order.address),
         selectinload(Order.user)
-    ).where(or_(*order_conditions)).order_by(Order.createdAt.desc())
-    res = await db.execute(stmt)
-    order = res.scalars().first()
+    ).where(Order.id == clean_id)
+    pk_res = await db.execute(pk_stmt)
+    order = pk_res.scalars().first()
+
+    if not order:
+        order_conditions = [
+            Order.readableId == id,
+            Order.readableId == clean_id,
+            Order.cfOrderId == id,
+            Order.cfOrderId == clean_id,
+            Order.readableId.like(f"{clean_id}-%"),
+        ]
+        if id != clean_id:
+            order_conditions.append(Order.id == id)
+        if len(clean_id) >= 15:
+            order_conditions.append(Order.id.like(f"{clean_id}%"))
+        stmt = select(Order).options(
+            selectinload(Order.items),
+            selectinload(Order.address),
+            selectinload(Order.user)
+        ).where(or_(*order_conditions)).order_by(Order.createdAt.desc())
+        res = await db.execute(stmt)
+        order = res.scalars().first()
 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
