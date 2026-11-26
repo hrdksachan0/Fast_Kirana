@@ -21,17 +21,6 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Explicitly strip Foreground Service permissions for Play Store Customer release (prevents plugin manifest merge) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" tools:node="remove" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" tools:node="remove" />
-
-    <!-- Wake-on-Order & Loud Alarm for Store / Kitchen Orders -->
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-
     <application
         android:label="FastMinute"
         android:name="${applicationName}"
@@ -56,9 +45,7 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
-            android:resizeableActivity="true"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true">
+            android:resizeableActivity="true">
 
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
@@ -138,11 +125,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-
-        <!-- Explicitly remove Geolocator Foreground Service from merged manifest for Play Store Customer release -->
-        <service
-            android:name="com.baseflow.geolocator.GeolocatorLocationService"
-            tools:node="remove" />
 
         <!-- Remove hardcoded portrait restrictions from Cashfree SDK for Play Console tablet / large screen compliance -->
         <activity

@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
+import '../config/app_config.dart';
 import 'location_service.dart';
 import 'supabase_service.dart';
 
@@ -123,13 +124,20 @@ class RiderLocationService {
 
     late LocationSettings locationSettings;
     if (defaultTargetPlatform == TargetPlatform.android) {
-      // NOTE: Do NOT attach foregroundNotificationConfig here because
-      // AndroidManifest.xml explicitly strips FOREGROUND_SERVICE_LOCATION
-      // and GeolocatorLocationService for Play Store Customer release compliance.
+      // Staff APK flavor keeps FOREGROUND_SERVICE_LOCATION so Rider GPS stays alive
+      // even when the screen is locked or Google Maps is open.
+      // Customer Play Store flavor strips foreground service for Play Console compliance.
       locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 6, // 6 meters threshold for active route tracking
-        intervalDuration: const Duration(seconds: 5), // 5 seconds hardware interval
+        intervalDuration: const Duration(seconds: 4), // 4 seconds hardware interval
+        foregroundNotificationConfig: AppConfig.isStaffFlavor
+            ? const ForegroundNotificationConfig(
+                notificationTitle: 'FastMinute Rider • Live GPS Active',
+                notificationText: 'Sharing live delivery location with customer',
+                enableWakeLock: true,
+              )
+            : null,
       );
     } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
       locationSettings = AppleSettings(
@@ -197,13 +205,17 @@ class RiderLocationService {
 
     late LocationSettings locationSettings;
     if (defaultTargetPlatform == TargetPlatform.android) {
-      // NOTE: Do NOT attach foregroundNotificationConfig here because
-      // AndroidManifest.xml strips FOREGROUND_SERVICE_LOCATION and
-      // GeolocatorLocationService for Play Store Customer release compliance.
       locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.medium, // Cell/WiFi + coarse GPS (drastically lowers power)
         distanceFilter: 100, // Trigger only after 100 meters of actual movement
         intervalDuration: const Duration(seconds: 60), // Check at most once a minute
+        foregroundNotificationConfig: AppConfig.isStaffFlavor
+            ? const ForegroundNotificationConfig(
+                notificationTitle: 'FastMinute Rider • On Duty',
+                notificationText: 'Ready for incoming delivery assignments',
+                enableWakeLock: false,
+              )
+            : null,
       );
     } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
       locationSettings = AppleSettings(

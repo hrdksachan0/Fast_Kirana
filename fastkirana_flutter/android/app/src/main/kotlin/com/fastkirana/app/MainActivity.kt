@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
@@ -28,8 +29,32 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        applyRoleWakeLockFlags()
         // Capture deep link that launched the app
         initialDeepLink = intent?.data?.toString()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyRoleWakeLockFlags()
+    }
+
+    private fun applyRoleWakeLockFlags() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return
+        try {
+            val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            val role = (prefs.getString("flutter.user_role", "") ?: "").uppercase().trim()
+            val isOpsStaff = role in setOf(
+                "ADMIN", "SUPER_ADMIN", "SUPERADMIN",
+                "RESTAURANT_OWNER", "CHEF", "KITCHEN",
+                "STORE_MANAGER", "PICKER", "DELIVERY"
+            )
+            setShowWhenLocked(isOpsStaff)
+            setTurnScreenOn(isOpsStaff)
+        } catch (_: Exception) {
+            setShowWhenLocked(false)
+            setTurnScreenOn(false)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

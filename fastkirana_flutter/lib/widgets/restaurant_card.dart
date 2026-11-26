@@ -385,46 +385,7 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                             ),
                             const SizedBox(width: 6),
                           ],
-                          if (isSurgeAlert)
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFFDC2626).withValues(alpha: 0.4),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Text('⚡', style: TextStyle(fontSize: 10)),
-                                    const SizedBox(width: 3),
-                                    Flexible(
-                                      child: Text(
-                                        'HIGH DEMAND SURGE',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: Responsive.scaledFontSize(context, 8.5),
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: 0.2,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          if (isPaused && !isSurgeAlert) ...[
+                          if (isOpen && isPaused && !isSurgeAlert) ...[
                             Flexible(
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -493,8 +454,68 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
                       ),
                     ),
 
+                    // Soft Peach Glow Rush Pill (Bottom Left — only when Open, never duplicated)
+                    if (isOpen && isSurgeAlert)
+                      Positioned(
+                        bottom: 10,
+                        left: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF7ED), Color(0xFFFFF1F2)],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFFED7AA),
+                              width: 1.0,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.16),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFF97316), Color(0xFFF43F5E)],
+                                    begin: Alignment.bottomLeft,
+                                    end: Alignment.topRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFF97316).withValues(alpha: 0.45),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'High Demand · +10 min',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF7C2D12),
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     // Offer Ribbon (Bottom Left of Image - Dynamic Offer from Restaurant)
-                    if (hasOffer)
+                    else if (isOpen && hasOffer && !offer.toUpperCase().contains('RUSH') && !offer.toUpperCase().contains('SURGE') && !offer.toUpperCase().contains('BUSY'))
                       Positioned(
                         bottom: 10,
                         left: 12,

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart' show Options;
 import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import '../../../core/theme/design_system.dart';
 import '../../../core/network/api_client.dart';
@@ -180,6 +181,10 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
       final qrQuery = _razorpayQrId.isNotEmpty ? '&qrId=${Uri.encodeComponent(_razorpayQrId)}' : '';
       final res = await dio.get(
         '/api/delivery/orders/${widget.orderId}/qr-status?t=${DateTime.now().millisecondsSinceEpoch}$qrQuery',
+        options: Options(
+          sendTimeout: const Duration(seconds: 4),
+          receiveTimeout: const Duration(seconds: 4),
+        ),
       );
       if (res.statusCode == 200 && res.data != null && mounted) {
         final status = res.data['paymentStatus']?.toString().toUpperCase();

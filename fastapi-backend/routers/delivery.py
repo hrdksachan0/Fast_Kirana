@@ -917,9 +917,12 @@ async def get_doorstep_qr_status(
     """
     require_delivery_or_admin(current_user)
 
-    stmt = select(Order).where(or_(Order.id == id, Order.readableId == id))
-    res = await db.execute(stmt)
+    # Fast-path PK lookup (avoids OR scan on every 1.5s doorstep QR poll)
+    res = await db.execute(select(Order).where(Order.id == id))
     order = res.scalars().first()
+    if not order:
+        res = await db.execute(select(Order).where(Order.readableId == id))
+        order = res.scalars().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 

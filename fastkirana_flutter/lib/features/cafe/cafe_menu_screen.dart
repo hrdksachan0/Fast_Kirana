@@ -997,77 +997,31 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                           '($totalReviews reviews)',
                           style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w600, color: AppDesignSystem.textSecondary),
                         ),
-                        if ((currentRestaurant != null && currentRestaurant.activeOrdersCount >= 6) ||
-                            currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
-                            currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true ||
-                            currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true ||
-                            currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE' ||
-                            currentRestaurant?.pauseReason?.toUpperCase().contains('SURGE') == true) ...[
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFDC2626).withValues(alpha: 0.3),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('⚡', style: TextStyle(fontSize: 11)),
-                                  const SizedBox(width: 3),
-                                  Flexible(
-                                    child: Text(
-                                      currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true || currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE'
-                                          ? 'KITCHEN SURGE ⚡'
-                                          : 'HIGH DEMAND RUSH ⚡',
-                                      style: GoogleFonts.inter(
-                                        fontSize: Responsive.scaledFontSize(context, 9.5),
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                        letterSpacing: 0.2,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
                 ),
 
-                if ((currentRestaurant != null && currentRestaurant.activeOrdersCount >= 6) ||
-                    currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
-                    currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true ||
-                    currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true ||
-                    currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE')
+                if ((currentRestaurant?.isOpen ?? true) &&
+                    ((currentRestaurant != null && currentRestaurant.activeOrdersCount >= 6) ||
+                        currentRestaurant?.discountBadge?.toUpperCase().contains('RUSH') == true ||
+                        currentRestaurant?.discountBadge?.toUpperCase().contains('BUSY') == true ||
+                        currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true ||
+                        currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE' ||
+                        currentRestaurant?.pauseReason?.toUpperCase().contains('SURGE') == true))
                   SliverToBoxAdapter(
                     child: Container(
-                      margin: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFFF7ED), Color(0xFFFEF2F2)],
+                          colors: [Color(0xFFFFF7ED), Color(0xFFFFF1F2)],
                         ),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFFDBA74)),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFED7AA), width: 1.0),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFEA580C).withValues(alpha: 0.06),
+                            color: const Color(0xFFF97316).withValues(alpha: 0.06),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -1076,12 +1030,40 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(7),
+                            width: 28,
+                            height: 28,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEA580C).withValues(alpha: 0.15),
+                              color: Colors.white,
                               shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFF97316).withValues(alpha: 0.14),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                            child: const Text('⚡', style: TextStyle(fontSize: 15)),
+                            child: Center(
+                              child: Container(
+                                width: 9,
+                                height: 9,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFF97316), Color(0xFFF43F5E)],
+                                    begin: Alignment.bottomLeft,
+                                    end: Alignment.topRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFF97316).withValues(alpha: 0.45),
+                                      blurRadius: 5,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -1089,21 +1071,19 @@ class _CafeMenuScreenState extends ConsumerState<CafeMenuScreen> with SingleTick
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  currentRestaurant?.discountBadge?.toUpperCase().contains('SURGE') == true || currentRestaurant?.pauseReason == 'HIGH_ORDER_SURGE'
-                                      ? 'Kitchen Surge Active'
-                                      : 'High Demand Rush Active',
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 12),
+                                  'Popular right now',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: Responsive.scaledFontSize(context, 12.5),
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF9A3412),
+                                    color: const Color(0xFF7C2D12),
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 1.5),
                                 Text(
-                                  'This kitchen is currently experiencing high rush. Fresh food preparation may take a few extra minutes.',
+                                  'Lots of fresh orders in queue · ~10 extra mins',
                                   style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 10.5),
-                                    color: const Color(0xFFC2410C),
+                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    color: const Color(0xFF9A3412).withValues(alpha: 0.82),
                                     fontWeight: FontWeight.w500,
                                     height: 1.25,
                                   ),

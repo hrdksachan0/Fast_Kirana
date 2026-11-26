@@ -54,6 +54,16 @@ android {
         ]
     }
 
+    flavorDimensions += "edition"
+    productFlavors {
+        customer {
+            dimension "edition"
+        }
+        staff {
+            dimension "edition"
+        }
+    }
+
 
     signingConfigs {
         release {

@@ -137,6 +137,14 @@ class AppConfig {
     defaultValue: 'prod',
   );
 
+  /// Edition flavor: 'customer' (Play Store) vs 'staff' (Direct APK with foreground GPS & wake alarms)
+  static const String appFlavor = String.fromEnvironment(
+    'APP_FLAVOR',
+    defaultValue: 'customer',
+  );
+
+  static bool get isStaffFlavor => appFlavor.toLowerCase() == 'staff';
+
   static bool get isProduction => buildFlavor == 'prod';
   static bool get isDebug => !isProduction;
 

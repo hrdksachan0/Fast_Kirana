@@ -204,11 +204,20 @@ class GeoMathUtils {
       }
     }
 
-    if (speedKmh <= 0) speedKmh = 22.0;
+    // Guard against stationary / red-light / GPS-drift speeds (e.g. 1.6 km/h -> 43 mins for 1.1 km!)
+    // City two-wheeler average is ~18-24 km/h; clamp unrealistic spikes too.
+    if (speedKmh < 12.0 || !speedKmh.isFinite) {
+      speedKmh = 20.0;
+    } else if (speedKmh > 40.0) {
+      speedKmh = 35.0;
+    }
 
-    int estMinutes = ((currentDistanceKm / speedKmh) * 60).round() + 3;
-    
+    int estMinutes = ((currentDistanceKm / speedKmh) * 60).round() + 2;
+
+    // Distance-proportional sanity ceiling so 1 km never shows > 9 mins
+    final maxSaneForDistance = math.max(8, (currentDistanceKm * 5.5).ceil() + 3);
     if (estMinutes < 2) estMinutes = 2;
+    if (estMinutes > maxSaneForDistance) estMinutes = maxSaneForDistance;
     if (estMinutes > 45) estMinutes = 45;
 
     return estMinutes;
