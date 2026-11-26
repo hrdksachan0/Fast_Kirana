@@ -150,10 +150,28 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
     }),
   ])
 
+const SENSITIVE_SETTING_TOKENS = [
+  'secret',
+  'password',
+  'token',
+  'private_key',
+  'api_key',
+  'service_role',
+  'webhook_secret',
+  'signing_key',
+  'client_secret',
+]
+
+function isSensitiveSettingKey(key: string): boolean {
+  const lower = (key || '').toLowerCase()
+  return SENSITIVE_SETTING_TOKENS.some((tok) => lower.includes(tok))
+}
+
   const settingsMap = { ...DEFAULT_SETTINGS }
   // 1. Populate global base settings
   settings.forEach((s) => {
     if (s.key === 'homepage_campaign_draft' || s.key.endsWith(':homepage_campaign_draft')) return
+    if (isSensitiveSettingKey(s.key)) return
     if (!s.key.startsWith('store:')) {
       settingsMap[s.key] = s.value
     }
@@ -166,7 +184,9 @@ export async function buildSettingsMap(storeId?: string | null): Promise<Record<
       if (s.key === 'homepage_campaign_draft' || s.key.endsWith(':homepage_campaign_draft')) return
       if (s.key.startsWith(storePrefix)) {
         const subKey = s.key.slice(storePrefix.length)
-        settingsMap[subKey] = s.value
+        if (!isSensitiveSettingKey(subKey)) {
+          settingsMap[subKey] = s.value
+        }
       }
     })
 

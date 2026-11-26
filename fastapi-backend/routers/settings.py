@@ -160,6 +160,11 @@ def check_is_store_open(settings_map: Dict[str, str], prefix: str) -> bool:
 # PUBLIC SETTINGS
 # ============================================================
 
+_SENSITIVE_KEY_TOKENS = ('secret', 'password', 'token', 'private_key', 'api_key', 'service_role', 'webhook_secret', 'signing_key', 'client_secret')
+def _is_sensitive_setting_key(key: str) -> bool:
+    lower = (key or '').lower()
+    return any(tok in lower for tok in _SENSITIVE_KEY_TOKENS)
+
 @router.get("")
 async def get_public_settings(
     response: Response,
@@ -188,7 +193,7 @@ async def get_public_settings(
 
         settings_map = DEFAULT_SETTINGS.copy()
         for s in settings_list:
-            if not s.key.startswith("store:") and s.key != "homepage_campaign_draft":
+            if not s.key.startswith("store:") and s.key != "homepage_campaign_draft" and not _is_sensitive_setting_key(s.key):
                 settings_map[s.key] = s.value
 
         # Layer store-scoped overrides if a specific dark store hub is queried
@@ -197,7 +202,8 @@ async def get_public_settings(
             for s in settings_list:
                 if s.key.startswith(store_prefix) and s.key != f"{store_prefix}homepage_campaign_draft":
                     sub_key = s.key[len(store_prefix):]
-                    settings_map[sub_key] = s.value
+                    if not _is_sensitive_setting_key(sub_key):
+                        settings_map[sub_key] = s.value
 
             try:
                 hub_res = await db.execute(select(DarkStore).where(DarkStore.id == effective_store_id))
