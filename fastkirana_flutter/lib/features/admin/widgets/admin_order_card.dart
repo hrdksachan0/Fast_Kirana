@@ -527,6 +527,7 @@ class AdminOrderCard extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
                         width: 7,
@@ -552,142 +553,129 @@ class AdminOrderCard extends ConsumerWidget {
                           letterSpacing: 0.3,
                         ),
                       ),
-                      if (order.isRestaurantOrder || order.isCombined) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: isKOTPrinted ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: isKOTPrinted ? const Color(0xFF86EFAC) : const Color(0xFFFDBA74),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Text(
-                            isKOTPrinted
-                                ? ((kotPrintedBy != null && kotPrintedBy!.trim().isNotEmpty)
-                                    ? 'KOT ✓ · ${kotPrintedBy!.trim().split(' ').first}'
-                                    : 'KOT ✓')
-                                : 'KOT Pending',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 9.5),
-                              fontWeight: FontWeight.w800,
-                              color: isKOTPrinted ? const Color(0xFF15803D) : const Color(0xFFC2410C),
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
-                  Builder(builder: (context) {
-                    final shop = order.shopName;
-                    final isRest = order.isRestaurantOrder;
-                    final outletName = (shop != null && shop.isNotEmpty && shop != 'null' && shop != 'FastMinute Dark Store' && shop != 'FastKirana Dark Store')
-                        ? shop
-                        : (isRest ? (RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant') : 'Dark Store');
-                    final isCombined = order.isCombined;
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Builder(builder: (context) {
+                      final shop = order.shopName;
+                      final isRest = order.isRestaurantOrder;
+                      final outletName = (shop != null && shop.isNotEmpty && shop != 'null' && shop != 'FastMinute Dark Store' && shop != 'FastKirana Dark Store')
+                          ? shop
+                          : (isRest ? (RestaurantRegistry.getName(order.restaurantId) ?? 'Restaurant') : 'Dark Store');
+                      final isCombined = order.isCombined;
 
-                    if (isCombined) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3E8FF),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFA855F7), width: 1.3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF9333EA).withValues(alpha: 0.15),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1.5),
+                      if (isCombined) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3E8FF),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFA855F7), width: 1.3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF9333EA).withValues(alpha: 0.15),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1.5),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('✨', style: TextStyle(fontSize: 12)),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  'COMBINED (${order.subOrders?.length ?? 2})',
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 10.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF581C87),
+                                    letterSpacing: 0.3,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      if (isRest) {
+                        // Ultra-highlighted, vibrant, high-contrast Restaurant Badge
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFEA580C), width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFEA580C).withValues(alpha: 0.22),
+                                blurRadius: 5,
+                                offset: const Offset(0, 1.5),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('🍽️', style: TextStyle(fontSize: 12.5)),
+                              const SizedBox(width: 4.5),
+                              Flexible(
+                                child: Text(
+                                  outletName.toUpperCase(),
+                                  style: GoogleFonts.inter(
+                                    fontSize: Responsive.scaledFontSize(context, 11),
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF9A3412),
+                                    letterSpacing: 0.4,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(7),
+                          border: Border.all(color: const Color(0xFF34D399), width: 1.1),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('✨', style: TextStyle(fontSize: 12)),
-                            const SizedBox(width: 4),
-                            Text(
-                              'COMBINED (${order.subOrders?.length ?? 2})',
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 10.5),
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFF581C87),
-                                letterSpacing: 0.3,
+                            const Text('🛒', style: TextStyle(fontSize: 11)),
+                            const SizedBox(width: 3.5),
+                            Flexible(
+                              child: Text(
+                                'DARK STORE',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 10),
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF065F46),
+                                  letterSpacing: 0.3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
                       );
-                    }
-
-                    if (isRest) {
-                      // Ultra-highlighted, vibrant, high-contrast Restaurant Badge
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFEA580C), width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFEA580C).withValues(alpha: 0.22),
-                              blurRadius: 5,
-                              offset: const Offset(0, 1.5),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('🍽️', style: TextStyle(fontSize: 12.5)),
-                            const SizedBox(width: 4.5),
-                            Text(
-                              outletName.toUpperCase(),
-                              style: GoogleFonts.inter(
-                                fontSize: Responsive.scaledFontSize(context, 11),
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFF9A3412),
-                                letterSpacing: 0.4,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(7),
-                        border: Border.all(color: const Color(0xFF34D399), width: 1.1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('🛒', style: TextStyle(fontSize: 11)),
-                          const SizedBox(width: 3.5),
-                          Text(
-                            'DARK STORE',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 10),
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF065F46),
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+                    }),
+                  ),
                 ],
               ),
             ),
@@ -865,22 +853,53 @@ class AdminOrderCard extends ConsumerWidget {
                                 ],
                               ),
                               const SizedBox(height: 3),
-                              // Order Status Badge (e.g. ON THE WAY, CONFIRMED) directly below #4097
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-                                ),
-                                child: Text(
-                                  order.status.displayName.toUpperCase(),
-                                  style: GoogleFonts.inter(
-                                    fontSize: Responsive.scaledFontSize(context, 9.5),
-                                    fontWeight: FontWeight.w900,
-                                    color: statusColor,
+                              // Order Status Badge + KOT Status Badge directly below #4097 & Route Pill
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Text(
+                                      order.status.displayName.toUpperCase(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 9.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: statusColor,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  if (live && (order.isRestaurantOrder || order.isCombined))
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isKOTPrinted ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isKOTPrinted ? const Color(0xFF86EFAC) : const Color(0xFFFDBA74),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isKOTPrinted
+                                            ? ((kotPrintedBy != null && kotPrintedBy!.trim().isNotEmpty)
+                                                ? 'KOT ✓ · ${kotPrintedBy!.trim().split(' ').first}'
+                                                : 'KOT ✓')
+                                            : 'KOT Pending',
+                                        style: GoogleFonts.inter(
+                                          fontSize: Responsive.scaledFontSize(context, 9.5),
+                                          fontWeight: FontWeight.w800,
+                                          color: isKOTPrinted ? const Color(0xFF15803D) : const Color(0xFFC2410C),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ],
                           ),
