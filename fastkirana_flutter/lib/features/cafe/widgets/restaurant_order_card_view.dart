@@ -48,10 +48,6 @@ class RestaurantOrderCardView extends StatelessWidget {
         (order['order'] is Map ? (order['order']['items'] ?? order['order']['order_items']) : null);
     final List items = (rawItems is List) ? rawItems : [];
 
-    final num total = (order['total'] is num)
-        ? (order['total'] as num)
-        : (num.tryParse(order['total']?.toString() ?? '0') ?? 0);
-
     final dynamic rawUser = order['user'];
     final Map<String, dynamic> user = (rawUser is Map<String, dynamic>) ? rawUser : {};
     final String customerName = (order['userName'] ?? user['name'] ?? order['customerName'] ?? 'Customer')
@@ -156,10 +152,6 @@ class RestaurantOrderCardView extends StatelessWidget {
                           ),
                         ),
                       ],
-                    ),
-                    Text(
-                      '₹${total.toInt()}',
-                      style: GoogleFonts.inter(fontSize: Responsive.scaledFontSize(context, 16), fontWeight: FontWeight.w900, color: slateDark),
                     ),
                   ],
                 ),
@@ -267,12 +259,6 @@ class RestaurantOrderCardView extends StatelessWidget {
               final String imgUrl = item is OrderItem
                   ? (item.imageUrl ?? '')
                   : OrderItemHelper.resolveImageUrl(item);
-              final num itemPrice = (item is Map && item['price'] is num)
-                  ? (item['price'] as num)
-                  : (item is OrderItem
-                      ? item.price
-                      : (num.tryParse(item is Map ? item['price']?.toString() ?? '0' : '0') ?? 0));
-              final num lineTotal = itemPrice * qty;
 
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5.0),
@@ -385,19 +371,6 @@ class RestaurantOrderCardView extends StatelessWidget {
                         ],
                       ),
                     ),
-
-                    if (lineTotal > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text(
-                          '₹${lineTotal.toInt()}',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 13),
-                            fontWeight: FontWeight.w800,
-                            color: slateDark,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               );
