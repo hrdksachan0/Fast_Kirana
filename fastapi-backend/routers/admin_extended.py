@@ -791,6 +791,14 @@ async def admin_get_orders(
             "userPhone": user_phone,
             "deliveryBoyName": o.deliveryUser.name if (hasattr(o, 'deliveryUser') and o.deliveryUser) else None,
             "deliveryBoyPhone": o.deliveryUser.phone if (hasattr(o, 'deliveryUser') and o.deliveryUser) else None,
+            "deliveryUser": {
+                "id": o.deliveryUser.id,
+                "name": o.deliveryUser.name or "Rider",
+                "phone": o.deliveryUser.phone or "",
+                "liveLat": float(o.deliveryUser.liveLat) if o.deliveryUser.liveLat is not None else None,
+                "liveLng": float(o.deliveryUser.liveLng) if o.deliveryUser.liveLng is not None else None,
+                "gpsUpdatedAt": (o.deliveryUser.updatedAt.isoformat() + "Z") if (o.deliveryUser.updatedAt and o.deliveryUser.liveLat is not None and o.deliveryUser.liveLng is not None) else None,
+            } if (hasattr(o, 'deliveryUser') and o.deliveryUser) else None,
             "shopName": o.shopName,
             "shopPhone": o.shopPhone,
             "user": {

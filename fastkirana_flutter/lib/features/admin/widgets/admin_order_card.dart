@@ -70,6 +70,90 @@ class AdminOrderCard extends ConsumerWidget {
     this.isProcessing = false,
   });
 
+  String? _resolveAssignedRiderGpsTs() {
+    for (final r in availableRiders) {
+      final rid = r['id'];
+      final rname = r['name']?.trim().toLowerCase();
+      if ((order.deliveryUserId != null && rid == order.deliveryUserId) ||
+          (order.deliveryBoyName != null &&
+              order.deliveryBoyName!.trim().isNotEmpty &&
+              rname == order.deliveryBoyName!.trim().toLowerCase())) {
+        return r['gpsUpdatedAt'];
+      }
+    }
+    return null;
+  }
+
+  Widget _buildRiderGpsFreshnessPill(String? gpsUpdatedAt) {
+    String label = 'GPS Off';
+    Color bg = const Color(0xFFFEE2E2);
+    Color border = const Color(0xFFFCA5A5);
+    Color fg = const Color(0xFFB91C1C);
+    Color dot = const Color(0xFFEF4444);
+
+    if (gpsUpdatedAt != null && gpsUpdatedAt.trim().isNotEmpty) {
+      final raw = gpsUpdatedAt.trim();
+      final normalized = (raw.endsWith('Z') || raw.contains('+') || RegExp(r'-\d{2}:\d{2}$').hasMatch(raw))
+          ? raw
+          : '${raw}Z';
+      final parsed = DateTime.tryParse(normalized)?.toUtc();
+      if (parsed != null) {
+        final ageSec = DateTime.now().toUtc().difference(parsed).inSeconds;
+        final safeAge = ageSec < 0 ? 0 : ageSec;
+        String ageText;
+        if (safeAge < 60) {
+          ageText = '${safeAge}s ago';
+        } else if (safeAge < 3600) {
+          ageText = '${safeAge ~/ 60}m ago';
+        } else if (safeAge < 86400) {
+          ageText = '${safeAge ~/ 3600}h ago';
+        } else {
+          ageText = '${safeAge ~/ 86400}d ago';
+        }
+        label = 'GPS $ageText';
+        if (safeAge <= 60) {
+          bg = const Color(0xFFDCFCE7);
+          border = const Color(0xFF86EFAC);
+          fg = const Color(0xFF15803D);
+          dot = const Color(0xFF22C55E);
+        } else if (safeAge <= 300) {
+          bg = const Color(0xFFFEF3C7);
+          border = const Color(0xFFFCD34D);
+          fg = const Color(0xFFB45309);
+          dot = const Color(0xFFF59E0B);
+        }
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5.5,
+            height: 5.5,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 3.5),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 8.5,
+              fontWeight: FontWeight.w800,
+              color: fg,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   static Color getStatusColor(OrderStatus? status) {
     if (status == null) return AppDesignSystem.slate500;
     switch (status) {
@@ -342,13 +426,22 @@ class AdminOrderCard extends ConsumerWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        riderName,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13.5,
-                                          fontWeight: isThisSelected ? FontWeight.w900 : FontWeight.w700,
-                                          color: isThisSelected ? const Color(0xFF1D4ED8) : AppDesignSystem.slate900,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              riderName,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13.5,
+                                                fontWeight: isThisSelected ? FontWeight.w900 : FontWeight.w700,
+                                                color: isThisSelected ? const Color(0xFF1D4ED8) : AppDesignSystem.slate900,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          _buildRiderGpsFreshnessPill(rider['gpsUpdatedAt']?.toString()),
+                                        ],
                                       ),
                                       if (riderPhone.isNotEmpty)
                                         Text(
@@ -1467,6 +1560,10 @@ class AdminOrderCard extends ConsumerWidget {
                                     ),
                                   ),
                                 ),
+                                if (!isStorePartner &&
+                                    order.status != OrderStatus.delivered &&
+                                    order.status != OrderStatus.cancelled)
+                                  _buildRiderGpsFreshnessPill(_resolveAssignedRiderGpsTs()),
                               ],
                             ),
                             if (order.deliveryBoyPhone != null && order.deliveryBoyPhone!.isNotEmpty)

@@ -1232,6 +1232,7 @@ async def update_rider_live_location(
         if user:
             user.liveLat = float(lat)
             user.liveLng = float(lng)
+            user.updatedAt = datetime.utcnow()
 
             active_order = None
             all_tracked_orders = []

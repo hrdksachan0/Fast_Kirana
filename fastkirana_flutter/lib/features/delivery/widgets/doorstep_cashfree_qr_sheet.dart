@@ -38,7 +38,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
   bool _isPaid = false;
   bool _isCheckingStatus = false;
   bool _isManualChecking = false;
-  String _statusHint = 'Waiting for UPI...';
+  String _statusHint = 'Soundbox listening live...';
   String _razorpayQrUrl = '';
   String _razorpayQrId = '';
   bool _isCombined = false;
@@ -53,6 +53,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
 
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
+  late final AnimationController _scanBeamController;
   late final AnimationController _successController;
   late final Animation<double> _successScaleAnimation;
   late final Animation<double> _rippleAnimation;
@@ -62,9 +63,14 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
     _pulseAnimation = CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut);
+
+    _scanBeamController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat(reverse: true);
 
     _successController = AnimationController(
       vsync: this,
@@ -120,6 +126,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
   @override
   void dispose() {
     _pulseController.dispose();
+    _scanBeamController.dispose();
     _successController.dispose();
     _pollTimer?.cancel();
     _autoCompleteTimer?.cancel();
@@ -232,6 +239,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
     _pollTimer?.cancel();
     try {
       _pulseController.stop();
+      _scanBeamController.stop();
       _successController.forward(from: 0.0);
     } catch (_) {}
 
@@ -281,6 +289,38 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
     }
   }
 
+  Widget _buildEqualizerBars() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, _) {
+        final t = _pulseController.value;
+        final heights = [
+          5.0 + 9.0 * (0.5 + 0.5 * (t * 2 - 1).abs()),
+          5.0 + 9.0 * (1.0 - (t - 0.35).abs()).clamp(0.0, 1.0),
+          5.0 + 9.0 * (1.0 - (t - 0.65).abs()).clamp(0.0, 1.0),
+          5.0 + 9.0 * (1.0 - t),
+        ];
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: heights
+              .map(
+                (h) => Container(
+                  width: 2.5,
+                  height: h,
+                  margin: const EdgeInsets.symmetric(horizontal: 1.2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasRzpQr = _razorpayQrUrl.isNotEmpty &&
@@ -289,102 +329,119 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
 
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFF0B1220),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(
+          top: BorderSide(color: Color(0x4034D399), width: 1.2),
+        ),
       ),
-      padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+      padding: EdgeInsets.fromLTRB(18, 10, 18, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag Handle
           Container(
-            width: 38,
+            width: 36,
             height: 4,
-            decoration: BoxDecoration(color: AppDesignSystem.slate200, borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(
+              color: const Color(0xFF334155),
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          // Header
+          // Compact Top Bar (Hero Amount + Locked Pill + Order Meta + Close)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          _isPaid ? 'Payment Confirmed' : 'Doorstep Payment',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 16),
-                            fontWeight: FontWeight.w900,
-                            color: _isPaid ? AppDesignSystem.emerald700 : AppDesignSystem.slate900,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _isPaid ? AppDesignSystem.green100 : AppDesignSystem.emerald50,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: _isPaid ? AppDesignSystem.green200 : AppDesignSystem.emerald200,
-                            ),
-                          ),
-                          child: Text(
-                            _isPaid ? 'PAID ✅' : 'RAZORPAY ⚡',
-                            style: GoogleFonts.inter(
-                              fontSize: Responsive.scaledFontSize(context, 9.5),
-                              fontWeight: FontWeight.w900,
-                              color: _isPaid ? AppDesignSystem.green700 : AppDesignSystem.emerald700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
                     Text(
-                      'Order #$_effectiveDisplayId • ₹${_effectiveTotal.toStringAsFixed(0)}${_riderName.isNotEmpty ? " • 🛵 $_riderName" : ""}',
+                      '₹${_effectiveTotal.toStringAsFixed(0)}',
                       style: GoogleFonts.inter(
-                        fontSize: Responsive.scaledFontSize(context, 12.5),
-                        fontWeight: FontWeight.w700,
-                        color: AppDesignSystem.slate600,
+                        fontSize: Responsive.scaledFontSize(context, 22),
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: -0.6,
+                        height: 1.0,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: _isPaid ? const Color(0xFF16A34A) : const Color(0x2810B981),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: _isPaid ? const Color(0xFF4ADE80) : const Color(0x5534D399),
+                        ),
+                      ),
+                      child: Text(
+                        _isPaid ? 'PAID ✅' : '🔒 LOCKED',
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          color: _isPaid ? Colors.white : const Color(0xFF34D399),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '#$_effectiveDisplayId${_riderName.isNotEmpty ? " · $_riderName" : ""}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: Responsive.scaledFontSize(context, 11),
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF94A3B8),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppDesignSystem.slate900),
-                onPressed: () => Navigator.pop(context),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => Navigator.pop(context),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF334155)),
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Color(0xFFCBD5E1), size: 17),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           // Combined Order Highlight Banner
           if (_isCombined) ...[
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
               decoration: BoxDecoration(
-                color: AppDesignSystem.emerald50,
+                color: const Color(0x1F10B981),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppDesignSystem.emerald200),
+                border: Border.all(color: const Color(0x4534D399)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.layers_rounded, size: 16, color: AppDesignSystem.emerald700),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.layers_rounded, size: 15, color: Color(0xFF34D399)),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Text(
-                      '📦 Combined Order (Grocery + Kitchen) • Collect ₹${_effectiveTotal.toStringAsFixed(0)} for Both',
+                      'Combined Order (Grocery + Kitchen) • Collect ₹${_effectiveTotal.toStringAsFixed(0)} for Both',
                       style: GoogleFonts.inter(
                         fontSize: Responsive.scaledFontSize(context, 10.5),
-                        fontWeight: FontWeight.w900,
-                        color: AppDesignSystem.emerald800,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFA7F3D0),
                       ),
                     ),
                   ),
@@ -393,7 +450,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
             ),
           ],
 
-          // Display: PAID Screen OR QR Code with Fallback Tabs
+          // Display: PAID Celebration OR Midnight OLED White QR Island
           if (_isPaid) ...[
             AnimatedBuilder(
               animation: _successController,
@@ -413,15 +470,14 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                       border: Border.all(color: const Color(0xFF86EFAC), width: 1.8),
                       boxShadow: [
                         BoxShadow(
-                          color: AppDesignSystem.success.withValues(alpha: 0.18),
-                          blurRadius: 24,
-                          offset: const Offset(0, 6),
+                          color: AppDesignSystem.success.withValues(alpha: 0.28),
+                          blurRadius: 26,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
-                        // Animated Expanding Ripple Ring + Checkmark
                         Stack(
                           alignment: Alignment.center,
                           children: [
@@ -433,7 +489,9 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: AppDesignSystem.success.withValues(alpha: (1.0 - _rippleAnimation.value).clamp(0.0, 1.0)),
+                                    color: AppDesignSystem.success.withValues(
+                                      alpha: (1.0 - _rippleAnimation.value).clamp(0.0, 1.0),
+                                    ),
                                     width: 3,
                                   ),
                                 ),
@@ -471,7 +529,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '₹${_effectiveTotal.toStringAsFixed(0)} received via Razorpay ⚡',
+                          '₹${_effectiveTotal.toStringAsFixed(0)} received via Razorpay UPI ⚡',
                           style: GoogleFonts.inter(
                             fontSize: Responsive.scaledFontSize(context, 13),
                             fontWeight: FontWeight.w800,
@@ -485,9 +543,6 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFBBF7D0)),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2)),
-                            ],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -511,54 +566,66 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                 );
               },
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isCompleting ? null : _completeDelivery,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppDesignSystem.success,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 3,
-                shadowColor: AppDesignSystem.success.withValues(alpha: 0.4),
-              ),
-              child: _isCompleting
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Complete Delivery ✅',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.scaledFontSize(context, 14),
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: _isCompleting ? null : _completeDelivery,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppDesignSystem.success,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 4,
+                  shadowColor: AppDesignSystem.success.withValues(alpha: 0.4),
+                ),
+                child: _isCompleting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Complete Delivery ✅',
+                            style: GoogleFonts.inter(
+                              fontSize: Responsive.scaledFontSize(context, 15),
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+              ),
             ),
           ] else ...[
-            // Strict Auto-Verify Razorpay QR Card with Animated Radar Glow
+            // Glowing Pure-White QR Island (High-Contrast Night-Scan POS)
             AnimatedBuilder(
               animation: _pulseAnimation,
               builder: (context, child) {
-                final glow = !_isPaid ? _pulseAnimation.value : 0.0;
+                final glow = _pulseAnimation.value;
                 return Container(
-                  padding: const EdgeInsets.all(16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
                   decoration: BoxDecoration(
-                    color: AppDesignSystem.emerald50.withValues(alpha: 0.22 + 0.15 * glow),
-                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
                     border: Border.all(
-                      color: Color.lerp(AppDesignSystem.emerald300, AppDesignSystem.emerald600, glow)!,
-                      width: 1.5 + (0.5 * glow),
+                      color: Color.lerp(
+                        const Color(0x6610B981),
+                        const Color(0xCC34D399),
+                        glow,
+                      )!,
+                      width: 2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppDesignSystem.emerald600.withValues(alpha: 0.06 + 0.12 * glow),
-                        blurRadius: 14 * (0.8 + 0.4 * glow),
-                        spreadRadius: 1 * glow,
+                        color: const Color(0xFF10B981).withValues(alpha: 0.14 + 0.14 * glow),
+                        blurRadius: 24 + 8 * glow,
+                        spreadRadius: 1,
                       ),
                     ],
                   ),
@@ -568,27 +635,51 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
               child: Column(
                 children: [
                   if (_isLoading && !hasRzpQr) ...[
-                    const SizedBox(
-                      width: 220,
-                      height: 220,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(color: AppDesignSystem.success),
-                            SizedBox(height: 14),
-                            Text(
-                              'Generating Secure Razorpay QR...',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppDesignSystem.slate900),
+                    // Premium Shimmer Skeleton Loader while Razorpay QR generates
+                    AnimatedBuilder(
+                      animation: _pulseAnimation,
+                      builder: (context, _) {
+                        return Container(
+                          width: 232,
+                          height: 232,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Color.lerp(
+                              const Color(0xFFF1F5F9),
+                              const Color(0xFFE2E8F0),
+                              _pulseAnimation.value,
                             ),
-                          ],
-                        ),
-                      ),
+                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 34,
+                                height: 34,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Generating Locked QR...',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF334155),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ] else if (!hasRzpQr && !_isLoading) ...[
                     SizedBox(
-                      width: 220,
-                      height: 220,
+                      width: 232,
+                      height: 224,
                       child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -598,7 +689,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                             Text(
                               'Auto-Verify QR Unavailable',
                               style: GoogleFonts.inter(
-                                fontSize: 13,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w800,
                                 color: AppDesignSystem.slate900,
                               ),
@@ -608,7 +699,7 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                               'Retry QR or collect Cash (COD) via slide-to-deliver',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
-                                fontSize: 10.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w500,
                                 color: AppDesignSystem.slate600,
                               ),
@@ -616,14 +707,14 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                             const SizedBox(height: 12),
                             ElevatedButton.icon(
                               onPressed: _fetchQrData,
-                              icon: const Icon(Icons.refresh_rounded, size: 15),
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
                               label: const Text('Retry QR'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppDesignSystem.emerald600,
+                                backgroundColor: const Color(0xFF059669),
                                 foregroundColor: Colors.white,
-                                textStyle: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                textStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800),
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
                           ],
@@ -631,66 +722,98 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
                       ),
                     ),
                   ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppDesignSystem.slate200),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: activeQr.startsWith('data:image')
-                            ? Image.memory(
-                                base64Decode(activeQr.split(',').last),
-                                width: 236,
-                                height: 236,
-                                fit: BoxFit.contain,
-                                filterQuality: FilterQuality.none,
-                                errorBuilder: (c, e, s) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
-                              )
-                            : SizedBox(
-                                width: 236,
-                                height: 236,
-                                child: ClipRect(
-                                  child: Transform.scale(
-                                    scale: 1.28,
-                                    alignment: const Alignment(0.0, 0.02),
-                                    child: CachedNetworkImage(
-                                      imageUrl: activeQr,
-                                      width: 236,
-                                      height: 236,
-                                      fit: BoxFit.fitWidth,
-                                      alignment: const Alignment(0.0, 0.03),
-                                      placeholder: (c, u) => const SizedBox(
+                    // Crisp Zoomed QR + Subtle Animated Emerald Scan Beam
+                    SizedBox(
+                      width: 236,
+                      height: 236,
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: activeQr.startsWith('data:image')
+                                ? Image.memory(
+                                    base64Decode(activeQr.split(',').last),
+                                    width: 236,
+                                    height: 236,
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.none,
+                                    errorBuilder: (c, e, s) => const Icon(
+                                      Icons.qr_code_2_rounded,
+                                      size: 100,
+                                      color: AppDesignSystem.slate500,
+                                    ),
+                                  )
+                                : ClipRect(
+                                    child: Transform.scale(
+                                      scale: 1.28,
+                                      alignment: const Alignment(0.0, 0.02),
+                                      child: CachedNetworkImage(
+                                        imageUrl: activeQr,
                                         width: 236,
                                         height: 236,
-                                        child: Center(child: CircularProgressIndicator(color: AppDesignSystem.success)),
+                                        fit: BoxFit.fitWidth,
+                                        alignment: const Alignment(0.0, 0.03),
+                                        placeholder: (c, u) => const SizedBox(
+                                          width: 236,
+                                          height: 236,
+                                          child: Center(
+                                            child: CircularProgressIndicator(color: Color(0xFF059669)),
+                                          ),
+                                        ),
+                                        errorWidget: (c, u, e) => const Icon(
+                                          Icons.qr_code_2_rounded,
+                                          size: 100,
+                                          color: AppDesignSystem.slate500,
+                                        ),
                                       ),
-                                      errorWidget: (c, u, e) => const Icon(Icons.qr_code_2_rounded, size: 100, color: AppDesignSystem.slate500),
+                                    ),
+                                  ),
+                          ),
+                          // Animated Laser Scan Beam
+                          AnimatedBuilder(
+                            animation: _scanBeamController,
+                            builder: (context, _) {
+                              return Positioned(
+                                left: 8,
+                                right: 8,
+                                top: 10 + (_scanBeamController.value * 214),
+                                child: IgnorePointer(
+                                  child: Container(
+                                    height: 2.5,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(99),
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Colors.transparent,
+                                          Color(0xD910B981),
+                                          Colors.transparent,
+                                        ],
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x8810B981),
+                                          blurRadius: 8,
+                                          spreadRadius: 1,
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
-                              ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppDesignSystem.emerald200),
+                    Text(
+                      'GPay · PhonePe · Paytm · BHIM UPI',
+                      style: GoogleFonts.inter(
+                        fontSize: Responsive.scaledFontSize(context, 11),
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF334155),
                       ),
-                      child: Text(
-                        '₹${_effectiveTotal.toStringAsFixed(0)} LOCKED • GPay · PhonePe · Paytm · BHIM',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10.5),
-                          fontWeight: FontWeight.w800,
-                          color: AppDesignSystem.emerald800,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ],
@@ -698,56 +821,111 @@ class _DoorstepCashfreeQrSheetState extends ConsumerState<DoorstepCashfreeQrShee
             ),
             const SizedBox(height: 12),
 
-            // Live Auto-Checking Indicator + Manual Verify Now Boost Button
+            // Live Soundbox Equalizer Status Bar + Full-Width 54px Neon-Emerald Verify CTA
             if (hasRzpQr) ...[
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppDesignSystem.emerald50,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppDesignSystem.emerald200),
+                  color: const Color(0x1A10B981),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0x4034D399)),
                 ),
                 child: Row(
                   children: [
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2.2, color: AppDesignSystem.emerald600),
-                    ),
-                    const SizedBox(width: 8),
+                    _buildEqualizerBars(),
+                    const SizedBox(width: 9),
                     Expanded(
                       child: Text(
-                        _statusHint,
+                        _isManualChecking ? 'Checking Razorpay live...' : _statusHint,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10.5),
+                          fontSize: Responsive.scaledFontSize(context, 11.5),
                           fontWeight: FontWeight.w700,
-                          color: AppDesignSystem.emerald800,
+                          color: const Color(0xFFA7F3D0),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    TextButton(
-                      onPressed: _isManualChecking ? null : _manualVerifyPayment,
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppDesignSystem.emerald600,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: Text(
-                        _isManualChecking ? 'Checking...' : 'Verify Now ⚡',
-                        style: GoogleFonts.inter(
-                          fontSize: Responsive.scaledFontSize(context, 10),
-                          fontWeight: FontWeight.w800,
-                        ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'AUTO',
+                      style: GoogleFonts.inter(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF34D399),
+                        letterSpacing: 0.6,
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x5510B981),
+                        blurRadius: 20,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _isManualChecking ? null : _manualVerifyPayment,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      disabledBackgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: _isManualChecking
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Color(0xFF022C22),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Checking Razorpay...',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 14.5),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF022C22),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.bolt_rounded, color: Color(0xFF022C22), size: 22),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Verify Payment Now',
+                                style: GoogleFonts.inter(
+                                  fontSize: Responsive.scaledFontSize(context, 15),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF022C22),
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
                 ),
               ),
             ],

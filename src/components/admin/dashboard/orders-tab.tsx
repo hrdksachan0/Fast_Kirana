@@ -10,6 +10,7 @@ import { printKOTReceipt, printCustomerInvoice } from '@/lib/kot-print'
 import { supabase } from '@/lib/supabase-client'
 import { RecordRefundModal } from '@/components/admin/record-refund-modal'
 import { MobileOrderCard } from '@/components/admin/dashboard/mobile-order-card'
+import { RiderGpsBadge, getRiderGpsFreshness } from '@/components/admin/dashboard/rider-gps-badge'
 import { formatOrderTime, formatDate } from '@/lib/date-helpers'
 import { detectOrderRoute, DELIVERY_ROUTES, DeliveryRouteKey, setRouteInNotes } from '@/lib/route-detector'
 
@@ -1461,9 +1462,10 @@ export function OrdersTab({
                                   <option value="">🛵 Assign Rider...</option>
                                   {storeRiders.map((r) => {
                                     const count = Number(r.activeOrdersCount || 0)
+                                    const gps = getRiderGpsFreshness(r.gpsUpdatedAt)
                                     return (
                                       <option key={r.id} value={r.id}>
-                                        🛵 {r.name} ({count} active) · {count === 0 ? '🟢 Free' : '🟡 Busy'}
+                                        🛵 {r.name} ({count} active) · {gps.shortEmoji} {gps.label}
                                       </option>
                                     )
                                   })}
@@ -1478,11 +1480,20 @@ export function OrdersTab({
                                   </a>
                                 )}
                               </div>
-                              {o.status === 'SHIPPED' && o.deliveryUserId && (
-                                <div className="mt-0.5 text-[8.5px] font-black text-indigo-600 dark:text-indigo-400">
-                                  ⚡ On Road · Live Delivery
-                                </div>
-                              )}
+                              {o.deliveryUserId && o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && (() => {
+                                const matchedRider = storeRiders.find((r) => r.id === o.deliveryUserId)
+                                const gpsTs = o.deliveryUser?.gpsUpdatedAt || matchedRider?.gpsUpdatedAt || null
+                                return (
+                                  <div className="mt-1 flex items-center flex-wrap gap-1.5">
+                                    {o.status === 'SHIPPED' && (
+                                      <span className="text-[8.5px] font-black text-indigo-600 dark:text-indigo-400">
+                                        ⚡ On Road
+                                      </span>
+                                    )}
+                                    <RiderGpsBadge gpsUpdatedAt={gpsTs} compact />
+                                  </div>
+                                )
+                              })()}
                             </div>
                           )}
                         </td>

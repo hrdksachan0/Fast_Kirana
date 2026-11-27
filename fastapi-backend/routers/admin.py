@@ -1205,6 +1205,9 @@ async def get_admin_all_orders(
                 "id": o.deliveryUser.id if o.deliveryUser else None,
                 "name": o.deliveryUser.name if o.deliveryUser else "Rider",
                 "phone": o.deliveryUser.phone if o.deliveryUser else "",
+                "liveLat": float(o.deliveryUser.liveLat) if (o.deliveryUser and o.deliveryUser.liveLat is not None) else None,
+                "liveLng": float(o.deliveryUser.liveLng) if (o.deliveryUser and o.deliveryUser.liveLng is not None) else None,
+                "gpsUpdatedAt": to_iso_utc(o.deliveryUser.updatedAt) if (o.deliveryUser and o.deliveryUser.liveLat is not None and o.deliveryUser.liveLng is not None) else None,
             } if o.deliveryUser else None,
             "items": [
                 {
@@ -1514,6 +1517,9 @@ async def get_admin_riders(
                 "role": r.role.value if hasattr(r.role, 'value') else str(r.role),
                 "assignedStoreId": r.assignedStoreId,
                 "activeOrdersCount": active_counts_map.get(r.id, 0),
+                "liveLat": float(r.liveLat) if r.liveLat is not None else None,
+                "liveLng": float(r.liveLng) if r.liveLng is not None else None,
+                "gpsUpdatedAt": to_iso_utc(r.updatedAt) if (r.liveLat is not None and r.liveLng is not None) else None,
             } for r in riders
         ]
     }

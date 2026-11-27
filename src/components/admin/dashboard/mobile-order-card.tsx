@@ -4,6 +4,7 @@ import React from 'react'
 import { Loader2, MessageSquare, Share2, Printer, FileText } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { detectOrderRoute } from '@/lib/route-detector'
+import { RiderGpsBadge, getRiderGpsFreshness } from '@/components/admin/dashboard/rider-gps-badge'
 
 interface MobileOrderCardProps {
   order: any
@@ -220,11 +221,21 @@ export function MobileOrderCard({
       {/* ── Rider Pickup Details Banner ── */}
       {(o.deliveryUser || o.deliveryBoyName || ((o.status === 'SHIPPED' || o.status === 'DELIVERED') && o.deliveryUserId)) && (
         <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-[10.5px]" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
             <span className="text-xs">🛵</span>
             <span className="font-extrabold text-emerald-800 dark:text-emerald-300 truncate">
               {o.deliveryUser?.name || o.deliveryBoyName || 'FastMinute Rider'}
             </span>
+            {o.status !== 'DELIVERED' && o.status !== 'CANCELLED' && (
+              <RiderGpsBadge
+                gpsUpdatedAt={
+                  o.deliveryUser?.gpsUpdatedAt ||
+                  storeRiders?.find((r) => r.id === o.deliveryUserId)?.gpsUpdatedAt ||
+                  null
+                }
+                compact
+              />
+            )}
             {(o.deliveryUser?.phone || o.deliveryBoyPhone) && (
               <span className="text-[10px] text-text-muted font-mono font-semibold">
                 ({o.deliveryUser?.phone || o.deliveryBoyPhone})
@@ -262,9 +273,10 @@ export function MobileOrderCard({
             <option value="">🛵 Assign Rider...</option>
             {storeRiders.map((r) => {
               const count = Number(r.activeOrdersCount || 0)
+              const gps = getRiderGpsFreshness(r.gpsUpdatedAt)
               return (
                 <option key={r.id} value={r.id}>
-                  🛵 {r.name} ({count} active) · {count === 0 ? '🟢 Free' : '🟡 Busy'}
+                  🛵 {r.name} ({count} active) · {gps.shortEmoji} {gps.label}
                 </option>
               )
             })}

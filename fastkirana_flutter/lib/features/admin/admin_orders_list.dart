@@ -443,6 +443,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
               'id': r['id']?.toString() ?? '',
               'name': r['name']?.toString() ?? 'Rider',
               'phone': r['phone']?.toString() ?? '',
+              if (r['gpsUpdatedAt'] != null) 'gpsUpdatedAt': r['gpsUpdatedAt'].toString(),
             }).toList();
           });
         }
@@ -697,6 +698,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
       final notif = NotificationService();
       await notif.init();
       await notif.requestPermissions();
+      if (!mounted) return;
       final dio = ref.read(dioProvider);
       final prefs = await SharedPreferences.getInstance();
       final storeId = _assignedStoreId ?? prefs.getString('assigned_store_id');
@@ -1216,6 +1218,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
 
     if (!SecureStorage.isCacheLoaded || SecureStorage.cachedUserId == null) {
       await SecureStorage.loadCache();
+    }
+
+    if (!mounted) {
+      _isFetchingAdmin = false;
+      return;
     }
 
     try {
