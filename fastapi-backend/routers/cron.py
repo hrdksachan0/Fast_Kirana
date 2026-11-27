@@ -342,6 +342,34 @@ async def run_payment_recovery_cron(db: AsyncSession) -> Dict[str, Any]:
         logger.error(f"Step 2 timeout query error: {e}")
         summary["errors"].append(f"Step 2 failed: {str(e)}")
 
+    # ── STEP 3: Self-Healing RiderWallet.cashInHand Drift Reconciliation ──
+    try:
+        from models import RiderWallet
+        rw_res = await db.execute(select(RiderWallet))
+        wallets = rw_res.scalars().all()
+        drift_fixed = 0
+        for w in wallets:
+            actual_stmt = select(func.coalesce(func.sum(Order.total), 0.0)).where(
+                and_(
+                    Order.deliveryUserId == w.userId,
+                    Order.status == OrderStatus.DELIVERED,
+                    Order.paymentMethod == PaymentMethod.COD,
+                    or_(Order.cashSettledToAdmin == False, Order.cashSettledToAdmin.is_(None)),
+                )
+            )
+            actual_cash = round(float((await db.execute(actual_stmt)).scalar() or 0.0), 2)
+            recorded_cash = round(float(w.cashInHand or 0.0), 2)
+            if abs(actual_cash - recorded_cash) >= 0.5:
+                w.cashInHand = actual_cash
+                w.updatedAt = datetime.utcnow()
+                drift_fixed += 1
+                logger.info(f"[Cron RiderWallet] Auto-reconciled {w.userId}: ₹{recorded_cash} -> ₹{actual_cash}")
+        if drift_fixed > 0:
+            await db.commit()
+        summary["riderWalletsReconciled"] = drift_fixed
+    except Exception as rw_err:
+        logger.warning(f"Step 3 rider wallet reconcile error: {rw_err}")
+
     return summary
 
 

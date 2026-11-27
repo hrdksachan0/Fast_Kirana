@@ -1280,20 +1280,32 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       final activeOrder = activeShipped.first;
       final orderId = activeOrder['id']?.toString() ?? '';
       final readableId = activeOrder['readableId']?.toString();
-      final relatedIds = (activeOrder['subOrderIds'] is List)
-          ? (activeOrder['subOrderIds'] as List).map((e) => e.toString()).toList()
-          : <String>[];
+      // Collect ALL active shipped orders + sub-orders + combinedIds so multi-order batch customers all get live GPS
+      final relatedSet = <String>{};
+      for (final ord in activeShipped) {
+        final oid = ord['id']?.toString();
+        final rid = ord['readableId']?.toString();
+        final cid = ord['combinedId']?.toString();
+        if (oid != null && oid.isNotEmpty) relatedSet.add(oid);
+        if (rid != null && rid.isNotEmpty) relatedSet.add(rid);
+        if (cid != null && cid.isNotEmpty) relatedSet.add(cid);
+        if (ord['subOrderIds'] is List) {
+          for (final sid in (ord['subOrderIds'] as List)) {
+            final s = sid?.toString();
+            if (s != null && s.isNotEmpty) relatedSet.add(s);
+          }
+        }
+      }
+      final relatedIds = relatedSet.toList();
       final riderId = _currentUserId ?? 'rider_current';
 
-      if (!_locationService.isTrackingActiveOrder || _locationService.activeOrderId != orderId) {
-        _locationService.startTracking(
-          orderId: orderId,
-          readableId: readableId,
-          relatedOrderIds: relatedIds,
-          riderId: riderId,
-          dioClient: ref.read(dioProvider),
-        );
-      }
+      _locationService.startTracking(
+        orderId: orderId,
+        readableId: readableId,
+        relatedOrderIds: relatedIds,
+        riderId: riderId,
+        dioClient: ref.read(dioProvider),
+      );
     } else if (_isOnline) {
       // Rider is ON DUTY / Online, but has no active deliveries -> Battery-saver 100m Idle mode
       final riderId = _currentUserId ?? 'rider_current';

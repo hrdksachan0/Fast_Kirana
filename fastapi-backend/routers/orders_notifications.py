@@ -61,9 +61,23 @@ ORDER_DETAILS_CACHE_TTL: float = 4.0  # 4 seconds TTL for high frequency trackin
 def clear_order_cache(order_id: Optional[str] = None):
     global _order_details_cache, _order_details_cache_time
     if order_id:
-        prefix = f"{order_id}:"
+        clean_target = str(order_id).strip().lstrip("#")
+        base_target = re.sub(r'-[GR\d]+$', '', clean_target) if ("-G" in clean_target or "-R" in clean_target) else ""
+        prefixes = {f"{order_id}:", f"{clean_target}:"}
+        if base_target:
+            prefixes.add(f"{base_target}:")
         for k in list(_order_details_cache.keys()):
-            if k.startswith(prefix):
+            val = _order_details_cache.get(k)
+            val_id = val.get("id") if isinstance(val, dict) else None
+            val_rid = val.get("readableId") if isinstance(val, dict) else None
+            val_cid = val.get("combinedId") if isinstance(val, dict) else None
+            if (
+                any(k.startswith(p) for p in prefixes)
+                or val_id == order_id
+                or val_id == clean_target
+                or (val_rid and (val_rid == clean_target or (base_target and val_rid == base_target)))
+                or (val_cid and val_cid == clean_target)
+            ):
                 _order_details_cache.pop(k, None)
                 _order_details_cache_time.pop(k, None)
     else:

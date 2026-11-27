@@ -249,10 +249,10 @@ class Order {
     if (val == null) return OrderStatus.pending;
     final str = val.toString().toLowerCase().trim();
     if (str == 'admin_pending' || str == 'adminpending' || str.contains('admin_pending')) return OrderStatus.adminPending;
-    if (str.contains('confirm')) return OrderStatus.confirmed;
-    if (str.contains('pack')) return OrderStatus.packed;
+    if (str.contains('confirm') || str.contains('prepar') || str.contains('cook') || str.contains('process') || str.contains('accept')) return OrderStatus.confirmed;
+    if (str.contains('pack') || str == 'ready' || str.contains('ready_for')) return OrderStatus.packed;
     if (str.contains('ship') || str.contains('way') || str.contains('out')) return OrderStatus.shipped;
-    if (str.contains('deliver')) return OrderStatus.delivered;
+    if (str.contains('deliver') || str == 'completed') return OrderStatus.delivered;
     if (str.contains('cancel')) return OrderStatus.cancelled;
     return OrderStatus.pending;
   }

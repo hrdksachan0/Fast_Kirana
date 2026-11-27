@@ -1234,7 +1234,24 @@ async def update_rider_live_location(
             user.liveLng = float(lng)
 
             active_order = None
-            # Also update active Order delivery coordinates if orderId provided
+            all_tracked_orders = []
+            seen_order_ids = set()
+
+            # 1. Update ALL active SHIPPED orders currently assigned to this rider (supports multi-order batches!)
+            rider_shipped_res = await db.execute(
+                select(Order).options(selectinload(Order.address)).where(
+                    Order.deliveryUserId == user_id,
+                    Order.status == OrderStatus.SHIPPED
+                )
+            )
+            for ship_ord in rider_shipped_res.scalars().all():
+                ship_ord.deliveryLat = float(lat)
+                ship_ord.deliveryLng = float(lng)
+                if ship_ord.id not in seen_order_ids:
+                    seen_order_ids.add(ship_ord.id)
+                    all_tracked_orders.append(ship_ord)
+
+            # 2. Also update specific orderId & its combined siblings if provided
             if order_id:
                 clean_oid = str(order_id).strip().lstrip("#")
                 o_stmt = select(Order).options(selectinload(Order.address)).where(
@@ -1252,6 +1269,9 @@ async def update_rider_live_location(
                     for ord_item in matching_orders:
                         ord_item.deliveryLat = float(lat)
                         ord_item.deliveryLng = float(lng)
+                        if ord_item.id not in seen_order_ids:
+                            seen_order_ids.add(ord_item.id)
+                            all_tracked_orders.append(ord_item)
 
                     # Update sibling orders in combined delivery
                     if active_order.combinedId:
@@ -1260,32 +1280,63 @@ async def update_rider_live_location(
                         for sib in comb_res.scalars().all():
                             sib.deliveryLat = float(lat)
                             sib.deliveryLng = float(lng)
+                            if sib.id not in seen_order_ids:
+                                seen_order_ids.add(sib.id)
+                                all_tracked_orders.append(sib)
+
+            if not active_order and all_tracked_orders:
+                active_order = all_tracked_orders[0]
 
             await db.commit()
 
-            # Zero-latency WebSocket broadcast to customer live tracking screen across all order aliases
-            if order_id:
-                clean_oid = str(order_id).strip().lstrip("#")
-                broadcast_channels = {f"order_{clean_oid}"}
-                if active_order:
-                    if active_order.id:
-                        broadcast_channels.add(f"order_{active_order.id}")
-                    if active_order.readableId:
-                        broadcast_channels.add(f"order_{active_order.readableId}")
-                    if active_order.combinedId:
-                        broadcast_channels.add(f"order_{active_order.combinedId}")
+            # Zero-latency WebSocket + Supabase Realtime broadcast across ALL active orders & aliases
+            if all_tracked_orders or order_id:
+                ws_channels = set()
+                sb_topics = set()
+                if order_id:
+                    clean_oid = str(order_id).strip().lstrip("#")
+                    ws_channels.add(f"order_{clean_oid}")
+                    sb_topics.add(f"order-live-tracking-{clean_oid}")
+                for trk_ord in all_tracked_orders:
+                    if trk_ord.id:
+                        ws_channels.add(f"order_{trk_ord.id}")
+                        sb_topics.add(f"order-live-tracking-{trk_ord.id}")
+                    if trk_ord.readableId:
+                        rid_clean = str(trk_ord.readableId).strip().lstrip("#")
+                        ws_channels.add(f"order_{rid_clean}")
+                        sb_topics.add(f"order-live-tracking-{rid_clean}")
+                        base_rid = re.sub(r'-[GR\d]+$', '', rid_clean)
+                        if base_rid and base_rid != rid_clean:
+                            sb_topics.add(f"order-live-tracking-{base_rid}")
+                            sb_topics.add(f"order-live-tracking-FK-{base_rid}")
+                    if trk_ord.combinedId:
+                        ws_channels.add(f"order_{trk_ord.combinedId}")
+                        sb_topics.add(f"order-live-tracking-{trk_ord.combinedId}")
 
-                for b_chan in broadcast_channels:
+                loc_payload = {
+                    "event": "LOCATION_UPDATE",
+                    "orderId": active_order.id if active_order else str(order_id or ""),
+                    "lat": float(lat),
+                    "lng": float(lng),
+                    "heading": float(payload.heading or 0.0),
+                    "speed": float(payload.speed or 0.0),
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+                for b_chan in ws_channels:
                     try:
-                        await manager.broadcast_to_channel(b_chan, {
-                            "event": "LOCATION_UPDATE",
-                            "orderId": clean_oid,
-                            "lat": float(lat),
-                            "lng": float(lng),
-                            "heading": float(payload.heading or 0.0),
-                            "speed": float(payload.speed or 0.0),
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        })
+                        await manager.broadcast_to_channel(b_chan, loc_payload)
+                    except Exception:
+                        pass
+
+                if sb_topics:
+                    try:
+                        from utils.supabase_broadcast import broadcast_supabase_realtime
+                        background_tasks.add_task(
+                            broadcast_supabase_realtime,
+                            list(sb_topics),
+                            "location_update",
+                            loc_payload
+                        )
                     except Exception:
                         pass
 

@@ -501,6 +501,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       var clean = raw.trim().replaceAll('#', '');
       if (clean.isNotEmpty) {
         keys.add(clean);
+        final strippedSuffix = clean.replaceFirst(RegExp(r'-[GR\d]+$'), '');
+        if (strippedSuffix.isNotEmpty && strippedSuffix != clean) {
+          keys.add(strippedSuffix);
+          if (RegExp(r'^\d+$').hasMatch(strippedSuffix)) {
+            keys.add('FK-$strippedSuffix');
+          }
+        }
         if (clean.startsWith('FK-')) {
           final numOnly = clean.substring(3);
           if (numOnly.isNotEmpty) keys.add(numOnly);
@@ -518,6 +525,32 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       }
     }
     return keys;
+  }
+
+  /// Monotonic lifecycle rank so stale caches or out-of-order sockets can NEVER regress
+  /// an already Confirmed/Packed/Shipped order back to Verification (ADMIN_PENDING/PENDING).
+  int _statusRank(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.adminPending:
+      case OrderStatus.pending:
+        return 0;
+      case OrderStatus.confirmed:
+        return 1;
+      case OrderStatus.packed:
+        return 2;
+      case OrderStatus.shipped:
+        return 3;
+      case OrderStatus.delivered:
+        return 4;
+      case OrderStatus.cancelled:
+        return 99;
+    }
+  }
+
+  bool _isBackwardStatusRegression(OrderStatus? current, OrderStatus incoming) {
+    if (current == null) return false;
+    if (incoming == OrderStatus.cancelled) return false;
+    return _statusRank(incoming) < _statusRank(current);
   }
 
   /// Subscribe to ALL channel key aliases for the order
@@ -549,6 +582,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
           // by fetching the verified server order record or if current order is already cancelled.
           if (parsed == OrderStatus.cancelled && _order != null && _order!.status != OrderStatus.cancelled) {
             _fetchLiveOrder();
+            return;
+          }
+
+          // 🛡️ Monotonic Forward-Only Guard: never regress Confirmed/Packed/Shipped back to Verification
+          if (_isBackwardStatusRegression(_order?.status, parsed)) {
+            debugPrint('[OrderTracking] Ignored backward realtime status ${_order?.status} -> $parsed');
             return;
           }
 
@@ -620,6 +659,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
         return;
       }
 
+      // 🛡️ Monotonic Forward-Only Guard
+      if (_isBackwardStatusRegression(_order?.status, parsed)) {
+        debugPrint('[OrderTracking] Ignored backward EventBus status ${_order?.status} -> $parsed');
+        return;
+      }
+
       if (_order != null && _order!.status != parsed) {
         setState(() {
           final updatedSubs = _order!.subOrders?.map((s) => s.copyWith(status: parsed)).toList();
@@ -665,20 +710,24 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       }
       if (mounted) {
         final prevStatus = _order?.status;
+        // 🛡️ Prevent stale cached GET from regressing a confirmed/advanced order back to Verification
+        final effectiveOrder = _isBackwardStatusRegression(prevStatus, order.status)
+            ? order.copyWith(status: prevStatus, subOrders: _order?.subOrders ?? order.subOrders)
+            : order;
         setState(() {
-          _order = order;
+          _order = effectiveOrder;
           _isLoading = false;
         });
 
         NotificationService().updateLiveOrderActivity(
-          order: order,
+          order: effectiveOrder,
           customEtaText: _etaText.isNotEmpty ? _etaText : null,
         );
 
-        _triggerStatusHaptic(order.status, prevStatus);
+        _triggerStatusHaptic(effectiveOrder.status, prevStatus);
 
-        _setupCoordinatesFromOrder(order);
-        await _syncRiderLocationFromEndpoint(order);
+        _setupCoordinatesFromOrder(effectiveOrder);
+        await _syncRiderLocationFromEndpoint(effectiveOrder);
 
         // Re-subscribe with newly discovered order IDs (readableId, combinedId)
         final newKeys = _collectTrackingChannelKeys();
@@ -960,7 +1009,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
 
   /// Single fast GPS sync from /api/delivery/location (no 6x sequential fallback loop)
   Future<void> _syncRiderLocationFromEndpoint(Order order) async {
-    if (order.status != OrderStatus.shipped && order.status != OrderStatus.packed) return;
+    final hasActiveSubForTracking = order.subOrders?.any(
+          (s) => s.status == OrderStatus.shipped || s.status == OrderStatus.packed,
+        ) ??
+        false;
+    if (order.status != OrderStatus.shipped && order.status != OrderStatus.packed && !hasActiveSubForTracking) return;
     try {
       final dio = ref.read(dioProvider);
       final qId = order.id.isNotEmpty
@@ -1043,14 +1096,17 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
       if (order == null) return;
       if (mounted) {
         final prevStatus = _order?.status;
-        setState(() => _order = order);
+        final effectiveOrder = _isBackwardStatusRegression(prevStatus, order.status)
+            ? order.copyWith(status: prevStatus, subOrders: _order?.subOrders ?? order.subOrders)
+            : order;
+        setState(() => _order = effectiveOrder);
 
         NotificationService().updateLiveOrderActivity(
-          order: order,
+          order: effectiveOrder,
           customEtaText: _etaText.isNotEmpty ? _etaText : null,
         );
 
-        _triggerStatusHaptic(order.status, prevStatus);
+        _triggerStatusHaptic(effectiveOrder.status, prevStatus);
 
         // Stale-data protection: if live GPS arrived in last 15 seconds,
         // don't let polled DB coordinates snap the rider marker backwards
@@ -1058,11 +1114,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
             DateTime.now().difference(_lastLocationUpdateTime!).inSeconds < 15;
 
         if (!hasRecentLiveGps) {
-          _setupCoordinatesFromOrder(order);
+          _setupCoordinatesFromOrder(effectiveOrder);
         }
 
         // 🛵 Active Delivery GPS sync directly from delivery location endpoint
-        await _syncRiderLocationFromEndpoint(order);
+        await _syncRiderLocationFromEndpoint(effectiveOrder);
       }
     } catch (e) {
       LoggerService.error("Bare catch", e);
@@ -1133,7 +1189,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> with 
     }
 
     // 4. Rider Position
-    if (order.status == OrderStatus.shipped || order.status == OrderStatus.packed) {
+    final hasActiveSubForRider = order.subOrders?.any(
+          (s) => s.status == OrderStatus.shipped || s.status == OrderStatus.packed,
+        ) ??
+        false;
+    if (order.status == OrderStatus.shipped || order.status == OrderStatus.packed || hasActiveSubForRider) {
       bool hasValidRiderCoords = false;
       if (order.deliveryLat != null && order.deliveryLng != null && order.deliveryLat != 0.0 && order.deliveryLng != 0.0) {
         // Sanity check: Ensure deliveryLat/Lng isn't an accidental copy of customer position

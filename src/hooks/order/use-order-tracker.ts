@@ -379,11 +379,24 @@ export function useOrderTracker({
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       try {
         if (!isMainTerminal) {
-          const res = await fetch(`${apiUrl()}/api/orders/${order.id}`)
+          const res = await fetch(`${apiUrl()}/api/orders/${order.id}`, { cache: 'no-store' })
           if (res.ok) {
             const data = await res.json()
             if (data && data.status) {
+              const rank = (s: string) => {
+                const u = String(s || '').toUpperCase()
+                if (u === 'CANCELLED') return 99
+                if (u === 'DELIVERED') return 4
+                if (u === 'SHIPPED' || u === 'OUT_FOR_DELIVERY') return 3
+                if (u === 'PACKED' || u === 'READY') return 2
+                if (u === 'CONFIRMED' || u === 'PREPARING' || u === 'COOKING') return 1
+                return 0
+              }
               setOrder((prev) => {
+                // Monotonic forward-only guard: never regress Confirmed/Packed/Shipped back to Verification
+                if (data.status !== 'CANCELLED' && rank(data.status) < rank(prev.status)) {
+                  return prev
+                }
                 if (JSON.stringify(data) !== JSON.stringify(prev)) {
                   if (data.status !== prev.status) {
                     playOrderChime()

@@ -309,6 +309,13 @@ class RiderLocationService {
       var clean = raw.trim().replaceAll('#', '');
       if (clean.isNotEmpty) {
         keys.add(clean);
+        final strippedSuffix = clean.replaceFirst(RegExp(r'-[GR\d]+$'), '');
+        if (strippedSuffix.isNotEmpty && strippedSuffix != clean) {
+          keys.add(strippedSuffix);
+          if (RegExp(r'^\d+$').hasMatch(strippedSuffix)) {
+            keys.add('FK-$strippedSuffix');
+          }
+        }
         if (clean.startsWith('FK-')) {
           final numOnly = clean.substring(3);
           if (numOnly.isNotEmpty) keys.add(numOnly);
