@@ -212,7 +212,7 @@ class TrackingReceiptCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Packaging Charge', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
+                Text('Handling Fee', style: GoogleFonts.plusJakartaSans(fontSize: Responsive.scaledFontSize(context, 12), fontWeight: FontWeight.w500, color: slateMuted)),
                 Text(
                   '₹${miscFee.toInt()}',
                   style: GoogleFonts.plusJakartaSans(

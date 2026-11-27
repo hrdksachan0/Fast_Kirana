@@ -77,13 +77,27 @@ export async function GET(req: NextRequest) {
       const notes = String(o.notes || '')
       const riderName = o.deliveryUser?.name || null
 
-      // Doorstep QR detection: rider showed QR to customer at delivery
-      const isDoorstepQr = notes.includes('Doorstep UPI') || notes.includes('QR Scan') || notes.includes('Rider QR')
+      // Doorstep QR detection: rider showed QR to customer at delivery (Cashfree or Razorpay)
+      const isDoorstepQr =
+        notes.includes('Doorstep UPI') ||
+        notes.includes('Doorstep Razorpay QR') ||
+        notes.includes('QR Scan') ||
+        notes.includes('Rider QR')
 
-      // Cashfree PG detection from notes (written by verify route or webhook)
-      const hasCashfreeNote = notes.includes('Cashfree PG') || notes.includes('CF_') || notes.includes('Cashfree Auto-Paid') || notes.includes('[CF_ORDER:')
-      // Extract CF payment reference for display
-      const cfRefMatch = notes.match(/CF_([a-zA-Z0-9_-]+)/) || notes.match(/\[CF_ORDER:([^\]]+)\]/)
+      // Online PG detection from notes (Cashfree or Razorpay written by verify route or webhook)
+      const hasCashfreeNote =
+        notes.includes('Cashfree PG') ||
+        notes.includes('CF_') ||
+        notes.includes('Cashfree Auto-Paid') ||
+        notes.includes('[CF_ORDER:') ||
+        notes.includes('Razorpay PG') ||
+        notes.includes('[RZP_ORDER:')
+      // Extract CF/RZP payment reference for display
+      const cfRefMatch =
+        notes.match(/CF_([a-zA-Z0-9_-]+)/) ||
+        notes.match(/\[CF_ORDER:([^\]]+)\]/) ||
+        notes.match(/Ref:\s*(pay_[a-zA-Z0-9_-]+)/) ||
+        notes.match(/\[RZP_ORDER:([^\]]+)\]/)
       const cfRef = cfRefMatch ? cfRefMatch[1] : null
 
       // Admin manual verification

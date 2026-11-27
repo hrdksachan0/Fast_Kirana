@@ -1371,6 +1371,12 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
       }
     }
 
+    final isOnlineExtraEarly = extra?['paymentMethod'] == 'UPI' ||
+        extra?['paymentMethod'] == 'ONLINE' ||
+        extra?['paymentCollectedBy'] == 'ONLINE' ||
+        extra?['isRiderCash'] == false;
+    final optimisticPayMethod = isOnlineExtraEarly ? 'UPI' : (isCod ? 'COD' : 'UPI');
+
     setState(() {
       for (final o in _orders) {
         final oId = o['id']?.toString();
@@ -1381,12 +1387,14 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
           o['status'] = newStatus;
           if (newStatus == 'DELIVERED') {
             o['paymentStatus'] = 'PAID';
+            o['paymentMethod'] = optimisticPayMethod;
             o['deliveredAt'] = now.toIso8601String();
             if (o['subOrders'] is List) {
               for (final sub in (o['subOrders'] as List)) {
                 if (sub is Map) {
                   sub['status'] = 'DELIVERED';
                   sub['paymentStatus'] = 'PAID';
+                  sub['paymentMethod'] = optimisticPayMethod;
                   sub['deliveredAt'] = now.toIso8601String();
                 }
               }
@@ -1530,6 +1538,13 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
             'status': newStatus,
             'updatedAt': now.toIso8601String(),
             if (newStatus == 'DELIVERED') 'paymentStatus': 'PAID',
+            if (newStatus == 'DELIVERED')
+              'paymentMethod': (extra?['paymentMethod'] == 'UPI' ||
+                      extra?['paymentMethod'] == 'ONLINE' ||
+                      extra?['paymentCollectedBy'] == 'ONLINE' ||
+                      extra?['isRiderCash'] == false)
+                  ? 'UPI'
+                  : (isCod ? 'COD' : 'UPI'),
             if (newStatus == 'DELIVERED') 'deliveredAt': now.toIso8601String(),
           };
           for (final id in idsToUpdate) {
@@ -1649,7 +1664,8 @@ class _DeliveryDashboardState extends ConsumerState<DeliveryDashboard>
     final orderId = order['id']?.toString() ?? '';
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
     final rawPayStatus = (order['paymentStatus'] ?? '').toString().toUpperCase().trim();
-    final isAlreadyPaid = rawPayStatus == 'PAID';
+    final rawPayMethod = (order['paymentMethod'] ?? 'COD').toString().toUpperCase().trim();
+    final isAlreadyPaid = rawPayStatus == 'PAID' || rawPayMethod != 'COD';
 
     final extra = isAlreadyPaid
         ? <String, dynamic>{

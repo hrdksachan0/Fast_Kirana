@@ -933,10 +933,11 @@ async def get_doorstep_qr_status(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    if order.paymentStatus == PaymentStatus.PAID:
+    if order.paymentStatus == PaymentStatus.PAID and order.paymentMethod != PaymentMethod.COD:
         return {
             "orderId": order.id,
             "paymentStatus": "PAID",
+            "paymentMethod": order.paymentMethod.value,
             "paid": True,
         }
 
@@ -998,9 +999,22 @@ async def get_doorstep_qr_status(
 
     ref_text = f"Doorstep Razorpay QR Paid ({pay_id or resolved_qr_id})"
     for o in all_orders:
+        prev_was_unsettled_cod = (
+            o.status == OrderStatus.DELIVERED
+            and o.paymentMethod == PaymentMethod.COD
+            and not o.cashSettledToAdmin
+            and bool(o.deliveryUserId)
+        )
         o.paymentMethod = PaymentMethod.ONLINE
         o.paymentStatus = PaymentStatus.PAID
         o.notes = f"{o.notes} | {ref_text}" if o.notes else ref_text
+        if prev_was_unsettled_cod:
+            w_res = await db.execute(select(RiderWallet).where(RiderWallet.userId == o.deliveryUserId))
+            w_row = w_res.scalars().first()
+            if w_row:
+                amt = float(o.total or 0.0)
+                w_row.cashInHand = max(0.0, float(w_row.cashInHand or 0.0) - amt)
+                w_row.totalCollected = max(0.0, float(w_row.totalCollected or 0.0) - amt)
     await db.commit()
 
     await _broadcast_doorstep_payment_received(all_orders, total_amount, pay_id or resolved_qr_id, bool(companions))

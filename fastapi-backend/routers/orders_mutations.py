@@ -416,10 +416,20 @@ async def update_order(
     # Delivery photos are completely disabled (privacy & fast zero-friction delivery)
     final_delivery_photo = None
 
+    # Capture previous status & payment method BEFORE mutating so DELIVERED retries can NEVER double-count rider cashInHand
+    was_already_delivered = (order.status == OrderStatus.DELIVERED)
+    previous_payment_method = order.paymentMethod
+
     # Update database values
     order.status = target_status
     if "notes" in payload:
-        order.notes = payload.get("notes")
+        incoming_note = str(payload.get("notes") or "").strip()
+        existing_note = str(order.notes or "").strip()
+        if incoming_note and existing_note and incoming_note not in existing_note:
+            # Preserve existing gateway / Doorstep QR payment reference & [STOCK_DEDUCTED] tags
+            order.notes = f"{existing_note} | {incoming_note}"
+        elif incoming_note:
+            order.notes = incoming_note
     elif "deliveryRoute" in payload:
         clean_route = str(payload.get("deliveryRoute")).upper().strip()
         order.notes = f"{order.notes or ''} | ROUTE:{clean_route}".strip(" |")
@@ -449,7 +459,9 @@ async def update_order(
                 order.deliveryUserId = str(raw_duid).strip()
 
         # Determine actual payment method on delivery:
-        # Preserve COD unless customer was already paid online or paid via doorstep UPI QR
+        # Preserve COD unless customer was already paid online or paid via doorstep UPI QR.
+        # NEVER allow a stale client cashAmount to downgrade an already-verified online/Razorpay QR payment back to COD!
+        payload_pm = str(payload.get("paymentMethod") or "").upper().strip()
         is_already_paid_online = (
             order.paymentStatus == PaymentStatus.PAID and
             order.paymentMethod != PaymentMethod.COD
@@ -457,14 +469,26 @@ async def update_order(
         is_explicit_online = (
             is_already_paid_online or
             order.paymentMethod in [PaymentMethod.UPI, PaymentMethod.CARD, PaymentMethod.WALLET] or
-            payment_collected_by == "ONLINE"
+            payload_pm in ["UPI", "ONLINE", "CARD", "WALLET"] or
+            str(payment_collected_by or "").upper().strip() == "ONLINE" or
+            payload.get("isRiderCash") is False
         )
 
+        parsed_custom_cash = None
         if cash_amount_custom is not None:
             try:
-                order_cash_collected = max(0.0, float(cash_amount_custom))
+                parsed_custom_cash = max(0.0, float(cash_amount_custom))
             except (ValueError, TypeError):
-                order_cash_collected = float(order.total)
+                parsed_custom_cash = float(order.total)
+
+        if is_already_paid_online:
+            new_payment_method = order.paymentMethod if order.paymentMethod != PaymentMethod.COD else PaymentMethod.UPI
+            order_cash_collected = 0.0
+        elif is_explicit_online and (parsed_custom_cash is None or parsed_custom_cash <= 0):
+            new_payment_method = PaymentMethod.UPI
+            order_cash_collected = 0.0
+        elif parsed_custom_cash is not None:
+            order_cash_collected = parsed_custom_cash
             if order_cash_collected > 0:
                 new_payment_method = PaymentMethod.COD
             else:
@@ -487,7 +511,8 @@ async def update_order(
         order.deliveryPhoto = safe_photo
         order.deliveryLat = float(delivery_lat) if delivery_lat is not None else None
         order.deliveryLng = float(delivery_lng) if delivery_lng is not None else None
-        order.deliveredAt = datetime.utcnow()
+        if not was_already_delivered or order.deliveredAt is None:
+            order.deliveredAt = datetime.utcnow()
 
         # 🛡️ 7-Guard Rider Doorstep GPS Auto-Learn (fixes old/fallback customer pins once, never overwrites real pins)
         if order.deliveryLat is not None and order.deliveryLng is not None and order.addressId and (is_delivery or payment_collected_by == "RIDER"):
@@ -559,8 +584,8 @@ async def update_order(
         except Exception as ref_err:
             logger.warning(f"Referral delivery reward hook error for order {order.id}: {ref_err}")
 
-        # Update Rider Wallet for Cash collected ONLY if a genuine delivery rider collected it
-        if order_cash_collected > 0 and order.deliveryUserId and (is_delivery or payment_collected_by == "RIDER"):
+        # Update Rider Wallet for Cash collected ONLY once on first transition to DELIVERED
+        if not was_already_delivered and order_cash_collected > 0 and order.deliveryUserId and (is_delivery or payment_collected_by == "RIDER"):
             wallet_stmt = select(RiderWallet).where(RiderWallet.userId == order.deliveryUserId)
             wallet_res = await db.execute(wallet_stmt)
             wallet = wallet_res.scalars().first()
@@ -578,6 +603,15 @@ async def update_order(
                     totalDeposited=0.0
                 )
                 db.add(wallet)
+        elif was_already_delivered and previous_payment_method == PaymentMethod.COD and new_payment_method != PaymentMethod.COD and not order.cashSettledToAdmin and order.deliveryUserId:
+            # Order was already delivered as COD and later converted to Online/Doorstep QR — reverse phantom cashInHand
+            wallet_stmt = select(RiderWallet).where(RiderWallet.userId == order.deliveryUserId)
+            wallet_res = await db.execute(wallet_stmt)
+            wallet = wallet_res.scalars().first()
+            if wallet:
+                order_amt = float(order.total or 0.0)
+                wallet.cashInHand = max(0.0, float(wallet.cashInHand or 0.0) - order_amt)
+                wallet.totalCollected = max(0.0, float(wallet.totalCollected or 0.0) - order_amt)
 
     elif target_status == OrderStatus.SHIPPED:
         if role == Role.DELIVERY:

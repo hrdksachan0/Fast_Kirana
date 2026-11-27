@@ -144,11 +144,11 @@ async def get_admin_rider_cash_summary(
         cod_res = await db.execute(cod_stmt)
         today_cod_count, today_cod_total = cod_res.first() or (0, 0.0)
 
-        # Fetch today's Online/UPI stats for rider
+        # Fetch today's Online/UPI stats for rider (exact parity with /api/delivery/wallet)
         online_rider_stmt = select(func.count(Order.id), func.coalesce(func.sum(Order.total), 0.0)).where(
             and_(
                 Order.deliveryUserId == r.id,
-                Order.paymentMethod.in_([PaymentMethod.UPI, PaymentMethod.CARD, PaymentMethod.WALLET]),
+                Order.paymentMethod != PaymentMethod.COD,
                 Order.status == OrderStatus.DELIVERED,
                 func.coalesce(Order.deliveredAt, Order.createdAt) >= today_start
             )

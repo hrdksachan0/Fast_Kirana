@@ -646,7 +646,7 @@ class OrderDetailScreen extends StatelessWidget {
                         ),
                         if (order.miscFee > 0)
                           _buildBillRow(
-                            'Packaging Charge',
+                            'Handling Fee',
                             '₹${order.miscFee.toInt()}',
                           ),
                         if (order.taxes > 0)
