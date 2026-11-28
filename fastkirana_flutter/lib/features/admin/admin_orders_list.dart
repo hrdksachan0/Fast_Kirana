@@ -591,9 +591,16 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen>
     );
 
     // 2. Realtime continuous auto-refresh timer every 12 seconds
+    int riderRefreshTick = 0;
     _liveSyncTimer = Timer.periodic(const Duration(seconds: 12), (_) {
       if (!_isDeviceOffline && mounted) {
         _silentFetchAdminOrders();
+        riderRefreshTick++;
+        // Refresh rider GPS timestamps at most once per 60s and ONLY when active deliveries exist
+        if (riderRefreshTick % 5 == 0 &&
+            _allOrders.any((o) => o.status == OrderStatus.shipped || o.status == OrderStatus.packed)) {
+          _fetchDeliveryRiders();
+        }
       }
     });
   }

@@ -23,6 +23,7 @@ class RiderLocationService {
   RiderLocationService._internal();
 
   StreamSubscription<Position>? _positionSubscription;
+  Timer? _activeHeartbeatTimer;
   String? _activeOrderId;
   String? _activeReadableId;
   List<String> _activeRelatedOrderIds = [];
@@ -166,6 +167,28 @@ class RiderLocationService {
       );
     }, (error, stack) {
       debugPrint('[RiderLocation] Active stream zone error: $error');
+    });
+
+    // Stationary heartbeat: Android distanceFilter skips callbacks when rider is stopped (<6m).
+    // Ultra-lightweight 45s heartbeat ONLY during active delivery (0 backend load when idle).
+    _activeHeartbeatTimer?.cancel();
+    _activeHeartbeatTimer = Timer.periodic(const Duration(seconds: 45), (_) async {
+      if (_trackingMode != RiderTrackingMode.activeOrder) return;
+      final now = DateTime.now();
+      if (_lastDbInsertTime != null && now.difference(_lastDbInsertTime!).inSeconds < 40) {
+        return; // Already uploaded recently via live movement
+      }
+      try {
+        Position? pos = _lastPosition;
+        try {
+          pos = await Geolocator.getLastKnownPosition() ?? pos;
+        } catch (_) {}
+        if (pos != null) {
+          _lastPosition = pos;
+          _lastUploadTime = now;
+          await _sendActiveLocationUpdate(pos);
+        }
+      } catch (_) {}
     });
 
     return true;
@@ -566,6 +589,8 @@ class RiderLocationService {
   }
 
   Future<void> _cancelPositionSubscriptionOnly() async {
+    _activeHeartbeatTimer?.cancel();
+    _activeHeartbeatTimer = null;
     await _positionSubscription?.cancel();
     _positionSubscription = null;
   }

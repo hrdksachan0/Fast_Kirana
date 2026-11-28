@@ -12,7 +12,9 @@ import '../../core/theme/design_system.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/wishlist_provider.dart';
+import '../../providers/store_settings_provider.dart';
 import '../../widgets/app_confirmation_dialog.dart';
+import '../../widgets/app_update_dialog.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/referral_provider.dart';
 import '../auth/login_screen.dart';
@@ -733,7 +735,72 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
+
+                    // Quiet Non-Intrusive Soft Update Banner (no nagging popup!)
+                    Builder(
+                      builder: (context) {
+                        final settings = ref.watch(storeSettingsProvider).valueOrNull;
+                        final latestVer = settings?.latestAppVersion ?? '';
+                        final hasSoftUpdate = latestVer.isNotEmpty &&
+                            AppConfig.isVersionLower(AppConfig.appVersion, latestVer);
+                        if (!hasSoftUpdate) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: InkWell(
+                            onTap: () => AppUpdateDialog.launchUpdateUrl(settings?.appUpdateUrl ?? ''),
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: AppDesignSystem.slate200, width: 1),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE20A22),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 9),
+                                  Expanded(
+                                    child: Text(
+                                      'Update available · v$latestVer',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(
+                                        fontSize: Responsive.scaledFontSize(context, 12),
+                                        fontWeight: FontWeight.w700,
+                                        color: AppDesignSystem.slate800,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Update',
+                                    style: GoogleFonts.inter(
+                                      fontSize: Responsive.scaledFontSize(context, 12),
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFFE20A22),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 16,
+                                    color: Color(0xFFE20A22),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
 
                     // Version & Ghatampur Stamp
                     Center(

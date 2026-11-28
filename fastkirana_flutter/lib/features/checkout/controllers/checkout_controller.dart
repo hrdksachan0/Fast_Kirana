@@ -505,24 +505,13 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       pendingCart: null,
     );
 
-    // If user cancelled, pressed back, or closed the sheet, return cleanly without scary modals
-    if (isUserBackout) {
-      debugPrint('ℹ️ User dropped or cancelled payment (). Returning cleanly to checkout.');
-      if (context != null && context.mounted && state.selectedPayment != 'cod') {
-        AppToast.showInfo(
-          context,
-          'Payment Cancelled',
-          subtitle: 'Your cart items are safely preserved.',
-        );
-      }
-      return;
-    }
-
-    // Prompt customer with options: Retry Payment, Convert to COD, or Cancel Order
+    // Show Blinkit-style 1-Tap Recovery Sheet for BOTH UPI failure and UPI cancel/backout
+    // so customers on weak 4G/5G can switch to Pay on Delivery (Cash / Doorstep QR) in 1 tap.
     if (context != null && context.mounted && total > 0 && cart != null && state.selectedPayment != 'cod') {
       await PaymentFailedCodSheet.show(
         context: context,
         grandTotal: total,
+        isCancelled: isUserBackout,
         onRetryPayment: () async {
           await PaymentGatewayHandler.clearPendingPaymentRecovery();
           await CheckoutDraft.clearAcceptedDraft();
